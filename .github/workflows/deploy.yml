@@ -49,7 +49,7 @@ jobs:
         run: |
           # Clonar solo la rama production en un directorio temporal
           git clone --branch production --single-branch \
-            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/tradicionmisticayhermetica-web/tmyh-web.git \
+            https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/tradicionmisticayhermetica-web/tmyh-web.git \
             /tmp/production
 
           # Configurar identidad DENTRO del repo clonado
