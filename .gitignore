@@ -3,7 +3,9 @@
 # =============================================================================
 
 # Datos sensibles (emails, nombres, telefonos, exports de WP/Classroom)
-data/
+# Solo excluye data/ en la raíz del repo (/data/), NO carpetas data/ anidadas
+# como tmyh-web/src/data/ que es código fuente.
+/data/
 
 # Backups WordPress (no van al repo: pesados y con PII)
 wp-extracted/
