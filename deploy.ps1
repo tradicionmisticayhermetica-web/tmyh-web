@@ -71,9 +71,13 @@ Write-Host "[2/4] Preparando rama production..." -ForegroundColor Yellow
 if (Test-Path $tempDir) { Remove-Item -Recurse -Force $tempDir }
 
 # Intentamos clonar la rama production existente (preserva historia).
-# Si no existe, hacemos init nuevo.
+# Si no existe, hacemos init nuevo. Bajamos ErrorActionPreference porque git
+# escribe progreso en stderr y PowerShell lo trata como error.
+$prevPref = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 git clone --branch production --single-branch $remoteUrl $tempDir 2>&1 | Out-Null
 $cloneOk = $LASTEXITCODE -eq 0
+$ErrorActionPreference = $prevPref
 
 if ($cloneOk) {
     Write-Host "  Rama production existente clonada (mantiene historia)" -ForegroundColor DarkGray
