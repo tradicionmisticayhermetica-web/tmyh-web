@@ -1,51 +1,51 @@
-# Guía de setup: Área Reservada (Fase 1A)
+# Guía del panel admin (`/area-reservada`)
 
-Este documento explica cómo dejar funcionando el panel de administración del sitio en cinco pasos. Después de seguir esta guía vas a tener:
+Esta guía explica qué hace el panel administrativo, cómo se crean
+usuarios admin y cómo se configura todo. Para entender la
+infraestructura general del proyecto ver `docs/arquitectura.md`.
 
-- Una página `/login` para que Emanuel (y otros admins) ingresen.
-- Un panel `/area-reservada` con dashboard, bandeja de mensajes y vista de detalle.
-- Un botón "Responder en el panel" en el email de notificación que abre directo el mensaje en el panel con el form precargado.
-- Un sistema de roles (`alumno`, `docente`, `admin`, `super_admin`) que vamos a usar en fases siguientes.
+## Qué es el panel hoy
 
----
+El panel `/area-reservada` es un espacio privado del sitio al que solo
+acceden usuarios con rol `admin` o `super_admin`. Hoy cumple dos
+funciones. Primero, sirve como archivo histórico de los mensajes de
+contacto recibidos: muestra una lista de las consultas que llegaron
+desde el formulario público y permite ver el detalle de cada una.
+Segundo, es la base sobre la cual se va a montar el editor de blog y
+el envío de newsletter en próximas iteraciones.
 
-## 1. Correr la migración 005 en Supabase
+Las respuestas a los visitantes no se gestionan desde el panel: cada
+notificación de nuevo mensaje llega al Gmail de Emanuel
+(`tradicionmisticayhermetica@gmail.com`) con `Reply-To` apuntando al
+email del visitante. Cuando Emanuel responde desde Gmail, el mail sale
+directo al visitante. El panel solo conserva el registro de la
+consulta original.
 
-Abrí Supabase → SQL Editor → New query y pegá el contenido de:
+## Estructura de roles
 
-```
-docs/migrations/005_admin_panel.sql
-```
+Hay cuatro roles posibles definidos en la tabla `public.perfiles`:
+`alumno`, `docente`, `admin` y `super_admin`. Los dos primeros existen
+preparados para fases futuras (LMS, area de alumnos) pero hoy no tienen
+funcionalidad activa. Solo `admin` y `super_admin` pueden entrar al
+panel; el resto rebota al login con un mensaje de "no tenés acceso".
 
-Click "Run". Debería decir "Success. No rows returned." (o similar).
+Cuando un usuario nuevo se crea en Supabase Auth, un trigger
+(`handle_nuevo_usuario`) inserta automáticamente la fila
+correspondiente en `perfiles` con rol por defecto `alumno`. Para
+promoverlo a admin hay que actualizarlo manualmente.
 
-Esto crea:
+## Crear un usuario admin
 
-- Tabla `public.perfiles`.
-- Funciones `es_admin()` y `es_super_admin()`.
-- Trigger que crea un perfil automáticamente cada vez que se registra un usuario en Supabase Auth.
-- Columnas `respondido`, `respondido_en`, `respondido_por`, `respuesta_asunto`, `respuesta_cuerpo` en `mensajes_contacto`.
-- Policies RLS para que admins puedan leer/actualizar mensajes y perfiles.
-- Vista `mensajes_contacto_pendientes` para la bandeja.
-- Vista `panel_resumen` para el dashboard.
-- RPC `marcar_mensaje_respondido(...)` para que la edge function marque los mensajes como respondidos.
+Esto se hace una sola vez al inicio del proyecto, y después si se
+quieren agregar más admins. El usuario actual administrador es
+`tradicionmisticayhermetica@gmail.com`.
 
----
+Primero, crear el usuario en Supabase Auth: Dashboard →
+Authentication → Users → "Add user" → "Create new user" → email y
+contraseña fuerte → tildar "Auto Confirm User" → Create. El trigger
+inserta la fila en `perfiles` con rol `alumno`.
 
-## 2. Crear el primer usuario super_admin (Emanuel)
-
-### 2.1 Crear el usuario en Auth
-
-Supabase Dashboard → **Authentication** → **Users** → botón **"Add user"** → **"Create new user"**.
-
-- Email: `tradicionmisticayhermetica@gmail.com` (o el que quieras usar para login).
-- Password: contraseña fuerte (anotala en un gestor).
-- Tildá **"Auto Confirm User"** para que no tenga que validar el email.
-- Click "Create user".
-
-### 2.2 Promoverlo a super_admin
-
-El trigger ya creó automáticamente la fila en `public.perfiles` con rol `alumno`. Tenés que pasarlo a `super_admin`. SQL Editor → New query:
+Segundo, promoverlo a admin con SQL:
 
 ```sql
 update public.perfiles
@@ -53,143 +53,116 @@ update public.perfiles
  where email = 'tradicionmisticayhermetica@gmail.com';
 ```
 
-Verificalo:
+Verificar:
 
 ```sql
 select id, email, rol, activo from public.perfiles;
 ```
 
-Tiene que aparecer con rol `super_admin` y activo `true`.
+Tiene que aparecer con `super_admin` y `activo = true`.
 
-> Si querés crear más admins después, repetí 2.1 y 2.2 cambiando el rol a `admin` (admin común sin permisos especiales) o `super_admin` (todos los permisos, incluido el manejo de roles más adelante).
+## Migraciones SQL involucradas
 
----
+El panel se construyó incrementalmente. Las migraciones relevantes:
 
-## 3. Desplegar la nueva Edge Function `responder-mensaje`
+La migración 005 crea la tabla `perfiles`, los helpers `es_admin()` y
+`es_super_admin()`, el trigger que crea perfiles automáticamente, y
+las RLS policies para `mensajes_contacto` (admins pueden leer y
+actualizar). También crea la vista inicial de KPIs.
 
-Desde la raíz del proyecto:
+La migración 008 simplifica el panel después de que decidimos no
+gestionar respuestas dentro del sitio. Borra las tablas, vistas y RPCs
+que se habían creado para el flujo de respuestas (que terminó siendo
+sobre-ingeniería) y deja `panel_resumen` con KPIs simples: total de
+mensajes, mensajes de la última semana, último mes, total de
+contactos, suscriptores de newsletter.
 
-```powershell
-cd C:\Users\Juan\Desktop\TMyH
-npx supabase functions deploy responder-mensaje
-```
+La migración 009 agrega las RLS policies de admins para `contactos` e
+`inscripciones`. Sin esto, la vista `panel_resumen` mostraba 0
+contactos aunque la tabla tuviera 1262 (porque sin policies abiertas,
+el JWT del admin no podía leer las filas).
 
-Esta función:
+Las tres migraciones ya están aplicadas. Si se reinstala el proyecto
+en otra Supabase, hay que correrlas en orden numérico.
 
-1. Valida que quien la llama sea admin (vía JWT y `es_admin()`).
-2. Envía el mail de respuesta vía Resend desde `contacto@tradicionmisticayhermetica.com`.
-3. Marca el mensaje como respondido en la BBDD.
+## Edge function asociada
 
-> **IMPORTANTE**: a diferencia de `notificar-mensaje-contacto`, **no usamos `--no-verify-jwt`**. Queremos que Supabase valide el token del admin antes de invocar la función.
+`notificar-mensaje-contacto` es la única edge function activa. Se
+dispara con un Database Webhook cada vez que se inserta una fila en
+`mensajes_contacto`. Manda un email a Emanuel con los datos del
+mensaje y `Reply-To` al email del visitante para que el reply en
+Gmail vaya directo.
 
-### Variables de entorno
-
-Las que ya tenías (`RESEND_API_KEY`, `EMAIL_FROM`) sirven para esta función también, no hace falta agregar nada nuevo.
-
-Verificalo con:
-
-```powershell
-npx supabase secrets list
-```
-
-Tienen que aparecer `RESEND_API_KEY` y `EMAIL_FROM`.
-
----
-
-## 4. Re-desplegar la Edge Function `notificar-mensaje-contacto`
-
-Esta la actualicé para que el botón "Responder" del email abra el panel en lugar de Gmail:
+Para deployarla:
 
 ```powershell
 npx supabase functions deploy notificar-mensaje-contacto --no-verify-jwt
 ```
 
-Opcional: configurá la URL del sitio si en algún momento usás un dominio distinto al de producción para previews. Por defecto usa `https://www.tradicionmisticayhermetica.com`.
+El flag `--no-verify-jwt` es importante: la llamada viene de un
+webhook interno de Supabase, no de un usuario autenticado.
+
+Los secrets que la función usa (ya seteados, no hace falta tocar):
+
+- `RESEND_API_KEY`: clave de la API de Resend.
+- `EMAIL_FROM`: `Tradicion Mistica y Hermetica <contacto@tradicionmisticayhermetica.com>`.
+- `EMAIL_TO`: `tradicionmisticayhermetica@gmail.com`.
+
+Para listar los secrets actuales:
 
 ```powershell
-npx supabase secrets set SITE_URL="https://www.tradicionmisticayhermetica.com"
+npx supabase secrets list
 ```
 
----
+## Database Webhook
 
-## 5. Probar el flujo end-to-end
+Configurado desde Supabase Dashboard → Database → Webhooks. Trigger:
+INSERT en `public.mensajes_contacto`. Tipo: Supabase Edge Function.
+Función: `notificar-mensaje-contacto`. Eso ya está creado, solo se
+menciona acá por si hay que recrearlo en otro proyecto.
 
-### 5.1 Loguearte
+## Recuperación de contraseña
 
-Levantá el dev server:
+El flujo de recuperación de contraseña usa los emails templates de
+Supabase Auth. La página `/recuperar-password` del sitio invoca la
+función `solicitarResetPassword` que dispara un email al usuario con
+un link a `/restablecer-password?token=...`. El token llega como
+parámetro y la página lo procesa para permitir cambiar la contraseña.
 
-```powershell
-cd C:\Users\Juan\Desktop\TMyH\tmyh-web
-npm run dev
-```
-
-Abrí `http://localhost:4321/login` (o el puerto que te muestre Astro).
-
-Ingresá con el email y password que creaste en el paso 2.1. Debería redirigirte a `/area-reservada` y ver el dashboard con el resumen.
-
-### 5.2 Mandar una consulta de prueba
-
-Desde `/contacto`, completá el form con un email cualquiera (puede ser el tuyo personal). Enviá.
-
-### 5.3 Recibir la notificación
-
-Tendrías que recibir el email en `tradicionmisticayhermetica@gmail.com` con el botón "Responder en el panel". Click → abre `/area-reservada/mensaje?id=<uuid>` con la respuesta precargada.
-
-### 5.4 Responder desde el panel
-
-Editá el cuerpo si querés y click "Enviar respuesta". El visitante debería recibir el mail desde `contacto@tradicionmisticayhermetica.com`. El mensaje queda marcado como "Respondido" y desaparece de la bandeja de pendientes.
-
----
-
-## Estructura de archivos creados / modificados
+Para que esto funcione en producción, los Redirect URLs en Supabase
+Dashboard → Authentication → URL Configuration deben incluir el
+dominio del sitio:
 
 ```
-docs/migrations/005_admin_panel.sql         (nuevo)
-supabase/functions/responder-mensaje/       (nuevo)
-supabase/functions/notificar-mensaje-contacto/index.ts  (modificado)
-tmyh-web/src/lib/supabase.ts                (modificado: persistSession=true)
-tmyh-web/src/lib/auth.ts                    (nuevo)
-tmyh-web/src/lib/admin.ts                   (nuevo)
-tmyh-web/src/layouts/AdminLayout.astro      (nuevo)
-tmyh-web/src/pages/login.astro              (nuevo)
-tmyh-web/src/pages/area-reservada/index.astro      (nuevo)
-tmyh-web/src/pages/area-reservada/mensajes.astro   (nuevo)
-tmyh-web/src/pages/area-reservada/mensaje.astro    (nuevo)
+https://www.tradicionmisticayhermetica.com/restablecer-password
+https://www.tradicionmisticayhermetica.com/area-reservada
 ```
 
----
+## Estructura de las páginas del panel
 
-## Cosas que NO hace todavía esta fase
+`/login`: form de login. Si la sesión es válida y el rol es admin,
+redirige a `/area-reservada`. Si no, muestra error.
 
-Para que quede claro qué viene en fases posteriores y no esperes lo que no está:
+`/area-reservada`: dashboard con cuatro KPIs (mensajes totales, última
+semana, último mes, suscriptores newsletter) y la lista de los 5
+mensajes más recientes recibidos.
 
-- **Fase 1B**: editor de newsletter visual y envío masivo (próxima sesión).
-- **Fase 2**: usar los roles `alumno` y `docente`. Hoy solo `admin` y `super_admin` ven el panel; los otros roles ya están en la BBDD pero no tienen vistas propias.
-- **Migración masiva** de los ~1262 contactos existentes a usuarios de Auth: la haremos en Fase 2.
-- **Recuperación de contraseña**: hay que activar email templates de Supabase (lo dejamos para Fase 2; por ahora si Emanuel olvida la pass, la reseteás manualmente desde el Dashboard).
-- **Logging detallado** de cada respuesta enviada, métricas, etc.: por ahora solo guardamos asunto/cuerpo en `mensajes_contacto`.
+`/area-reservada/mensajes`: lista completa de mensajes, ordenados por
+fecha descendente, con buscador por nombre/email/curso.
 
----
+`/area-reservada/mensaje?id=...`: detalle de un mensaje individual.
+Muestra los datos del visitante, el mensaje original, y un aviso de
+que las respuestas se gestionan desde Gmail.
 
-## Troubleshooting
+`/area-reservada/cuenta`: página para cambiar contraseña del admin
+logueado.
 
-**"Esta cuenta no tiene acceso al panel"** al intentar loguearse:
+`/recuperar-password` y `/restablecer-password`: flujo de recuperación.
 
-- Verificá que el rol del usuario sea `admin` o `super_admin` en `public.perfiles`. Si quedó como `alumno`, corré el `update` del paso 2.2.
+## Próximas iteraciones
 
-**"No pude conectar con el servidor"** al enviar respuesta:
-
-- La edge function `responder-mensaje` no está desplegada. Volvé al paso 3.
-- O `RESEND_API_KEY` no está bien configurada. Hacé `npx supabase secrets list` para verificar.
-
-**"Sesión expirada"** después de unos minutos:
-
-- Es normal: Supabase refresca el JWT solo. Si no anda, recargá la página y debería re-loguearse automáticamente.
-
-**El badge de "Pendientes" en el sidebar no aparece o muestra 0 cuando hay mensajes**:
-
-- Las RLS de `panel_resumen` o `mensajes_contacto` no están bien. Probá correr de nuevo la migración 005 (es idempotente).
-
-**El link "Responder en el panel" del email lleva al dominio incorrecto**:
-
-- El secret `SITE_URL` no está bien configurado. Corregilo con `npx supabase secrets set SITE_URL="..."` y re-desplegá `notificar-mensaje-contacto`.
+El panel está pensado como cimiento del backoffice editorial. Las
+próximas funcionalidades a sumar son: editor de blog que permita
+publicar posts directamente al sitio, y editor de newsletter para
+mandar contenido a los 1262 suscriptores. Detalle en
+`docs/PENDIENTES.md`.

@@ -53,17 +53,16 @@ directo a spam.
 
 1. Dashboard → **Domains** → **Add Domain**.
 2. Dominio: `tradicionmisticayhermetica.com`.
-3. Resend te muestra entre 3 y 5 registros DNS que hay que cargar. Los
-   típicos son:
-
-| Tipo  | Nombre                         | Valor                              |
-|-------|--------------------------------|------------------------------------|
-| MX    | `send`                         | `feedback-smtp.us-east-1.amazonses.com` (prioridad 10) |
-| TXT   | `send`                         | `v=spf1 include:amazonses.com ~all` |
-| TXT   | `resend._domainkey`            | Una clave DKIM larga (p=...)       |
-| TXT   | `_dmarc` (opcional)            | `v=DMARC1; p=none;`                |
-
-Los valores exactos te los da Resend. Copialos tal cual.
+3. Resend te muestra entre 3 y 5 registros DNS que hay que cargar.
+   Los típicos son cuatro: un registro MX con nombre `send` apuntando
+   a `feedback-smtp.us-east-1.amazonses.com` con prioridad 10; un
+   registro TXT con nombre `send` y valor
+   `v=spf1 include:amazonses.com ~all` (eso es el SPF); un registro
+   TXT con nombre `resend._domainkey` y como valor una clave DKIM
+   larga (la que empieza con `p=...`); y opcionalmente un registro
+   TXT con nombre `_dmarc` y valor `v=DMARC1; p=none;` para DMARC.
+   Los valores exactos te los da Resend al agregar el dominio:
+   copialos tal cual.
 
 ### 2.2. En el panel de Donweb
 
