@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!--
+    Favicon TM&H — símbolo del Sol alquímico (☉)
+    Círculo con punto central, rodeado de rayos alternados (largos/cortos)
+    estilo "sunburst" medieval. Se lee bien a 16px y tiene detalle a 64px.
+    Paleta: noche + oro.
+  -->
+  <defs>
+    <!-- Gradiente dorado del anillo y rayos -->
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e6c464" />
+      <stop offset="100%" stop-color="#a8863d" />
+    </linearGradient>
+
+    <!-- Gradiente radial del disco central: simula luz concentrada -->
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f5ecd7" stop-opacity="0.9" />
+      <stop offset="60%" stop-color="#e6c464" stop-opacity="0.5" />
+      <stop offset="100%" stop-color="#a8863d" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Fondo cuadrado redondeado, tono noche -->
+  <rect width="64" height="64" rx="12" fill="#0b0a12" />
+
+  <!-- Halo radial dorado detrás del disco -->
+  <circle cx="32" cy="32" r="22" fill="url(#glow)" />
+
+  <!-- Rayos del sol: 8 largos cardinales + 8 cortos diagonales intermedios -->
+  <g stroke="url(#gold)" stroke-linecap="round">
+    <!-- 8 rayos largos (cada 45°) -->
+    <g stroke-width="2">
+      <line x1="32" y1="4"  x2="32" y2="12" />
+      <line x1="32" y1="52" x2="32" y2="60" />
+      <line x1="4"  y1="32" x2="12" y2="32" />
+      <line x1="52" y1="32" x2="60" y2="32" />
+      <line x1="12.2" y1="12.2" x2="17.9" y2="17.9" />
+      <line x1="46.1" y1="46.1" x2="51.8" y2="51.8" />
+      <line x1="51.8" y1="12.2" x2="46.1" y2="17.9" />
+      <line x1="12.2" y1="51.8" x2="17.9" y2="46.1" />
+    </g>
+    <!-- 8 rayos cortos, intercalados cada 22.5° para textura -->
+    <g stroke-width="1.2" opacity="0.55">
+      <line x1="32" y1="8"  x2="32" y2="11" transform="rotate(22.5 32 32)" />
+      <line x1="32" y1="8"  x2="32" y2="11" transform="rotate(67.5 32 32)" />
+      <line x1="32" y1="8"  x2="32" y2="11" transform="rotate(112.5 32 32)" />
+      <line x1="32" y1="8"  x2="32" y2="11" transform="rotate(157.5 32 32)" />
+      <line x1="32" y1="8"  x2="32" y2="11" transform="rotate(202.5 32 32)" />
+      <line x1="32" y1="8"  x2="32" y2="11" transform="rotate(247.5 32 32)" />
+      <line x1="32" y1="8"  x2="32" y2="11" transform="rotate(292.5 32 32)" />
+      <line x1="32" y1="8"  x2="32" y2="11" transform="rotate(337.5 32 32)" />
+    </g>
+  </g>
+
+  <!-- Anillo exterior dorado -->
+  <circle
+    cx="32"
+    cy="32"
+    r="15"
+    fill="none"
+    stroke="url(#gold)"
+    stroke-width="1.6"
+    opacity="0.95"
+  />
+
+  <!-- Anillo interior más tenue -->
+  <circle
+    cx="32"
+    cy="32"
+    r="11"
+    fill="none"
+    stroke="#d4af37"
+    stroke-width="0.7"
+    opacity="0.6"
+  />
+
+  <!-- Punto central: el "sol" propiamente dicho -->
+  <circle cx="32" cy="32" r="3.2" fill="url(#gold)" />
+  <circle cx="32" cy="32" r="3.2" fill="none" stroke="#0b0a12" stroke-width="0.3" />
+</svg>
