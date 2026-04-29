@@ -100,8 +100,12 @@ import EditorBlog from "../../../components/EditorBlog.astro";
         <button id="btn-despublicar" type="button" class="btn-ghost hidden">Volver a borrador</button>
         <div class="flex-1"></div>
         <button id="btn-archivar" type="button"
-          class="text-[11px] uppercase tracking-widest text-parchment-500 hover:text-wine-600 transition px-3 py-2">
+          class="text-[11px] uppercase tracking-widest text-parchment-400 hover:text-parchment-100 transition px-3 py-2">
           Archivar
+        </button>
+        <button id="btn-papelera" type="button"
+          class="text-[11px] uppercase tracking-widest text-parchment-500 hover:text-wine-500 transition px-3 py-2">
+          🗑 Papelera
         </button>
       </div>
     </form>
@@ -112,8 +116,44 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       obtenerPost,
       guardarPost,
       archivarPost,
+      moverAPapelera,
       type PostBlog,
     } from "../../../lib/admin";
+
+    // Toast de notificación (reemplaza window.alert)
+    function notificar(msg: string, tipo: "ok" | "error" | "info" = "info") {
+      const existing = document.getElementById("toast-notif");
+      if (existing) existing.remove();
+      const toast = document.createElement("div");
+      toast.id = "toast-notif";
+      const color = tipo === "ok" ? "bg-gold-400 text-night-950"
+                  : tipo === "error" ? "bg-wine-700 text-parchment-50"
+                  : "bg-night-900 border border-gold-400/30 text-parchment-100";
+      toast.className = `fixed bottom-6 right-6 z-[999] px-5 py-3 rounded-sm shadow-xl font-sans text-sm max-w-sm ${color} transition-all`;
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.classList.add("opacity-0"); setTimeout(() => toast.remove(), 400); }, 3500);
+    }
+
+    // Confirm personalizado (reemplaza window.confirm)
+    function confirmar(msg: string): Promise<boolean> {
+      return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.className = "fixed inset-0 z-[998] flex items-center justify-center bg-night-950/80 backdrop-blur-sm";
+        overlay.innerHTML = `
+          <div class="card-altar p-8 max-w-md mx-4 space-y-5">
+            <p class="font-serif text-base text-parchment-100 leading-relaxed">${msg}</p>
+            <div class="flex gap-3 justify-end">
+              <button id="conf-cancel" class="btn-ghost text-sm">Cancelar</button>
+              <button id="conf-ok" class="btn-gold text-sm">Confirmar</button>
+            </div>
+          </div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector("#conf-ok")?.addEventListener("click", () => { overlay.remove(); resolve(true); });
+        overlay.querySelector("#conf-cancel")?.addEventListener("click", () => { overlay.remove(); resolve(false); });
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+      });
+    }
 
     let postId: string | null = null;
     let contenidoJson: unknown = null;
@@ -266,11 +306,22 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       document.getElementById("btn-publicar")?.addEventListener("click", () => guardar("publicado"));
       document.getElementById("btn-despublicar")?.addEventListener("click", () => guardar("borrador"));
       document.getElementById("btn-archivar")?.addEventListener("click", async () => {
-        if (!confirm("¿Archivar este post? Ya no será visible en el sitio.")) return;
+        if (!await confirmar("¿Archivar este post? Dejará de ser visible en el sitio, pero lo podés recuperar desde la sección Papelera.")) return;
         const r = await archivarPost(postId!);
         if (r.ok) {
-          setStatus("Post archivado.", "ok");
+          setStatus("Post archivado. Para verlo, usá el filtro 'Archivados'.", "ok");
           pintarEstado("archivado");
+        } else {
+          setStatus(`Error: ${r.error}`, "error");
+        }
+      });
+
+      document.getElementById("btn-papelera")?.addEventListener("click", async () => {
+        if (!await confirmar("¿Mover a la papelera? Quedará ahí por 30 días antes de eliminarse automáticamente. Podés restaurarlo o borrarlo definitivamente desde 'Papelera'.")) return;
+        const r = await moverAPapelera(postId!);
+        if (r.ok) {
+          setStatus("Post movido a la papelera.", "ok");
+          setTimeout(() => { window.location.href = "/area-reservada/blog"; }, 1200);
         } else {
           setStatus(`Error: ${r.error}`, "error");
         }

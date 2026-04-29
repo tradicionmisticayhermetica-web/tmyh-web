@@ -1,0 +1,148 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Papelera" active="blog">
+  <div class="flex items-center justify-between mb-8 gap-4 flex-wrap">
+    <div>
+      <a
+        href="/area-reservada/blog"
+        class="text-xs uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition inline-flex items-center gap-2 mb-3"
+      >
+        ← Volver al blog
+      </a>
+      <h1 class="font-display text-3xl text-parchment-50">Papelera</h1>
+      <p class="text-parchment-300 mt-2 font-serif italic text-sm">
+        Los posts se eliminan definitivamente después de 30 días en la papelera.
+        Podés restaurarlos o eliminarlos ahora.
+      </p>
+    </div>
+  </div>
+
+  <section id="lista-papelera" class="card-altar divide-y divide-gold-400/10">
+    <div class="py-12 text-center text-parchment-400 text-sm font-serif italic">
+      Cargando papelera…
+    </div>
+  </section>
+
+  <script>
+    import {
+      listarPapelera,
+      restaurarDePapelera,
+      eliminarPostDefinitivamente,
+      formatearFecha,
+      type PostBlog,
+    } from "../../../lib/admin";
+
+    const lista = document.getElementById("lista-papelera");
+
+    function escapeHtml(s: string): string {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function notificar(msg: string, tipo: "ok" | "error" | "info" = "info") {
+      const existing = document.getElementById("toast-notif");
+      if (existing) existing.remove();
+      const toast = document.createElement("div");
+      toast.id = "toast-notif";
+      const color = tipo === "ok" ? "bg-gold-400 text-night-950"
+                  : tipo === "error" ? "bg-wine-700 text-parchment-50"
+                  : "bg-night-900 border border-gold-400/30 text-parchment-100";
+      toast.className = `fixed bottom-6 right-6 z-[999] px-5 py-3 rounded-sm shadow-xl font-sans text-sm max-w-sm ${color}`;
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = "0"; setTimeout(() => toast.remove(), 400); }, 3500);
+    }
+
+    function confirmar(msg: string): Promise<boolean> {
+      return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.className = "fixed inset-0 z-[998] flex items-center justify-center bg-night-950/80 backdrop-blur-sm";
+        overlay.innerHTML = `
+          <div class="card-altar p-8 max-w-md mx-4 space-y-5">
+            <p class="font-serif text-base text-parchment-100 leading-relaxed">${msg}</p>
+            <div class="flex gap-3 justify-end">
+              <button id="conf-cancel" class="btn-ghost text-sm">Cancelar</button>
+              <button id="conf-ok" class="btn-gold text-sm">Confirmar</button>
+            </div>
+          </div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector("#conf-ok")?.addEventListener("click", () => { overlay.remove(); resolve(true); });
+        overlay.querySelector("#conf-cancel")?.addEventListener("click", () => { overlay.remove(); resolve(false); });
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+      });
+    }
+
+    function diasEnPapelera(iso: string): number {
+      return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+    }
+
+    async function cargar() {
+      const posts = await listarPapelera(200);
+      if (!lista) return;
+
+      if (posts.length === 0) {
+        lista.innerHTML = `
+          <div class="py-16 text-center">
+            <div class="text-2xl text-gold-400 mb-3 opacity-30">🗑</div>
+            <p class="text-parchment-300 font-serif italic">La papelera está vacía.</p>
+          </div>`;
+        return;
+      }
+
+      lista.innerHTML = posts.map((p: PostBlog) => {
+        const dias = p.eliminado_en ? diasEnPapelera(p.eliminado_en) : 0;
+        const diasRestantes = Math.max(0, 30 - dias);
+        return `
+          <div class="flex items-center justify-between gap-4 px-6 py-5 flex-wrap">
+            <div class="flex-1 min-w-0">
+              <div class="font-display text-parchment-50 mb-0.5">${escapeHtml(p.titulo)}</div>
+              <div class="text-xs text-parchment-500 font-mono">/${escapeHtml(p.slug)}</div>
+              <div class="text-[11px] text-wine-400 mt-1 uppercase tracking-widest">
+                En papelera hace ${dias} ${dias === 1 ? "día" : "días"} · quedan ${diasRestantes} días
+              </div>
+            </div>
+            <div class="flex gap-2 shrink-0">
+              <button
+                class="btn-restaurar btn-ghost text-xs"
+                data-id="${escapeHtml(p.id)}"
+                data-titulo="${escapeHtml(p.titulo)}"
+              >
+                Restaurar
+              </button>
+              <button
+                class="btn-eliminar text-[11px] uppercase tracking-widest text-wine-500 hover:text-wine-300 border border-wine-600/30 hover:border-wine-500/60 px-3 py-1.5 rounded-sm transition"
+                data-id="${escapeHtml(p.id)}"
+                data-titulo="${escapeHtml(p.titulo)}"
+              >
+                Eliminar definitivamente
+              </button>
+            </div>
+          </div>`;
+      }).join("");
+
+      // Restaurar
+      lista.querySelectorAll<HTMLButtonElement>(".btn-restaurar").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!await confirmar(`¿Restaurar "${btn.dataset.titulo}"? Volverá como borrador.`)) return;
+          const r = await restaurarDePapelera(btn.dataset.id!);
+          if (r.ok) { notificar("Post restaurado como borrador.", "ok"); await cargar(); }
+          else notificar(`Error: ${r.error}`, "error");
+        });
+      });
+
+      // Eliminar definitivamente
+      lista.querySelectorAll<HTMLButtonElement>(".btn-eliminar").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!await confirmar(`¿Eliminar definitivamente "${btn.dataset.titulo}"? Esta acción no se puede deshacer.`)) return;
+          const r = await eliminarPostDefinitivamente(btn.dataset.id!);
+          if (r.ok) { notificar("Post eliminado definitivamente.", "ok"); await cargar(); }
+          else notificar(`Error: ${r.error}`, "error");
+        });
+      });
+    }
+
+    cargar();
+  </script>
+</AdminLayout>

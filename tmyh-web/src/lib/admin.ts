@@ -105,6 +105,7 @@ export interface PostBlog {
   estado: "borrador" | "publicado" | "archivado";
   etiquetas: string[];
   publicado_en: string | null;
+  eliminado_en: string | null;
   creado_en: string;
   actualizado_en: string;
 }
@@ -117,18 +118,40 @@ export interface ResultadoGuardarPost {
   error?: string;
 }
 
-/** Lista todos los posts (admins ven borradores y archivados también). */
+/**
+ * Lista posts activos (no eliminados).
+ * Admins ven borradores y archivados; el filtro de papelera es aparte.
+ */
 export async function listarPosts(limite = 100): Promise<PostBlog[]> {
   const { data, error } = await supabase
     .from("posts")
     .select(
-      "id, slug, titulo, extracto, imagen_destacada, estado, etiquetas, publicado_en, creado_en, actualizado_en",
+      "id, slug, titulo, extracto, imagen_destacada, estado, etiquetas, publicado_en, eliminado_en, creado_en, actualizado_en",
     )
+    .is("eliminado_en", null)
     .order("creado_en", { ascending: false })
     .limit(limite);
 
   if (error) {
     console.error("[admin.listarPosts]", error);
+    return [];
+  }
+  return (data ?? []) as PostBlog[];
+}
+
+/** Lista posts en la papelera (eliminado_en IS NOT NULL). */
+export async function listarPapelera(limite = 100): Promise<PostBlog[]> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select(
+      "id, slug, titulo, extracto, estado, etiquetas, eliminado_en, creado_en",
+    )
+    .not("eliminado_en", "is", null)
+    .order("eliminado_en", { ascending: false })
+    .limit(limite);
+
+  if (error) {
+    console.error("[admin.listarPapelera]", error);
     return [];
   }
   return (data ?? []) as PostBlog[];
@@ -222,11 +245,44 @@ export async function guardarPost(
   return { ok: true, id: data?.id };
 }
 
-/** Elimina un post (soft delete: cambia estado a 'archivado'). */
+/** Archiva un post (oculto del blog pero recuperable). */
 export async function archivarPost(id: string): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase
     .from("posts")
     .update({ estado: "archivado" })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/** Mueve un post a la papelera (soft delete). */
+export async function moverAPapelera(id: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase
+    .rpc("mover_post_a_papelera", { p_post_id: id });
+
+  if (error) return { ok: false, error: error.message };
+  const r = data as any;
+  if (!r?.ok) return { ok: false, error: r?.error ?? "error_rpc" };
+  return { ok: true };
+}
+
+/** Restaura un post desde la papelera (vuelve a borrador). */
+export async function restaurarDePapelera(id: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase
+    .rpc("restaurar_post", { p_post_id: id });
+
+  if (error) return { ok: false, error: error.message };
+  const r = data as any;
+  if (!r?.ok) return { ok: false, error: r?.error ?? "error_rpc" };
+  return { ok: true };
+}
+
+/** Elimina definitivamente un post de la base de datos. Solo admins. */
+export async function eliminarPostDefinitivamente(id: string): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("posts")
+    .delete()
     .eq("id", id);
 
   if (error) return { ok: false, error: error.message };

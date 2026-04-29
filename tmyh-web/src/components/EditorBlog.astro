@@ -368,22 +368,70 @@ const {
             editor.chain().focus().redo().run();
             break;
           case "link": {
+            // Prompt personalizado inline
             const prevUrl = editor.getAttributes("link").href ?? "";
-            const url = window.prompt("URL del link:", prevUrl);
-            if (url === null) break;
-            if (url === "") {
+            const input = document.createElement("div");
+            input.className = "fixed inset-0 z-[998] flex items-center justify-center bg-night-950/80 backdrop-blur-sm";
+            input.innerHTML = `
+              <div class="card-altar p-6 max-w-sm w-full mx-4 space-y-4">
+                <p class="text-[11px] uppercase tracking-widest text-parchment-400">URL del link</p>
+                <input id="link-url-input" type="url" value="${prevUrl}"
+                  placeholder="https://..."
+                  class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-3 py-2 text-sm font-sans rounded-sm"/>
+                <div class="flex gap-2 justify-end">
+                  <button id="link-cancel" class="btn-ghost text-xs">Cancelar</button>
+                  <button id="link-remove" class="text-[11px] uppercase tracking-widest text-wine-400 hover:text-wine-300 px-3 py-1.5">Quitar link</button>
+                  <button id="link-ok" class="btn-gold text-xs">Aplicar</button>
+                </div>
+              </div>`;
+            document.body.appendChild(input);
+            const urlInput = input.querySelector("#link-url-input") as HTMLInputElement;
+            urlInput?.focus();
+            input.querySelector("#link-ok")?.addEventListener("click", () => {
+              const url = urlInput.value.trim();
+              if (url) editor.chain().focus().setLink({ href: url }).run();
+              input.remove();
+            });
+            input.querySelector("#link-remove")?.addEventListener("click", () => {
               editor.chain().focus().unsetLink().run();
-            } else {
-              editor.chain().focus().setLink({ href: url }).run();
-            }
+              input.remove();
+            });
+            input.querySelector("#link-cancel")?.addEventListener("click", () => input.remove());
+            urlInput?.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") { const url = urlInput.value.trim(); if (url) editor.chain().focus().setLink({ href: url }).run(); input.remove(); }
+              if (e.key === "Escape") input.remove();
+            });
             break;
           }
           case "image":
             imageInput?.click();
             break;
           case "youtube": {
-            const url = window.prompt("URL del video de YouTube:");
-            if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
+            const ytModal = document.createElement("div");
+            ytModal.className = "fixed inset-0 z-[998] flex items-center justify-center bg-night-950/80 backdrop-blur-sm";
+            ytModal.innerHTML = `
+              <div class="card-altar p-6 max-w-sm w-full mx-4 space-y-4">
+                <p class="text-[11px] uppercase tracking-widest text-parchment-400">URL del video de YouTube</p>
+                <input id="yt-url-input" type="url" placeholder="https://www.youtube.com/watch?v=..."
+                  class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-3 py-2 text-sm font-sans rounded-sm"/>
+                <div class="flex gap-2 justify-end">
+                  <button id="yt-cancel" class="btn-ghost text-xs">Cancelar</button>
+                  <button id="yt-ok" class="btn-gold text-xs">Insertar</button>
+                </div>
+              </div>`;
+            document.body.appendChild(ytModal);
+            const ytInput = ytModal.querySelector("#yt-url-input") as HTMLInputElement;
+            ytInput?.focus();
+            ytModal.querySelector("#yt-ok")?.addEventListener("click", () => {
+              const url = ytInput.value.trim();
+              if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
+              ytModal.remove();
+            });
+            ytModal.querySelector("#yt-cancel")?.addEventListener("click", () => ytModal.remove());
+            ytInput?.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") { const url = ytInput.value.trim(); if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run(); ytModal.remove(); }
+              if (e.key === "Escape") ytModal.remove();
+            });
             break;
           }
         }
@@ -405,7 +453,12 @@ const {
         .upload(path, file, { upsert: false, contentType: file.type });
 
       if (error) {
-        alert(`No se pudo subir la imagen: ${error.message}`);
+        // Toast en lugar de alert del navegador
+        const toast = document.createElement("div");
+        toast.className = "fixed bottom-6 right-6 z-[999] px-5 py-3 rounded-sm shadow-xl font-sans text-sm max-w-sm bg-wine-700 text-parchment-50";
+        toast.textContent = `No se pudo subir la imagen: ${error.message}`;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = "0"; setTimeout(() => toast.remove(), 400); }, 4000);
         return;
       }
 
