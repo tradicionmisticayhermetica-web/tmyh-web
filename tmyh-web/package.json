@@ -1,0 +1,21 @@
+{
+  "name": "tmyh-web",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sitio de Tradicion Mistica y Hermetica (Emanuel Mari) - Astro + TS + Tailwind",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.2",
+    "@supabase/supabase-js": "^2.104.1",
+    "@tailwindcss/vite": "^4.1.14",
+    "astro": "^5.14.1",
+    "tailwindcss": "^4.1.14"
+  }
+}

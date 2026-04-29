@@ -1,0 +1,15 @@
+---
+/**
+ * Ornamento divisor con un símbolo alquímico central.
+ * Se usa entre secciones para separar sin romper el tono.
+ */
+interface Props {
+  symbol?: string;
+  class?: string;
+}
+const { symbol = "⚛", class: className = "" } = Astro.props;
+---
+
+<div class:list={["ornament my-12", className]}>
+  <span class="text-lg text-[color:var(--color-gold-400)]">{symbol}</span>
+</div>

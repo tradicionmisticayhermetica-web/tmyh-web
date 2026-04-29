@@ -1,0 +1,172 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Dashboard" active="dashboard">
+  <header class="mb-8">
+    <p class="title-eyebrow">Panel</p>
+    <h1 class="font-display text-3xl text-parchment-50 mt-3">Buen día</h1>
+    <p class="text-parchment-300 mt-2 font-serif italic">
+      Resumen de actividad. Las respuestas a los visitantes se gestionan desde
+      Gmail (al hacer "Reply" sale a la dirección del visitante automáticamente).
+    </p>
+  </header>
+
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+    <div class="card-altar p-5">
+      <div class="text-[10px] uppercase tracking-widest text-parchment-400">
+        Mensajes
+      </div>
+      <div
+        class="font-display text-3xl text-gold-300 mt-2"
+        id="kpi-total"
+      >
+        —
+      </div>
+      <div class="text-xs text-parchment-400 mt-1">total recibidos</div>
+    </div>
+    <div class="card-altar p-5">
+      <div class="text-[10px] uppercase tracking-widest text-parchment-400">
+        Última semana
+      </div>
+      <div
+        class="font-display text-3xl text-parchment-100 mt-2"
+        id="kpi-semana"
+      >
+        —
+      </div>
+      <div class="text-xs text-parchment-400 mt-1">consultas nuevas</div>
+    </div>
+    <div class="card-altar p-5">
+      <div class="text-[10px] uppercase tracking-widest text-parchment-400">
+        Último mes
+      </div>
+      <div
+        class="font-display text-3xl text-parchment-100 mt-2"
+        id="kpi-mes"
+      >
+        —
+      </div>
+      <div class="text-xs text-parchment-400 mt-1">consultas nuevas</div>
+    </div>
+    <div class="card-altar p-5">
+      <div class="text-[10px] uppercase tracking-widest text-parchment-400">
+        Newsletter
+      </div>
+      <div
+        class="font-display text-3xl text-parchment-100 mt-2"
+        id="kpi-newsletter"
+      >
+        —
+      </div>
+      <div class="text-xs text-parchment-400 mt-1">suscriptos / contactos</div>
+    </div>
+  </section>
+
+  <section class="card-altar p-7 lg:p-8">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <p class="title-eyebrow">Bandeja</p>
+        <h2 class="font-display text-xl text-parchment-50 mt-2">
+          Últimos mensajes recibidos
+        </h2>
+      </div>
+      <a
+        href="/area-reservada/mensajes"
+        class="text-xs uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition"
+      >
+        Ver todos →
+      </a>
+    </div>
+
+    <div id="lista-recientes" class="divide-y divide-gold-400/10">
+      <div class="py-10 text-center text-parchment-400 text-sm font-serif italic">
+        Cargando…
+      </div>
+    </div>
+  </section>
+
+  <script>
+    import {
+      obtenerResumen,
+      listarMensajes,
+      formatearFecha,
+      nombreCompleto,
+    } from "../../lib/admin";
+
+    const lista = document.getElementById("lista-recientes");
+
+    function escapeHtml(s: string): string {
+      return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function setKpi(id: string, value: number | string) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(value);
+    }
+
+    (async () => {
+      const r = await obtenerResumen();
+      if (r) {
+        setKpi("kpi-total", r.total_mensajes);
+        setKpi("kpi-semana", r.mensajes_ultima_semana);
+        setKpi("kpi-mes", r.mensajes_ultimo_mes);
+        setKpi(
+          "kpi-newsletter",
+          `${r.suscriptores_newsletter} / ${r.total_contactos}`,
+        );
+      }
+
+      const recientes = await listarMensajes(5);
+      if (!lista) return;
+
+      if (recientes.length === 0) {
+        lista.innerHTML = `
+          <div class="py-12 text-center">
+            <div class="text-2xl text-gold-400 mb-3">☉</div>
+            <p class="text-parchment-300 font-serif italic">
+              Todavía no llegó ninguna consulta.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      lista.innerHTML = recientes
+        .map(
+          (m) => `
+        <a
+          href="/area-reservada/mensaje?id=${m.id}"
+          class="block py-4 hover:bg-gold-400/5 transition px-3 -mx-3 rounded-sm"
+        >
+          <div class="flex items-baseline justify-between gap-3">
+            <div class="font-display text-parchment-50">${escapeHtml(nombreCompleto(m))}</div>
+            <div class="text-[11px] text-parchment-400 uppercase tracking-widest whitespace-nowrap">
+              ${escapeHtml(formatearFecha(m.creado_en))}
+            </div>
+          </div>
+          ${m.curso_interes ? `<div class="text-xs text-gold-300 mt-1">${escapeHtml(m.curso_interes)}</div>` : ""}
+          <p class="text-sm text-parchment-300 mt-2 font-serif line-clamp-2">
+            ${escapeHtml(m.mensaje)}
+          </p>
+        </a>
+      `,
+        )
+        .join("");
+    })();
+  </script>
+</AdminLayout>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

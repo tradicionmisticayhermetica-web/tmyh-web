@@ -1,0 +1,190 @@
+---
+import "../styles/global.css";
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07060d" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Acceso · Tradición Mística y Hermética</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap"
+    />
+  </head>
+
+  <body class="min-h-screen flex flex-col">
+    <main class="flex-1 flex items-center justify-center px-6 py-12 relative">
+      <div class="stars-bg" aria-hidden="true"></div>
+
+      <div class="relative w-full max-w-md">
+        <div class="text-center mb-8">
+          <a
+            href="/"
+            class="inline-flex items-center gap-3 text-parchment-300 hover:text-gold-300 transition"
+          >
+            <span class="text-xl text-gold-400">☉</span>
+            <span class="font-display text-sm tracking-widest"
+              >Tradición Mística y Hermética</span
+            >
+          </a>
+        </div>
+
+        <div class="card-altar p-8 lg:p-10">
+          <div class="text-center mb-8">
+            <div class="title-eyebrow mb-4">Acceso</div>
+            <h1 class="font-display text-2xl text-parchment-50 mt-2">
+              Área Reservada
+            </h1>
+            <p class="text-sm text-parchment-300 mt-3 font-serif italic">
+              Ingrese sus credenciales para continuar
+            </p>
+          </div>
+
+          <form id="form-login" class="space-y-5" novalidate>
+            <div>
+              <label
+                for="email"
+                class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2"
+                >Correo</label
+              >
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autocomplete="email"
+                class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-4 py-2.5 text-sm font-sans transition rounded-sm"
+              />
+            </div>
+
+            <div>
+              <label
+                for="password"
+                class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2"
+                >Contraseña</label
+              >
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                autocomplete="current-password"
+                class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-4 py-2.5 text-sm font-sans transition rounded-sm"
+              />
+            </div>
+
+            <div
+              id="login-status"
+              class="hidden text-sm font-serif italic px-1"
+              role="status"
+              aria-live="polite"
+            >
+            </div>
+
+            <button
+              id="btn-login"
+              type="submit"
+              class="btn-gold w-full justify-center"
+            >
+              Ingresar
+            </button>
+          </form>
+
+          <p class="text-center text-xs text-parchment-400 mt-5">
+            <a href="/recuperar-password" class="link-subtle"
+              >¿Olvidaste tu contraseña?</a
+            >
+          </p>
+
+          <div
+            class="ornament my-6"
+            aria-hidden="true"
+            style="opacity:0.4"
+          >
+            <span>☉</span>
+          </div>
+
+          <p class="text-center text-xs text-parchment-400">
+            <a href="/" class="link-subtle">← Volver al sitio</a>
+          </p>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      import { iniciarSesion, obtenerPerfilActual } from "../lib/auth";
+
+      // Si ya esta logueado, mandarlo al panel directo
+      const perfil = await obtenerPerfilActual();
+      if (perfil && perfil.activo && (perfil.rol === "admin" || perfil.rol === "super_admin")) {
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get("next");
+        window.location.href = next && next.startsWith("/") ? next : "/area-reservada";
+      }
+
+      const form = document.getElementById("form-login") as HTMLFormElement | null;
+      const status = document.getElementById("login-status");
+      const btn = document.getElementById("btn-login") as HTMLButtonElement | null;
+
+      function mostrarStatus(msg: string, tipo: "ok" | "error") {
+        if (!status) return;
+        status.textContent = msg;
+        status.classList.remove("hidden", "text-gold-300", "text-wine-600");
+        status.classList.add(
+          tipo === "ok" ? "text-gold-300" : "text-wine-600",
+        );
+      }
+
+      form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!btn) return;
+
+        const fd = new FormData(form);
+        const email = String(fd.get("email") ?? "").trim();
+        const password = String(fd.get("password") ?? "");
+
+        if (!email || !password) {
+          mostrarStatus("Completá email y contraseña.", "error");
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "Verificando...";
+        if (status) status.classList.add("hidden");
+
+        const r = await iniciarSesion(email, password);
+
+        if (r.ok) {
+          mostrarStatus("Acceso concedido. Redirigiendo…", "ok");
+          const params = new URLSearchParams(window.location.search);
+          const next = params.get("next");
+          setTimeout(() => {
+            window.location.href =
+              next && next.startsWith("/") ? next : "/area-reservada";
+          }, 400);
+          return;
+        }
+
+        const mensajes: Record<string, string> = {
+          credenciales_invalidas: "Email o contraseña incorrectos.",
+          email_no_confirmado: "Tenés que confirmar el email antes de ingresar.",
+          sin_permisos: "Esta cuenta no tiene acceso al panel.",
+          perfil_inactivo: "Tu cuenta está desactivada. Contactá al administrador.",
+          red: "No pude conectar con el servidor. Probá de nuevo.",
+          config: "Configuración faltante. Avisá al administrador.",
+        };
+        mostrarStatus(mensajes[r.error ?? ""] ?? "Algo salió mal.", "error");
+        btn.disabled = false;
+        btn.textContent = "Ingresar";
+      });
+    </script>
+  </body>
+</html>

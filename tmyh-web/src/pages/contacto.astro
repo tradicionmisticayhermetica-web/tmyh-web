@@ -1,0 +1,251 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Ornament from "../components/Ornament.astro";
+import { cursos } from "../data/cursos";
+---
+
+<BaseLayout title="Contacto" description="Escribinos para inscribirte en un curso, pedir información o presentarte.">
+  <section class="py-24">
+    <div class="container-prose max-w-2xl">
+      <div class="text-center mb-12">
+        <span class="title-eyebrow">Hablemos</span>
+        <h1 class="text-4xl md:text-5xl font-display mt-6 mb-6 text-balance">
+          Contacto
+        </h1>
+        <p class="text-lg font-serif text-parchment-200 leading-relaxed">
+          Contanos qué estás buscando. Respondemos por mail en 48hs hábiles.
+        </p>
+      </div>
+
+      <Ornament symbol="✦" />
+
+      <form id="contact-form" class="card-altar p-8 md:p-10 space-y-6" novalidate>
+        {/* Honeypot anti-bots: campo escondido que un humano nunca completa.
+            Si llega con valor, lo descartamos silenciosamente en el cliente
+            (no vale la pena ni mandarlo a la RPC). */}
+        <div class="absolute left-[-9999px] w-px h-px overflow-hidden" aria-hidden="true">
+          <label for="website">No llenar</label>
+          <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <label for="nombre" class="block text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] mb-2">
+              Nombre *
+            </label>
+            <input
+              id="nombre"
+              name="nombre"
+              type="text"
+              required
+              autocomplete="given-name"
+              class="w-full bg-[color:var(--color-night-800)] border border-[rgb(230_196_100_/_0.15)] rounded-sm px-4 py-3 text-parchment-100 focus:border-[color:var(--color-gold-400)] focus:outline-none transition"
+            />
+          </div>
+          <div>
+            <label for="apellido" class="block text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] mb-2">
+              Apellido
+            </label>
+            <input
+              id="apellido"
+              name="apellido"
+              type="text"
+              autocomplete="family-name"
+              class="w-full bg-[color:var(--color-night-800)] border border-[rgb(230_196_100_/_0.15)] rounded-sm px-4 py-3 text-parchment-100 focus:border-[color:var(--color-gold-400)] focus:outline-none transition"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="email" class="block text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] mb-2">
+            Email *
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autocomplete="email"
+            class="w-full bg-[color:var(--color-night-800)] border border-[rgb(230_196_100_/_0.15)] rounded-sm px-4 py-3 text-parchment-100 focus:border-[color:var(--color-gold-400)] focus:outline-none transition"
+          />
+        </div>
+
+        <div>
+          <label for="telefono" class="block text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] mb-2">
+            Teléfono <span class="text-parchment-400 normal-case tracking-normal text-[0.7rem]">(opcional)</span>
+          </label>
+          <input
+            id="telefono"
+            name="telefono"
+            type="tel"
+            autocomplete="tel"
+            placeholder="+54 11 ..."
+            class="w-full bg-[color:var(--color-night-800)] border border-[rgb(230_196_100_/_0.15)] rounded-sm px-4 py-3 text-parchment-100 focus:border-[color:var(--color-gold-400)] focus:outline-none transition"
+          />
+        </div>
+
+        <div>
+          <label for="curso_interes" class="block text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] mb-2">
+            Curso de interés
+          </label>
+          <select
+            id="curso_interes"
+            name="curso_interes"
+            class="w-full bg-[color:var(--color-night-800)] border border-[rgb(230_196_100_/_0.15)] rounded-sm px-4 py-3 text-parchment-100 focus:border-[color:var(--color-gold-400)] focus:outline-none transition"
+          >
+            <option value="">Elegir...</option>
+            {cursos.map((c) => <option value={c.titulo}>{c.titulo}</option>)}
+            <option value="Consulta general">Consulta general</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="mensaje" class="block text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] mb-2">
+            Mensaje *
+          </label>
+          <textarea
+            id="mensaje"
+            name="mensaje"
+            rows="5"
+            required
+            class="w-full bg-[color:var(--color-night-800)] border border-[rgb(230_196_100_/_0.15)] rounded-sm px-4 py-3 text-parchment-100 focus:border-[color:var(--color-gold-400)] focus:outline-none transition resize-y"
+          ></textarea>
+        </div>
+
+        <label class="flex items-start gap-3 text-sm text-parchment-200">
+          <input
+            type="checkbox"
+            name="newsletter_optin"
+            class="mt-1 accent-[color:var(--color-gold-400)]"
+          />
+          <span>
+            Quiero recibir novedades por mail (cursos, fechas, contenidos).
+          </span>
+        </label>
+
+        <button type="submit" class="btn-gold w-full justify-center" id="submit-btn">
+          Enviar mensaje
+        </button>
+
+        <p id="form-status" class="text-center text-sm" aria-live="polite"></p>
+      </form>
+
+      <p class="text-center text-sm text-parchment-300 mt-10">
+        También podés escribirnos directo a <a href="mailto:tradicionmisticayhermetica@gmail.com" class="link-subtle">tradicionmisticayhermetica@gmail.com</a>.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  // Submit real del formulario de contacto.
+  // Llama a la RPC `enviar_mensaje_contacto` de Supabase via el cliente
+  // browser (anon key). Valida honeypot, desactiva el boton mientras envia,
+  // y muestra feedback en #form-status.
+  import { enviarMensajeContacto } from "../lib/supabase";
+
+  const form = document.getElementById("contact-form") as HTMLFormElement | null;
+  const status = document.getElementById("form-status") as HTMLParagraphElement | null;
+  const btn = document.getElementById("submit-btn") as HTMLButtonElement | null;
+
+  /** Mapa de codigos de error de la RPC a mensajes humanos en espanol. */
+  const MENSAJES_ERROR: Record<string, string> = {
+    nombre_invalido: "Por favor, indicá tu nombre.",
+    email_vacio: "Necesitamos un email para responderte.",
+    email_invalido: "El email no parece válido. Revisá el formato.",
+    mensaje_muy_corto: "Contanos un poco más en el mensaje.",
+    mensaje_muy_largo: "El mensaje es demasiado largo. Resumilo un poco.",
+    limite_diario: "Ya recibimos varios mensajes con este email hoy. Escribinos directo a tradicionmisticayhermetica@gmail.com si es urgente.",
+    limite_ip: "Demasiadas solicitudes desde esta conexión. Probá más tarde.",
+    error_interno: "Algo no funcionó de nuestro lado. Escribinos directo a tradicionmisticayhermetica@gmail.com.",
+    red: "No pudimos enviar el mensaje. Revisá tu conexión y probá de nuevo.",
+    config: "El formulario aún no está configurado. Escribinos directo a tradicionmisticayhermetica@gmail.com.",
+  };
+
+  function setStatus(texto: string, tipo: "ok" | "error" | "info") {
+    if (!status) return;
+    status.textContent = texto;
+    status.style.color =
+      tipo === "ok"
+        ? "#e6c464"          // dorado claro
+        : tipo === "error"
+          ? "#d97a6c"        // terracota suave
+          : "#b8a984";       // pergamino atenuado
+  }
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!btn) return;
+
+      const fd = new FormData(form);
+
+      // Honeypot: si vino con valor, es un bot. Fingimos exito sin enviar
+      // nada para no darle pistas.
+      if ((fd.get("website") as string)?.trim()) {
+        setStatus("Gracias. Recibimos tu mensaje.", "ok");
+        btn.disabled = true;
+        btn.textContent = "Enviado";
+        return;
+      }
+
+      const payload = {
+        nombre: (fd.get("nombre") as string)?.trim() ?? "",
+        apellido: (fd.get("apellido") as string)?.trim() || undefined,
+        email: (fd.get("email") as string)?.trim() ?? "",
+        telefono: (fd.get("telefono") as string)?.trim() || undefined,
+        curso_interes: (fd.get("curso_interes") as string)?.trim() || undefined,
+        mensaje: (fd.get("mensaje") as string)?.trim() ?? "",
+        newsletter_optin: fd.get("newsletter_optin") === "on",
+        user_agent: navigator.userAgent,
+      };
+
+      // Validaciones minimas del lado cliente antes de ir al servidor
+      // (UX: feedback instantaneo). La RPC igual valida en servidor.
+      if (payload.nombre.length < 2) {
+        setStatus(MENSAJES_ERROR.nombre_invalido, "error");
+        return;
+      }
+      if (!payload.email.includes("@")) {
+        setStatus(MENSAJES_ERROR.email_invalido, "error");
+        return;
+      }
+      if (payload.mensaje.length < 5) {
+        setStatus(MENSAJES_ERROR.mensaje_muy_corto, "error");
+        return;
+      }
+
+      btn.disabled = true;
+      const textoOriginal = btn.textContent ?? "Enviar mensaje";
+      btn.textContent = "Enviando…";
+      setStatus("Enviando tu mensaje...", "info");
+
+      const resp = await enviarMensajeContacto(payload);
+
+      if (resp.ok) {
+        setStatus(
+          "Gracias. Recibimos tu mensaje y te vamos a responder en breve.",
+          "ok",
+        );
+        btn.textContent = "Enviado";
+        form.reset();
+        // Despues de 6s volvemos el form a su estado inicial: boton
+        // habilitado y status vacio. Asi el usuario puede mandar otra
+        // consulta sin tener que refrescar. El rate-limit del SQL
+        // (5 mensajes/email/24h) cubre cualquier abuso.
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = textoOriginal;
+          setStatus("", "info");
+        }, 6000);
+      } else {
+        setStatus(
+          MENSAJES_ERROR[resp.error ?? "red"] ?? MENSAJES_ERROR.red,
+          "error",
+        );
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+      }
+    });
+  }
+</script>

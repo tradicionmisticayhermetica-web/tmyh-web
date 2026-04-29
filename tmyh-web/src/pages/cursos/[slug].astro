@@ -1,0 +1,754 @@
+---
+import { Image } from "astro:assets";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Ornament from "../../components/Ornament.astro";
+import { cursos, esTemaConSubitems } from "../../data/cursos";
+import { resolverImagen } from "../../lib/images";
+
+export function getStaticPaths() {
+  return cursos.map((curso) => ({
+    params: { slug: curso.slug },
+    props: { curso },
+  }));
+}
+
+const { curso } = Astro.props;
+const imagenCurso = await resolverImagen(curso.imagen);
+
+const estadoLabel =
+  curso.estado === "proximo"
+    ? "Próximamente"
+    : curso.estado === "historico"
+      ? "Edición cerrada"
+      : "Inscripción abierta";
+
+const whatsappUrl = curso.inscripcion?.whatsapp
+  ? `https://wa.me/${curso.inscripcion.whatsapp}`
+  : null;
+
+// Formato visual para números AR: "5491165008996" → "+54 9 11 6500 8996"
+// (país · 9 · cód. área · primeros 4 · últimos 4)
+function formatWhatsappAR(raw: string): string {
+  if (raw.length !== 13 || !raw.startsWith("549")) return `+${raw}`;
+  return `+${raw.slice(0, 2)} ${raw.slice(2, 3)} ${raw.slice(3, 5)} ${raw.slice(5, 9)} ${raw.slice(9)}`;
+}
+
+const whatsappDisplay = curso.inscripcion?.whatsapp
+  ? formatWhatsappAR(curso.inscripcion.whatsapp)
+  : null;
+
+/**
+ * Construye la URL de PayPal.me con el monto específico del curso.
+ *
+ * PayPal.me admite `paypal.me/<user>/<monto><moneda>` y muestra ese monto
+ * ya precargado al comprador. Así evitamos cobrar un precio distinto al
+ * publicado.
+ *
+ * Toma el número de `precio.internacionalUSD` (ej. "179 USD") y lo sanea.
+ */
+function construirPaypalUrl(
+  user: string | undefined,
+  montoUSD: string | undefined,
+): string | null {
+  if (!user) return null;
+  if (!montoUSD) return `https://paypal.me/${user}`;
+  const numero = montoUSD.replace(/[^\d.]/g, "");
+  if (!numero) return `https://paypal.me/${user}`;
+  return `https://paypal.me/${user}/${numero}USD`;
+}
+
+const paypalUrl = construirPaypalUrl(
+  curso.inscripcion?.paypalUser,
+  curso.precio?.internacionalUSD,
+);
+---
+
+<BaseLayout title={curso.titulo} description={curso.descripcionCorta}>
+  {/* ====================================================
+        HERO del curso
+      ==================================================== */}
+  <section class="relative py-24 md:py-32 overflow-hidden">
+    <div class="stars-bg"></div>
+    <div class="container-prose relative z-10 max-w-4xl">
+      <a
+        href="/cursos"
+        class="inline-flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-parchment-300 hover:text-[color:var(--color-gold-300)] mb-8"
+      >
+        ← Todos los cursos
+      </a>
+
+      <div class="flex items-start gap-6 flex-wrap">
+        <div class="text-7xl md:text-8xl text-[color:var(--color-gold-400)] leading-none">
+          {curso.simbolo}
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <span class="title-eyebrow">{estadoLabel}</span>
+          <h1 class="text-4xl md:text-6xl font-display mt-4 mb-3 text-balance">
+            {curso.titulo}
+          </h1>
+          {
+            curso.subtitulo && (
+              <p class="text-lg font-serif italic text-[color:var(--color-gold-300)] mb-6">
+                {curso.subtitulo}
+              </p>
+            )
+          }
+
+          <div class="flex flex-wrap gap-x-8 gap-y-3 text-sm mt-4">
+            <div>
+              <span class="text-parchment-400 text-xs tracking-wider uppercase block mb-1">Clases</span>
+              <span class="text-parchment-100">{curso.clases}</span>
+            </div>
+            {
+              curso.duracion && (
+                <div>
+                  <span class="text-parchment-400 text-xs tracking-wider uppercase block mb-1">Duración</span>
+                  <span class="text-parchment-100">{curso.duracion}</span>
+                </div>
+              )
+            }
+            <div>
+              <span class="text-parchment-400 text-xs tracking-wider uppercase block mb-1">Modalidad</span>
+              <span class="text-parchment-100">{curso.modalidad}</span>
+            </div>
+            <div>
+              <span class="text-parchment-400 text-xs tracking-wider uppercase block mb-1">Nivel</span>
+              <span class="text-parchment-100">{curso.nivel}</span>
+            </div>
+            {
+              curso.inicio && (
+                <div class="basis-full">
+                  <span class="text-parchment-400 text-xs tracking-wider uppercase block mb-1">Inicio</span>
+                  <span class="text-parchment-100">{curso.inicio}</span>
+                </div>
+              )
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ====================================================
+        Imagen evocativa del curso (antes del ornamento)
+      ==================================================== */}
+  {
+    imagenCurso && (
+      <section class="pb-2 md:pb-4">
+        <div class="container-prose max-w-4xl">
+          <figure class="max-w-sm md:max-w-md mx-auto">
+            <Image
+              src={imagenCurso}
+              alt={curso.imagenAlt ?? curso.titulo}
+              widths={[320, 480, 720, 1200]}
+              sizes="(min-width: 768px) 448px, min(90vw, 384px)"
+              class="img-altar w-full h-auto"
+              loading="lazy"
+            />
+            {curso.imagenAlt && (
+              <figcaption class="mt-3 text-center text-[11px] italic text-parchment-400 font-serif leading-relaxed">
+                {curso.imagenAlt}
+              </figcaption>
+            )}
+          </figure>
+        </div>
+      </section>
+    )
+  }
+
+  <Ornament symbol="✦" />
+
+  {/* ====================================================
+        Descripción + aside de inscripción
+      ==================================================== */}
+  <section class="py-16">
+    <div class="container-prose max-w-4xl">
+      <div class="grid md:grid-cols-[2fr_1fr] gap-12">
+        <div>
+          <span class="title-eyebrow">Sobre este curso</span>
+          <div class="mt-6 space-y-5 text-lg font-serif leading-relaxed text-parchment-100">
+            {curso.descripcionLarga.map((parrafo) => <p>{parrafo}</p>)}
+          </div>
+        </div>
+
+        <aside class="card-altar p-8 h-fit md:sticky md:top-28">
+          <h3
+            class="text-xs tracking-[0.25em] uppercase text-[color:var(--color-gold-400)] mb-4 pb-3 border-b border-[rgb(230_196_100_/_0.15)]"
+          >
+            Inscripción
+          </h3>
+
+          {
+            curso.estado === "historico" ? (
+              <>
+                <p class="text-sm text-parchment-200 leading-relaxed mb-6">
+                  Este programa ya se dictó. Si te interesa la temática, escribinos
+                  y te avisamos cuando abramos una nueva edición.
+                </p>
+                <a href="/contacto" class="btn-gold w-full justify-center">
+                  Avisarme si vuelve
+                </a>
+              </>
+            ) : curso.estado === "proximo" ? (
+              <>
+                <p class="text-sm text-parchment-200 leading-relaxed mb-6">
+                  Este curso está en preparación. Dejanos tu mail y te escribimos
+                  cuando se abra la inscripción.
+                </p>
+                <a href="/contacto" class="btn-gold w-full justify-center">
+                  Reservar lugar
+                </a>
+              </>
+            ) : (
+              <>
+                {
+                  curso.precio ? (
+                    <div class="mb-6 space-y-4 text-sm">
+                      {curso.precio.argEfectivo && (
+                        <div>
+                          <span class="text-parchment-400 text-xs tracking-wider uppercase block mb-1">
+                            Argentina
+                          </span>
+                          <span class="text-parchment-50 font-display text-xl">
+                            {curso.precio.argEfectivo}
+                          </span>
+                          <span class="text-parchment-300 text-xs block">
+                            Efectivo / MercadoPago / Tarjeta
+                          </span>
+                        </div>
+                      )}
+                      {curso.precio.argTransferencia && (
+                        <div>
+                          <span class="text-parchment-400 text-xs tracking-wider uppercase block mb-1">
+                            Transferencia (10% OFF)
+                          </span>
+                          <span class="text-[color:var(--color-gold-300)] font-display text-xl">
+                            {curso.precio.argTransferencia}
+                          </span>
+                        </div>
+                      )}
+                      {curso.precio.internacionalUSD && (
+                        <div>
+                          <span class="text-parchment-400 text-xs tracking-wider uppercase block mb-1">
+                            Internacional
+                          </span>
+                          <span class="text-parchment-50 font-display text-xl">
+                            {curso.precio.internacionalUSD}
+                          </span>
+                          <span class="text-parchment-300 text-xs block">
+                            PayPal · Payoneer · Western Union · Wise
+                          </span>
+                        </div>
+                      )}
+                      {curso.precio.nota && (
+                        <p class="text-xs text-parchment-300 italic leading-relaxed pt-2 border-t border-[rgb(230_196_100_/_0.1)]">
+                          {curso.precio.nota}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p class="text-sm text-parchment-200 leading-relaxed mb-6">
+                      Las inscripciones se gestionan por mail. Escribinos y te
+                      contamos todos los detalles.
+                    </p>
+                  )
+                }
+
+                <a href="#inscripcion" class="btn-gold w-full justify-center">
+                  Cómo inscribirse
+                </a>
+                {curso.programaPdf && (
+                  <a
+                    href={`/assets/${curso.programaPdf}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn-ghost w-full justify-center mt-3"
+                  >
+                    ↓ Descargar programa
+                  </a>
+                )}
+              </>
+            )
+          }
+        </aside>
+      </div>
+
+      {/* ====================================================
+            Temario
+          ==================================================== */}
+      <div class="mt-16">
+        <span class="title-eyebrow">Programa</span>
+        <h2 class="text-3xl font-display mt-4 mb-8">Lo que vamos a recorrer</h2>
+
+        {
+          curso.temas.some((t) => esTemaConSubitems(t)) ? (
+            <div class="space-y-8">
+              {curso.temas.map((tema, i) => {
+                if (esTemaConSubitems(tema)) {
+                  return (
+                    <div class="card-altar p-6 md:p-8">
+                      <h3 class="font-display text-xl text-[color:var(--color-gold-300)] mb-4 pb-3 border-b border-[rgb(230_196_100_/_0.1)]">
+                        {tema.titulo}
+                      </h3>
+                      <ul class="space-y-3">
+                        {tema.items.map((item) => (
+                          <li class="flex gap-3 text-parchment-100 font-serif leading-relaxed">
+                            <span class="text-[color:var(--color-gold-500)] mt-1.5 text-xs">
+                              ◆
+                            </span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                }
+                return (
+                  <div class="card-altar p-6 md:p-8">
+                    <h3 class="font-display text-xl text-parchment-100">
+                      {String(i + 1).padStart(2, "0")}. {tema}
+                    </h3>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <ol class="space-y-0">
+              {curso.temas.map((tema, i) => (
+                <li class="flex gap-5 py-5 border-b border-[rgb(230_196_100_/_0.08)] last:border-b-0">
+                  <span class="font-display text-2xl text-[color:var(--color-gold-500)] w-10 shrink-0">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span class="text-lg font-serif text-parchment-100 pt-1">
+                    {typeof tema === "string" ? tema : tema.titulo}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )
+        }
+      </div>
+
+      {/* ====================================================
+            Datos de inscripción detallados (solo activos con precios)
+          ==================================================== */}
+      {
+        curso.estado === "activo" && curso.inscripcion && (
+          <div id="inscripcion" class="mt-20 scroll-mt-28">
+            <Ornament symbol="☉" />
+
+            <div class="text-center mb-12">
+              <span class="title-eyebrow">Inscripción</span>
+              <h2 class="text-3xl md:text-4xl font-display mt-4 mb-4">
+                Cómo reservar tu lugar
+              </h2>
+              <p class="text-lg md:text-xl font-serif text-parchment-200 max-w-2xl mx-auto leading-relaxed">
+                Una vez realizado el pago, enviá el comprobante a{" "}
+                <a
+                  href={`mailto:${curso.inscripcion.email}`}
+                  class="link-subtle text-[color:var(--color-gold-300)]"
+                >
+                  {curso.inscripcion.email}
+                </a>{" "}
+                con tu nombre completo, teléfono y nacionalidad. Te enviamos el
+                acceso al grupo privado y al aula virtual.
+              </p>
+            </div>
+
+            {/* Aviso sobre fluctuaciones cambiarias en MercadoPago */}
+            <div
+              class="alert-cambio mb-10 bg-[rgb(230_196_100_/_0.04)] border border-l-2 border-l-[color:var(--color-gold-400)] border-y-[rgb(230_196_100_/_0.08)] border-r-[rgb(230_196_100_/_0.08)] px-7 py-7 md:px-10 md:py-9 font-serif text-parchment-100"
+              role="note"
+            >
+              <p
+                class="text-[11px] tracking-[0.25em] uppercase text-[color:var(--color-gold-300)] mb-4 font-sans"
+              >
+                Antes de pagar
+              </p>
+              <p class="text-lg md:text-xl leading-[1.65] mb-5">
+                Por las fluctuaciones cambiarias, el monto cargado en el link de
+                MercadoPago puede no coincidir exactamente con el precio
+                publicado del curso. Verificá que coincida antes de confirmar el
+                pago.
+              </p>
+              <p class="text-lg md:text-xl leading-[1.65] mb-5">
+                Si querés acceder al
+                <strong class="text-parchment-50 font-medium"
+                  >descuento por transferencia</strong
+                >, usá el Alias o CBU.
+              </p>
+              <p class="text-base md:text-lg leading-[1.7] italic text-parchment-300">
+                Ante cualquier diferencia, escribinos antes de pagar y lo
+                resolvemos.
+              </p>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+              {/* Argentina */}
+              <div class="card-altar p-8 md:p-10">
+                <div class="flex items-center gap-3 mb-7">
+                  <span class="text-2xl">🇦🇷</span>
+                  <h3 class="font-display text-2xl text-[color:var(--color-gold-300)]">
+                    Argentina
+                  </h3>
+                </div>
+
+                {curso.precio?.argEfectivo && (
+                  <div class="mb-7">
+                    <span class="text-[11px] tracking-[0.2em] uppercase text-parchment-400 block mb-2">
+                      MercadoPago / Efectivo / Tarjeta
+                    </span>
+                    <p class="text-parchment-100 font-display text-3xl mb-3">
+                      {curso.precio.argEfectivo}
+                    </p>
+                    {curso.inscripcion.linkMercadoPago ? (
+                      <a
+                        href={curso.inscripcion.linkMercadoPago}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-base link-subtle text-[color:var(--color-gold-300)]"
+                      >
+                        Pagar con MercadoPago →
+                      </a>
+                    ) : (
+                      <p class="text-base text-parchment-300 italic leading-relaxed">
+                        Escribinos por WhatsApp o email y te pasamos el link
+                        de pago de MercadoPago con el monto exacto.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {curso.precio?.argTransferencia && (
+                  <div class="pt-7 border-t border-[rgb(230_196_100_/_0.1)] space-y-3">
+                    <span class="text-[11px] tracking-[0.2em] uppercase text-parchment-400 block mb-2">
+                      Transferencia bancaria (10% OFF)
+                    </span>
+                    <p class="text-[color:var(--color-gold-300)] font-display text-3xl mb-4">
+                      {curso.precio.argTransferencia}
+                    </p>
+                    <dl class="text-base space-y-3.5 text-parchment-100">
+                      {curso.inscripcion.banco && (
+                        <div class="flex justify-between gap-4 items-center">
+                          <dt class="text-parchment-400 text-sm uppercase tracking-wider">Banco</dt>
+                          <dd class="text-right text-base">{curso.inscripcion.banco}</dd>
+                        </div>
+                      )}
+                      {curso.inscripcion.cbu && (
+                        <div class="flex justify-between gap-3 items-center">
+                          <dt class="text-parchment-400 text-sm uppercase tracking-wider">CBU</dt>
+                          <dd class="flex items-center gap-2">
+                            <span class="font-mono text-sm md:text-base select-all">{curso.inscripcion.cbu}</span>
+                            <button
+                              type="button"
+                              class="copy-btn"
+                              data-copy={curso.inscripcion.cbu}
+                              data-label="CBU"
+                              aria-label="Copiar CBU"
+                              title="Copiar al portapapeles"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="copy-icon" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="check-icon" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </button>
+                          </dd>
+                        </div>
+                      )}
+                      {curso.inscripcion.alias && (
+                        <div class="flex justify-between gap-3 items-center">
+                          <dt class="text-parchment-400 text-sm uppercase tracking-wider">Alias</dt>
+                          <dd class="flex items-center gap-2">
+                            <span class="font-mono text-base md:text-lg select-all">{curso.inscripcion.alias}</span>
+                            <button
+                              type="button"
+                              class="copy-btn"
+                              data-copy={curso.inscripcion.alias}
+                              data-label="Alias"
+                              aria-label="Copiar Alias"
+                              title="Copiar al portapapeles"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="copy-icon" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="check-icon" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </button>
+                          </dd>
+                        </div>
+                      )}
+                      {curso.inscripcion.cuit && (
+                        <div class="flex justify-between gap-4 items-center">
+                          <dt class="text-parchment-400 text-sm uppercase tracking-wider">CUIT</dt>
+                          <dd class="text-right font-mono text-sm md:text-base">
+                            {curso.inscripcion.cuit}
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+                )}
+              </div>
+
+              {/* Internacional */}
+              <div class="card-altar p-8 md:p-10">
+                <div class="flex items-center gap-3 mb-7">
+                  <span class="text-2xl">🌍</span>
+                  <h3 class="font-display text-2xl text-[color:var(--color-gold-300)]">
+                    Internacional
+                  </h3>
+                </div>
+
+                {curso.precio?.internacionalUSD && (
+                  <div class="mb-7">
+                    <span class="text-[11px] tracking-[0.2em] uppercase text-parchment-400 block mb-2">
+                      Global
+                    </span>
+                    <p class="text-parchment-100 font-display text-3xl mb-4">
+                      {curso.precio.internacionalUSD}
+                    </p>
+                    <p class="text-base text-parchment-300 leading-relaxed mb-4">
+                      PayPal · Payoneer · Western Union · Wise
+                    </p>
+                    {paypalUrl && (
+                      <a
+                        href={paypalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-base link-subtle text-[color:var(--color-gold-300)]"
+                      >
+                        Pagar con PayPal →
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                <div class="pt-7 border-t border-[rgb(230_196_100_/_0.1)] space-y-5 text-base text-parchment-100">
+                  {whatsappUrl && (
+                    <div>
+                      <span class="text-[11px] tracking-[0.2em] uppercase text-parchment-400 block mb-2">
+                        Consultas por WhatsApp
+                      </span>
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="link-subtle text-[color:var(--color-gold-300)] text-lg"
+                      >
+                        {whatsappDisplay}
+                      </a>
+                    </div>
+                  )}
+                  {curso.inscripcion.email && (
+                    <div>
+                      <span class="text-[11px] tracking-[0.2em] uppercase text-parchment-400 block mb-2">
+                        Email
+                      </span>
+                      <a
+                        href={`mailto:${curso.inscripcion.email}`}
+                        class="link-subtle text-[color:var(--color-gold-300)] break-all text-base md:text-lg"
+                      >
+                        {curso.inscripcion.email}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-10 text-center">
+              <a href="/contacto" class="btn-gold">
+                Escribir para inscribirse
+              </a>
+            </div>
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  {/* ====================================================
+        Estilos + script para los botones de copiar (Alias / CBU)
+      ==================================================== */}
+  <style>
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      padding: 0;
+      border: 1px solid rgb(230 196 100 / 0.25);
+      border-radius: 2px;
+      background: rgb(230 196 100 / 0.05);
+      color: var(--color-gold-300);
+      cursor: pointer;
+      transition: all 180ms ease;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .copy-btn:hover {
+      background: rgb(230 196 100 / 0.12);
+      border-color: rgb(230 196 100 / 0.5);
+      color: var(--color-gold-200);
+    }
+    .copy-btn:focus-visible {
+      outline: 2px solid var(--color-gold-400);
+      outline-offset: 2px;
+    }
+    .copy-btn .copy-icon,
+    .copy-btn .check-icon {
+      width: 1rem;
+      height: 1rem;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+    .copy-btn .check-icon {
+      position: absolute;
+      opacity: 0;
+      transform: scale(0.6);
+      color: var(--color-gold-300);
+    }
+    .copy-btn.is-copied .copy-icon {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    .copy-btn.is-copied .check-icon {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .copy-btn.is-copied {
+      background: rgb(230 196 100 / 0.2);
+      border-color: rgb(230 196 100 / 0.7);
+    }
+
+    /* ============================================================
+       Aviso de fluctuaciones cambiarias — "respiración interior".
+       Dispara 3 ciclos de 6s al entrar al viewport, y respira en loop
+       suave mientras el mouse esté encima. La luz emana de los bordes
+       hacia el centro como una brasa, sin invadir el contenido.
+       ============================================================ */
+    .alert-cambio {
+      transition: background-color 600ms ease;
+    }
+
+    @keyframes alertBreath {
+      0% {
+        /* Estado base: limpio, sin halo. */
+        box-shadow:
+          inset 0 0 0 0 rgba(212, 175, 55, 0),
+          inset 0 0 0 0 rgba(245, 230, 175, 0),
+          0 0 0 0 rgba(212, 175, 55, 0);
+        background-color: rgb(230 196 100 / 0.04);
+        border-color: rgb(230 196 100 / 0.08);
+        border-left-color: var(--color-gold-400);
+      }
+      45% {
+        /* Pico: halo dorado interior, fondo más cálido. */
+        box-shadow:
+          inset 0 0 80px -10px rgba(212, 175, 55, 0.32),
+          inset 0 0 22px -2px rgba(245, 230, 175, 0.22),
+          0 0 12px -2px rgba(212, 175, 55, 0.10);
+        background-color: rgb(230 196 100 / 0.10);
+        border-color: rgb(230 196 100 / 0.42);
+        border-left-color: var(--color-gold-200);
+      }
+      55% {
+        box-shadow:
+          inset 0 0 80px -10px rgba(212, 175, 55, 0.32),
+          inset 0 0 22px -2px rgba(245, 230, 175, 0.22),
+          0 0 12px -2px rgba(212, 175, 55, 0.10);
+        background-color: rgb(230 196 100 / 0.10);
+        border-color: rgb(230 196 100 / 0.42);
+        border-left-color: var(--color-gold-200);
+      }
+      100% {
+        box-shadow:
+          inset 0 0 0 0 rgba(212, 175, 55, 0),
+          inset 0 0 0 0 rgba(245, 230, 175, 0),
+          0 0 0 0 rgba(212, 175, 55, 0);
+        background-color: rgb(230 196 100 / 0.04);
+        border-color: rgb(230 196 100 / 0.08);
+        border-left-color: var(--color-gold-400);
+      }
+    }
+
+    /* Animación al entrar al viewport (3 ciclos finitos) */
+    .alert-cambio.is-breathing {
+      animation: alertBreath 6s ease-in-out 3;
+    }
+
+    /* Hover: respira en loop mientras el mouse está encima.
+       Tiene mayor especificidad y prioridad que .is-breathing,
+       así si entra hover durante los 3 ciclos del scroll, toma
+       el control de manera transparente. */
+    .alert-cambio:hover {
+      animation: alertBreath 6s ease-in-out infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .alert-cambio.is-breathing,
+      .alert-cambio:hover {
+        animation: none;
+      }
+    }
+  </style>
+
+  <script>
+    /* ============================================================
+       Brillo del aviso "Antes de pagar" — respira al entrar al viewport.
+       3 ciclos por aparición, se reinicia si se sale y vuelve a entrar.
+       ============================================================ */
+    const alertCard = document.querySelector<HTMLElement>(".alert-cambio");
+    if (alertCard && "IntersectionObserver" in window) {
+      const obs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              // Reset de la clase para reiniciar la animación cada vez
+              // que vuelve a entrar al viewport.
+              alertCard.classList.remove("is-breathing");
+              // Forzamos reflow para que el navegador reanime
+              void alertCard.offsetWidth;
+              alertCard.classList.add("is-breathing");
+            } else {
+              alertCard.classList.remove("is-breathing");
+            }
+          });
+        },
+        { threshold: 0.45 },
+      );
+      obs.observe(alertCard);
+    }
+
+    /* ============================================================
+       Botones de copiar (Alias / CBU)
+       ============================================================ */
+    document.querySelectorAll<HTMLButtonElement>(".copy-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const value = btn.getAttribute("data-copy");
+        if (!value) return;
+
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(value);
+          } else {
+            // Fallback: textarea oculto + execCommand("copy")
+            const ta = document.createElement("textarea");
+            ta.value = value;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+          }
+          btn.classList.add("is-copied");
+          const label = btn.getAttribute("data-label") ?? "valor";
+          btn.setAttribute("aria-label", `${label} copiado al portapapeles`);
+          window.setTimeout(() => {
+            btn.classList.remove("is-copied");
+            btn.setAttribute("aria-label", `Copiar ${label}`);
+          }, 1800);
+        } catch (err) {
+          console.error("[copy-btn] no se pudo copiar:", err);
+        }
+      });
+    });
+  </script>
+</BaseLayout>

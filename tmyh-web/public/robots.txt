@@ -1,0 +1,7 @@
+# Tradición Mística y Hermética — robots.txt
+# Permite indexación completa del sitio y apunta al sitemap.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://www.tradicionmisticayhermetica.com/sitemap-index.xml

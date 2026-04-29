@@ -1,0 +1,67 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Ornament from "../../components/Ornament.astro";
+import { getPostsOrdenados } from "../../data/posts";
+
+const posts = getPostsOrdenados();
+---
+
+<BaseLayout
+  title="Blog"
+  description="Reflexiones de Emanuel Mari sobre hermetismo, iniciación, alquimia y símbolo."
+>
+  <section class="py-20">
+    <div class="container-prose max-w-4xl">
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <span class="title-eyebrow">Reflexiones</span>
+        <h1 class="text-4xl md:text-5xl font-display mt-6 mb-6 text-balance">
+          Blog
+        </h1>
+        <p class="text-lg font-serif text-parchment-200 leading-relaxed">
+          Breves apuntes sobre hermetismo, iniciación, alquimia y símbolo. Textos
+          escritos a lo largo de los años, más como piedras en el camino que
+          como doctrina cerrada.
+        </p>
+      </div>
+
+      <Ornament symbol="✦" />
+
+      <div class="space-y-6 mt-12">
+        {
+          posts.map((post) => (
+            <a
+              href={`/blog/${post.slug}`}
+              class="card-altar group block p-8 md:p-10 relative overflow-hidden"
+            >
+              <div class="absolute top-6 right-6 text-3xl text-[color:var(--color-gold-500)] opacity-30 transition-opacity group-hover:opacity-60">
+                {post.simbolo}
+              </div>
+
+              <div class="flex items-center gap-3 mb-4 text-xs tracking-[0.2em] uppercase">
+                <span class="text-[color:var(--color-gold-400)]">
+                  {post.categoria}
+                </span>
+                <span class="text-parchment-500">·</span>
+                <time class="text-parchment-400" datetime={post.fechaISO}>
+                  {post.fechaLegible}
+                </time>
+              </div>
+
+              <h2 class="text-2xl md:text-3xl font-display mb-4 text-parchment-50 group-hover:text-[color:var(--color-gold-300)] transition-colors">
+                {post.titulo}
+              </h2>
+
+              <p class="text-base font-serif text-parchment-200 leading-relaxed mb-6 max-w-2xl">
+                {post.resumen}
+              </p>
+
+              <span class="text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] group-hover:text-[color:var(--color-gold-300)]">
+                Leer reflexión →
+              </span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</BaseLayout>

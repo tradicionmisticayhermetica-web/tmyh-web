@@ -1,0 +1,187 @@
+---
+import { Image } from "astro:assets";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Ornament from "../components/Ornament.astro";
+import CourseCard from "../components/CourseCard.astro";
+import { cursos } from "../data/cursos";
+import fluddImg from "../assets/images/fludd.jpg";
+import mnemosineImg from "../assets/images/mnemosine.jpg";
+
+const destacados = cursos.filter((c) => c.estado === "activo").slice(0, 3);
+---
+
+<BaseLayout title="Inicio">
+  {/* ============================================================
+        HERO
+      ============================================================ */}
+  <section class="relative overflow-hidden py-28 md:py-40">
+    <div class="stars-bg"></div>
+    <div class="container-prose relative z-10 text-center max-w-3xl">
+      <span class="title-eyebrow animate-soft-pulse">Escuela esotérica</span>
+
+      <h1 class="text-5xl md:text-7xl font-display font-medium mt-6 mb-6 text-balance leading-[1.05]">
+        Tradición Mística<br /><span class="text-[color:var(--color-gold-400)]">y Hermética</span>
+      </h1>
+
+      <p class="text-lg md:text-xl font-serif italic text-parchment-200 leading-relaxed max-w-2xl mx-auto">
+        Un camino de estudio y transformación a través del símbolo, la alquimia
+        y la Tradición. Cursos online en vivo dirigidos por <span class="text-[color:var(--color-gold-300)]">Emanuel Mari</span>.
+      </p>
+
+      <div class="mt-12 flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/cursos" class="btn-gold">Ver cursos</a>
+        <a href="/tradicion" class="btn-ghost">La Tradición</a>
+      </div>
+
+      <div class="mt-16 flex items-center justify-center gap-8 text-parchment-300 text-sm">
+        <div class="text-center">
+          <div class="text-2xl font-display text-[color:var(--color-gold-400)]">+1.200</div>
+          <div class="text-xs tracking-widest uppercase mt-1">alumnos</div>
+        </div>
+        <div class="w-px h-10 bg-[rgb(230_196_100_/_0.2)]"></div>
+        <div class="text-center">
+          <div class="text-2xl font-display text-[color:var(--color-gold-400)]">12+</div>
+          <div class="text-xs tracking-widest uppercase mt-1">años enseñando</div>
+        </div>
+        <div class="w-px h-10 bg-[rgb(230_196_100_/_0.2)]"></div>
+        <div class="text-center">
+          <div class="text-2xl font-display text-[color:var(--color-gold-400)]">5</div>
+          <div class="text-xs tracking-widest uppercase mt-1">cursos activos</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <Ornament symbol="✦" />
+
+  {/* ============================================================
+        MANIFIESTO
+      ============================================================ */}
+  <section class="py-20">
+    <div class="container-prose max-w-3xl text-center">
+      <span class="title-eyebrow">Manifiesto</span>
+      <h2 class="text-3xl md:text-4xl font-display mt-6 mb-8 text-balance">
+        El símbolo es la llave del alma.
+      </h2>
+      <div class="space-y-6 text-lg font-serif leading-relaxed text-parchment-200">
+        <p>
+          Hoy hay mucha información disponible y poca experiencia real
+          de sentido. La Tradición Hermética, con raíces en Egipto, Grecia y
+          el Renacimiento cristiano, propone una mirada simbólica del
+          mundo, atenta a las correspondencias y al lenguaje que el
+          símbolo despierta en quien lo estudia.
+        </p>
+        <p>
+          Acá no vas a encontrar respuestas rápidas. Nuestro enfoque es
+          serio y eso te va a llevar tiempo de reflexión interior si
+          querés avanzar en este camino. Lo que proponemos es una
+          práctica sostenida y un lenguaje vivo que, con el tiempo,
+          descubrís que ya llevabas dentro.
+        </p>
+      </div>
+
+      {/* Cosmologia hermetica de Robert Fludd como pieza de contemplacion */}
+      <figure class="mt-14 max-w-md md:max-w-lg mx-auto">
+        <Image
+          src={fluddImg}
+          alt="Grabado de la cosmología hermética de Robert Fludd, representación esquemática de las correspondencias entre los mundos."
+          widths={[400, 600, 900, 1400]}
+          sizes="(min-width: 768px) 512px, min(90vw, 448px)"
+          class="img-altar w-full h-auto"
+          loading="lazy"
+        />
+        <figcaption class="mt-3 text-[11px] italic text-parchment-400 font-serif leading-relaxed">
+          Robert Fludd, <em>Utriusque Cosmi Historia</em> (1617) — diagrama de
+          las correspondencias entre el macrocosmos y el microcosmos.
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <Ornament symbol="☿" />
+
+  {/* ============================================================
+        MEMORIA — TRADICION
+      ============================================================ */}
+  <section class="py-16 md:py-20">
+    <div class="container-prose max-w-5xl">
+      <div class="grid md:grid-cols-[1fr_1.6fr] gap-10 md:gap-14 items-center">
+        <figure class="order-2 md:order-1">
+          <Image
+            src={mnemosineImg}
+            alt="Mnemósine, titánide de la memoria y madre de las nueve Musas."
+            widths={[240, 400, 600, 1000]}
+            sizes="(min-width: 768px) 340px, 80vw"
+            class="img-altar mx-auto max-w-[340px]"
+            loading="lazy"
+          />
+          <figcaption class="mt-3 text-xs text-center italic text-parchment-400 font-serif">
+            Mnemósine, titánide de la memoria y madre de las nueve Musas.
+          </figcaption>
+        </figure>
+
+        <div class="order-1 md:order-2">
+          <span class="title-eyebrow">Tradición</span>
+          <h2 class="text-3xl md:text-4xl font-display mt-6 mb-6 text-balance">
+            Lo que se transmite, se recuerda.
+          </h2>
+          <div class="space-y-5 text-lg font-serif leading-relaxed text-parchment-200">
+            <p>
+              Toda escuela viva es, antes que nada, un acto de memoria. Los
+              griegos lo intuían al llamar a Mnemósine madre de las Musas: sin
+              memoria no hay arte, no hay filosofía, no hay ciencia del alma.
+            </p>
+            <p>
+              Acá no inventamos nada. Nos apoyamos en un linaje que va de los
+              textos herméticos de Alejandría al hermetismo cristiano del
+              Renacimiento, pasando por la alquimia operativa y el simbolismo
+              tradicional. Enseñamos lo que se nos ha enseñado.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <Ornament symbol="✧" />
+
+  {/* ============================================================
+        CURSOS DESTACADOS
+      ============================================================ */}
+  <section class="py-20">
+    <div class="container-prose">
+      <div class="flex items-end justify-between flex-wrap gap-6 mb-12">
+        <div>
+          <span class="title-eyebrow">Cursos activos</span>
+          <h2 class="text-3xl md:text-4xl font-display mt-4">Programas de estudio</h2>
+        </div>
+        <a href="/cursos" class="text-sm tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] hover:text-[color:var(--color-gold-300)]">
+          Ver todos →
+        </a>
+      </div>
+
+      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {destacados.map((curso) => <CourseCard curso={curso} />)}
+      </div>
+    </div>
+  </section>
+
+  <Ornament symbol="🜔" />
+
+  {/* ============================================================
+        CTA CONTACTO
+      ============================================================ */}
+  <section class="py-20">
+    <div class="container-prose max-w-2xl text-center">
+      <span class="title-eyebrow">¿Te resuena?</span>
+      <h2 class="text-3xl md:text-4xl font-display mt-6 mb-6">
+        Escribinos y conversamos.
+      </h2>
+      <p class="text-lg font-serif text-parchment-200 mb-10">
+        Si tenés preguntas sobre los cursos, querés saber por dónde empezar
+        o simplemente presentarte, escribinos y te respondemos.
+      </p>
+      <a href="/contacto" class="btn-gold">Escribir un mensaje</a>
+    </div>
+  </section>
+</BaseLayout>

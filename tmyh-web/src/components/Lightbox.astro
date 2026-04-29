@@ -1,0 +1,225 @@
+---
+/**
+ * Lightbox global para ampliar imágenes.
+ *
+ * Se aplica automáticamente a cualquier <img> con la clase `.img-altar`
+ * (excluyendo `.img-altar-atmosphere` que es un fondo decorativo).
+ *
+ * Al clickear una imagen:
+ *  - aparece un overlay oscuro sobre toda la pantalla
+ *  - la imagen se amplía al máximo tamaño disponible del srcset
+ *  - se muestra el pie de foto (figcaption) si existe
+ *
+ * Se cierra con: click fuera, botón ×, o tecla Escape.
+ *
+ * Este componente se incluye una sola vez en BaseLayout.
+ */
+---
+
+<div
+  id="lightbox"
+  class="lightbox"
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Imagen ampliada"
+>
+  <button
+    type="button"
+    class="lightbox__close"
+    aria-label="Cerrar imagen ampliada"
+  >
+    <span aria-hidden="true">×</span>
+  </button>
+  <figure class="lightbox__figure">
+    <img id="lightbox-img" src="" alt="" />
+    <figcaption id="lightbox-caption" class="lightbox__caption"></figcaption>
+  </figure>
+</div>
+
+<style>
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: rgba(7, 6, 13, 0.94);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 240ms ease;
+  }
+
+  .lightbox.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .lightbox__figure {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .lightbox__figure img {
+    display: block;
+    max-width: min(95vw, 1200px);
+    max-height: 80vh;
+    height: auto;
+    width: auto;
+    border: 1px solid rgb(230 196 100 / 0.3);
+    border-radius: 3px;
+    box-shadow:
+      0 40px 100px -30px rgba(0, 0, 0, 0.9),
+      0 0 80px -10px rgba(212, 175, 55, 0.25);
+    transform: scale(0.95);
+    transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .lightbox.is-open .lightbox__figure img {
+    transform: scale(1);
+  }
+
+  .lightbox__caption {
+    color: var(--color-parchment-300);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 0.85rem;
+    text-align: center;
+    max-width: 60ch;
+    line-height: 1.5;
+    padding: 0 1rem;
+  }
+
+  .lightbox__caption:empty {
+    display: none;
+  }
+
+  .lightbox__close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgb(11 10 18 / 0.6);
+    border: 1px solid rgb(230 196 100 / 0.3);
+    border-radius: 9999px;
+    color: var(--color-parchment-100);
+    font-size: 1.75rem;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      border-color 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .lightbox__close:hover,
+  .lightbox__close:focus-visible {
+    border-color: var(--color-gold-400);
+    color: var(--color-gold-300);
+    transform: scale(1.05);
+  }
+
+  /* Indicador visual de que las imágenes son clickeables */
+  :global(img.img-altar:not(.img-altar-atmosphere)) {
+    cursor: zoom-in;
+  }
+</style>
+
+<script>
+  const lightbox = document.getElementById("lightbox");
+  const lightboxImg = document.getElementById(
+    "lightbox-img",
+  ) as HTMLImageElement | null;
+  const lightboxCaption = document.getElementById("lightbox-caption");
+  const closeBtn = lightbox?.querySelector<HTMLButtonElement>(
+    ".lightbox__close",
+  );
+
+  /**
+   * Dado un <img> con srcset, devuelve la URL del candidato más grande.
+   * Si no hay srcset, devuelve src.
+   */
+  function pickLargestSrc(img: HTMLImageElement): string {
+    const srcset = img.srcset;
+    if (!srcset) return img.currentSrc || img.src;
+    let maxWidth = 0;
+    let best = img.currentSrc || img.src;
+    for (const entry of srcset.split(",")) {
+      const parts = entry.trim().split(/\s+/);
+      if (parts.length < 2) continue;
+      const url = parts[0];
+      const w = parseInt(parts[1].replace(/\D/g, ""), 10);
+      if (!Number.isNaN(w) && w > maxWidth) {
+        maxWidth = w;
+        best = url;
+      }
+    }
+    return best;
+  }
+
+  function openLightbox(img: HTMLImageElement) {
+    if (!lightbox || !lightboxImg) return;
+    lightboxImg.src = pickLargestSrc(img);
+    lightboxImg.alt = img.alt;
+
+    if (lightboxCaption) {
+      const fig = img.closest("figure");
+      const cap = fig?.querySelector("figcaption");
+      lightboxCaption.textContent = cap?.textContent?.trim() ?? "";
+    }
+
+    lightbox.classList.add("is-open");
+    lightbox.setAttribute("aria-hidden", "false");
+    document.documentElement.style.overflow = "hidden";
+  }
+
+  function closeLightbox() {
+    if (!lightbox) return;
+    lightbox.classList.remove("is-open");
+    lightbox.setAttribute("aria-hidden", "true");
+    document.documentElement.style.overflow = "";
+  }
+
+  const selector = "img.img-altar:not(.img-altar-atmosphere)";
+  document.querySelectorAll<HTMLImageElement>(selector).forEach((img) => {
+    img.setAttribute("tabindex", "0");
+    img.setAttribute("role", "button");
+    img.setAttribute("aria-label", `Ampliar imagen: ${img.alt || ""}`);
+    img.addEventListener("click", () => openLightbox(img));
+    img.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openLightbox(img);
+      }
+    });
+  });
+
+  closeBtn?.addEventListener("click", closeLightbox);
+
+  lightbox?.addEventListener("click", (event) => {
+    // Solo cerrar si se clickeó el overlay vacío (no la imagen ni el pie)
+    if (event.target === lightbox) closeLightbox();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (
+      event.key === "Escape" &&
+      lightbox?.classList.contains("is-open")
+    ) {
+      closeLightbox();
+    }
+  });
+</script>

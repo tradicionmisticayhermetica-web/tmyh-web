@@ -1,0 +1,327 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   Tema: Tradicion Mistica y Hermetica
+   Paleta: noche profunda + dorado antiguo + pergamino + granada
+   Tipografia: Cinzel (display, grabado clasico) + Inter (body)
+   ============================================================================ */
+
+@theme {
+  --color-night-950: #07060d;
+  --color-night-900: #0b0a12;
+  --color-night-800: #11101b;
+  --color-night-700: #1a1828;
+  --color-night-600: #262337;
+  --color-night-500: #3a364d;
+
+  --color-gold-300: #e6c464;
+  --color-gold-400: #d4af37;
+  --color-gold-500: #c9a25c;
+  --color-gold-600: #a8863d;
+  --color-gold-700: #7a6128;
+
+  --color-parchment-50:  #f5ecd7;
+  --color-parchment-100: #ede2c4;
+  --color-parchment-200: #d7c8a4;
+  --color-parchment-300: #b8a984;
+  --color-parchment-400: #8b7e5d;
+
+  --color-wine-600: #6e1e30;
+  --color-wine-700: #5b1a2a;
+  --color-wine-800: #3f1220;
+
+  --font-display: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --shadow-glow: 0 0 60px -10px rgb(212 175 55 / 0.25);
+  --shadow-altar: 0 20px 50px -20px rgb(0 0 0 / 0.8);
+}
+
+/* =========================================================================
+   Reset y base
+   ========================================================================= */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-night-900);
+    color: var(--color-parchment-100);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(212, 175, 55, 0.08), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 85% 100%, rgba(110, 30, 48, 0.15), transparent 70%),
+      linear-gradient(180deg, var(--color-night-950) 0%, var(--color-night-900) 100%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: 0.02em;
+    color: var(--color-parchment-50);
+  }
+
+  h1 { font-weight: 500; }
+  h2 { font-weight: 500; }
+  h3 { font-weight: 400; }
+
+  ::selection {
+    background-color: var(--color-gold-400);
+    color: var(--color-night-950);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-gold-400);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+}
+
+/* =========================================================================
+   Utilidades personalizadas
+   ========================================================================= */
+
+@layer utilities {
+  .container-prose {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Titulos con subrayado dorado sutil debajo */
+  .title-eyebrow {
+    display: inline-block;
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--color-gold-400);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgb(212 175 55 / 0.3);
+  }
+
+  .link-subtle {
+    color: var(--color-gold-300);
+    text-decoration: underline;
+    text-decoration-color: rgb(230 196 100 / 0.3);
+    text-underline-offset: 4px;
+    transition: color 180ms ease, text-decoration-color 180ms ease;
+  }
+
+  .link-subtle:hover {
+    color: var(--color-gold-400);
+    text-decoration-color: var(--color-gold-400);
+  }
+
+  /* Sello dorado con borde para botones primarios */
+  .btn-gold {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-night-950);
+    background: linear-gradient(180deg, var(--color-gold-300), var(--color-gold-500));
+    border: 1px solid var(--color-gold-600);
+    border-radius: 2px;
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.15) inset, 0 10px 30px -15px rgb(212 175 55 / 0.5);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+  }
+
+  .btn-gold:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.2) inset, 0 15px 40px -15px rgb(212 175 55 / 0.7);
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-parchment-100);
+    border: 1px solid rgb(230 226 212 / 0.2);
+    border-radius: 2px;
+    transition: all 180ms ease;
+  }
+
+  .btn-ghost:hover {
+    color: var(--color-gold-300);
+    border-color: var(--color-gold-400);
+  }
+
+  /* Tarjeta esoterica con borde sutil y brillo leve */
+  .card-altar {
+    background: linear-gradient(180deg, rgb(26 24 40 / 0.6), rgb(11 10 18 / 0.9));
+    border: 1px solid rgb(230 196 100 / 0.12);
+    border-radius: 4px;
+    backdrop-filter: blur(4px);
+    transition: transform 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
+  }
+
+  .card-altar:hover {
+    transform: translateY(-4px);
+    border-color: rgb(212 175 55 / 0.4);
+    box-shadow: var(--shadow-altar), var(--shadow-glow);
+  }
+
+  /* Ornamento divisor con simbolo central */
+  .ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: var(--color-gold-500);
+    opacity: 0.7;
+  }
+
+  .ornament::before,
+  .ornament::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    max-width: 6rem;
+    background: linear-gradient(to right, transparent, var(--color-gold-500), transparent);
+  }
+
+  /* Fondo estrellado tenue para hero (7 estrellas: 4 blancas + 3 doradas) */
+  .stars-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgb(230 226 212 / 0.3), transparent),
+      radial-gradient(1px 1px at 40% 70%, rgb(230 226 212 / 0.25), transparent),
+      radial-gradient(1px 1px at 60% 20%, rgb(230 226 212 / 0.35), transparent),
+      radial-gradient(1px 1px at 80% 50%, rgb(230 226 212 / 0.2), transparent),
+      radial-gradient(1.5px 1.5px at 15% 80%, rgb(230 196 100 / 0.4), transparent),
+      radial-gradient(1.5px 1.5px at 90% 15%, rgb(230 196 100 / 0.3), transparent),
+      radial-gradient(1.2px 1.2px at 50% 88%, rgb(230 196 100 / 0.28), transparent);
+    background-size: 100% 100%;
+    pointer-events: none;
+  }
+
+  /* Animacion leve de pulsado */
+  @keyframes soft-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .animate-soft-pulse {
+    animation: soft-pulse 4s ease-in-out infinite;
+  }
+
+  /* =======================================================================
+     Tamaño de lectura en desktop
+     El texto de cuerpo (Cormorant Garamond / serif) a 18px se ve chiquito
+     en pantallas grandes. Lo subimos un par de puntos a partir de 1024px
+     y agregamos un letter-spacing casi imperceptible para que la vista
+     descanse en párrafos largos. No tocamos títulos ni microtexto UI.
+     ======================================================================= */
+  @media (min-width: 1024px) {
+    .text-lg.font-serif {
+      font-size: 1.35rem;        /* ~21.6px (antes ~18px) */
+      line-height: 1.8;
+      letter-spacing: 0.012em;   /* respiro milimétrico entre letras */
+    }
+
+    .text-base.font-serif {
+      font-size: 1.15rem;        /* ~18.4px, para citas y secundarios */
+      line-height: 1.75;
+      letter-spacing: 0.01em;
+    }
+  }
+
+  /* =======================================================================
+     Tratamiento "atmosferico" de imagenes
+     Aplica filtro desaturado + tono calido, marco dorado sutil y sombra
+     para integrar las imagenes con la paleta noche/dorado.
+     ======================================================================= */
+
+  .img-altar {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid rgb(230 196 100 / 0.18);
+    border-radius: 3px;
+    box-shadow:
+      0 1px 0 rgb(230 196 100 / 0.06) inset,
+      0 25px 60px -30px rgb(0 0 0 / 0.8),
+      0 0 40px -10px rgb(212 175 55 / 0.15);
+    filter: grayscale(0.35) sepia(0.08) brightness(0.92) contrast(1.02);
+    transition: filter 320ms ease, box-shadow 320ms ease, border-color 320ms ease;
+  }
+
+  .img-altar:hover {
+    filter: grayscale(0.1) sepia(0.04) brightness(1) contrast(1.04);
+    border-color: rgb(212 175 55 / 0.45);
+    box-shadow:
+      0 1px 0 rgb(230 196 100 / 0.15) inset,
+      0 30px 70px -30px rgb(0 0 0 / 0.9),
+      0 0 60px -10px rgb(212 175 55 / 0.3);
+  }
+
+  /* Variante circular para retratos (Guenon, Emanuel, etc.) */
+  .img-altar-round {
+    border-radius: 9999px;
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+
+  /* Variante atenuada para fondos decorativos de hero */
+  .img-altar-atmosphere {
+    filter: grayscale(0.7) sepia(0.15) brightness(0.55) contrast(1.05);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* Contenedor de imagen con velo dorado superior e inferior (para heros) */
+  .img-veil {
+    position: relative;
+    overflow: hidden;
+    border-radius: 3px;
+  }
+
+  .img-veil::before,
+  .img-veil::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 40%;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .img-veil::before {
+    top: 0;
+    background: linear-gradient(180deg, var(--color-night-950) 0%, transparent 100%);
+    opacity: 0.6;
+  }
+
+  .img-veil::after {
+    bottom: 0;
+    background: linear-gradient(0deg, var(--color-night-950) 0%, transparent 100%);
+    opacity: 0.7;
+  }
+}

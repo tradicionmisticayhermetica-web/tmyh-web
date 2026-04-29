@@ -1,0 +1,27 @@
+# Dependencias
+node_modules/
+
+# Salida de build
+.astro/
+
+# Editores / SO
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variables de entorno locales
+.env
+.env.local
+.env.*.local
+
+# Importante: a diferencia de un proyecto normal, acá SI subimos 'dist/'
+# para que Ferozo (que no puede correr npm build) pueda pullear el sitio
+# ya compilado. Por eso dist/ NO está ignorado.

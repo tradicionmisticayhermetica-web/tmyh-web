@@ -1,0 +1,98 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CourseCard from "../../components/CourseCard.astro";
+import Ornament from "../../components/Ornament.astro";
+import { cursos } from "../../data/cursos";
+
+const activos = cursos.filter((c) => c.estado === "activo");
+const proximos = cursos.filter((c) => c.estado === "proximo");
+const historicos = cursos.filter((c) => c.estado === "historico");
+---
+
+<BaseLayout
+  title="Cursos"
+  description="Catálogo de cursos de la escuela: Simbología Hermética, Heka y los programas ya dictados (Espagiria, Cuerpo Solar, Revelaciones y Tradición Hermética)."
+>
+  <section class="py-20">
+    <div class="container-prose">
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <span class="title-eyebrow">Nuestros programas</span>
+        <h1 class="text-4xl md:text-5xl font-display mt-6 mb-6 text-balance">
+          Cursos de la escuela
+        </h1>
+        <p class="text-lg font-serif text-parchment-200 leading-relaxed">
+          Cada curso es un camino completo. Podés arrancar por el que más te
+          llame la atención; <span class="link-subtle"
+            ><a href="/cursos/simbologia-hermetica">Simbología Hermética</a></span
+          > suele ser una buena puerta de entrada.
+        </p>
+      </div>
+
+      {/* ============================================================
+            Cursos activos
+          ============================================================ */}
+      {
+        activos.length > 0 && (
+          <>
+            <div class="text-center mb-10">
+              <span class="title-eyebrow">Inscripción abierta</span>
+            </div>
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {activos.map((curso) => (
+                <CourseCard curso={curso} />
+              ))}
+            </div>
+          </>
+        )
+      }
+
+      {/* ============================================================
+            Próximamente
+          ============================================================ */}
+      {
+        proximos.length > 0 && (
+          <>
+            <Ornament symbol="✦" />
+            <div class="text-center mb-10">
+              <span class="title-eyebrow">Próximamente</span>
+              <h2 class="text-2xl md:text-3xl font-display mt-4">
+                Nuevos cursos en preparación
+              </h2>
+            </div>
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {proximos.map((curso) => (
+                <CourseCard curso={curso} />
+              ))}
+            </div>
+          </>
+        )
+      }
+
+      {/* ============================================================
+            Cursos dictados (históricos)
+          ============================================================ */}
+      {
+        historicos.length > 0 && (
+          <>
+            <Ornament symbol="☉" />
+            <div class="text-center max-w-2xl mx-auto mb-10">
+              <span class="title-eyebrow">Archivo</span>
+              <h2 class="text-2xl md:text-3xl font-display mt-4 mb-4">
+                Cursos dictados
+              </h2>
+              <p class="text-base font-serif text-parchment-300 leading-relaxed">
+                Programas que ya se dictaron en ediciones anteriores. Si te
+                interesa alguno, escribinos y te avisamos cuando vuelva a abrirse.
+              </p>
+            </div>
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {historicos.map((curso) => (
+                <CourseCard curso={curso} />
+              ))}
+            </div>
+          </>
+        )
+      }
+    </div>
+  </section>
+</BaseLayout>

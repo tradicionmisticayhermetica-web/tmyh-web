@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<!--
+  =============================================================================
+  Plantilla HTML para newsletter de Tradición Mística y Hermética
+  =============================================================================
+  Diseñada para máxima compatibilidad con clientes de email (Gmail, Outlook,
+  Apple Mail, Yahoo, etc.). Características:
+
+  - Tabla-based layout (obligatorio para Outlook y Yahoo).
+  - Todos los estilos INLINE (los clientes strippean <style> externo).
+  - Ancho 600px fijo (estándar de email marketing).
+  - Fuentes: Cinzel + Cormorant Garamond + Inter con fallbacks serif/sans. Al
+    no poder cargarse Google Fonts en email, caen a Georgia / Times / Arial,
+    que son aceptables.
+  - Paleta: noche + oro + pergamino, coherente con el sitio.
+  - Link de unsubscribe OBLIGATORIO en el footer (ley + CAN-SPAM + GDPR +
+    requisito de Gmail/Microsoft para no caer en spam).
+
+  USO:
+  1. Copiar este archivo entero.
+  2. Reemplazar los placeholders {{...}} con contenido real (ver lista abajo).
+  3. Enviarlo desde Resend / Brevo / lo que usen.
+
+  PLACEHOLDERS:
+    {{SUBJECT}}              Asunto del email (ej: "Nuevo curso: Heka")
+    {{TITULO_EYEBROW}}       Eyebrow arriba del título (ej: "Boletín Nº 3")
+    {{TITULO_PRINCIPAL}}     Título grande del newsletter
+    {{BAJADA}}               Párrafo introductorio corto (opcional)
+    {{CONTENIDO_HTML}}       Cuerpo principal. Puede ser varios <p>, <h2>,
+                             imágenes (<img style="max-width:100%"), etc.
+    {{CTA_TEXTO}}            Texto del botón principal (ej: "Conocer más")
+    {{CTA_URL}}              URL del botón principal
+    {{UNSUBSCRIBE_URL}}      URL única del contacto para darse de baja
+                             (construida con su token: /newsletter/unsubscribe?token=UUID)
+    {{PREFERENCIAS_URL}}     URL única del contacto para gestionar preferencias
+    {{SITE_URL}}             https://www.tradicionmisticayhermetica.com
+
+  EJEMPLO DE CONTENIDO:
+    <p style="...">En este boletín:</p>
+    <h2 style="...">Nuevo curso: Heka</h2>
+    <p style="...">Desde noviembre abrimos las inscripciones...</p>
+    <img src="https://.../afiche.jpg" alt="Heka" style="max-width:100%;border-radius:3px;" />
+
+  RECURSOS ÚTILES:
+    - https://www.litmus.com/community/templates   (testear en 90+ clientes)
+    - https://putsmail.com                          (enviar test a tu casilla)
+    - https://mjml.io                               (framework si querés automatizar más adelante)
+  =============================================================================
+-->
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="supported-color-schemes" content="dark light" />
+  <title>{{SUBJECT}}</title>
+
+  <!-- Fuentes (en clientes que las soporten: Apple Mail, Outlook con
+       conexión, clientes móviles modernos). Fallback a system fonts. -->
+  <!--[if !mso]><!-->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Inter:wght@400;500&display=swap"
+  />
+  <!--<![endif]-->
+
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td, a { font-family: Georgia, 'Times New Roman', serif !important; }
+  </style>
+  <![endif]-->
+</head>
+<body style="margin:0;padding:0;background:#0b0a12;font-family:'Cormorant Garamond', Georgia, 'Times New Roman', serif;-webkit-font-smoothing:antialiased;">
+  <!-- Preheader: texto que aparece como resumen en la bandeja, oculto en el render -->
+  <div style="display:none !important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">
+    {{BAJADA}}
+  </div>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#0b0a12;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <!-- Contenedor 600px -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px;max-width:600px;background:#0b0a12;border:1px solid rgba(230,196,100,0.14);">
+
+          <!-- ===================================================
+               Header: logo + nombre de la escuela
+               =================================================== -->
+          <tr>
+            <td style="padding:32px 40px 20px 40px;text-align:center;border-bottom:1px solid rgba(230,196,100,0.12);">
+              <!-- Disco solar chico en dorado (símbolo ☉ del sitio) -->
+              <div style="font-size:28px;line-height:1;color:#d4af37;margin-bottom:12px;">☉</div>
+              <div style="font-family:'Cinzel', Georgia, 'Times New Roman', serif;font-size:14px;letter-spacing:4px;color:#f5ecd7;text-transform:uppercase;">
+                Tradición Mística
+                <span style="color:#d4af37;">·</span>
+                Hermética
+              </div>
+            </td>
+          </tr>
+
+          <!-- ===================================================
+               Eyebrow + título + bajada
+               =================================================== -->
+          <tr>
+            <td style="padding:48px 40px 24px 40px;text-align:center;">
+              {{#if TITULO_EYEBROW}}
+              <div style="display:inline-block;font-family:'Inter', Arial, sans-serif;font-size:11px;font-weight:500;letter-spacing:4px;color:#d4af37;text-transform:uppercase;padding-bottom:8px;border-bottom:1px solid rgba(212,175,55,0.3);margin-bottom:20px;">
+                {{TITULO_EYEBROW}}
+              </div>
+              {{/if}}
+
+              <h1 style="margin:0 0 16px 0;font-family:'Cinzel', Georgia, 'Times New Roman', serif;font-size:32px;line-height:1.2;font-weight:500;color:#f5ecd7;letter-spacing:1px;">
+                {{TITULO_PRINCIPAL}}
+              </h1>
+
+              {{#if BAJADA}}
+              <p style="margin:8px 0 0 0;font-family:'Cormorant Garamond', Georgia, 'Times New Roman', serif;font-size:18px;font-style:italic;line-height:1.6;color:#d7c8a4;">
+                {{BAJADA}}
+              </p>
+              {{/if}}
+            </td>
+          </tr>
+
+          <!-- Ornamento divisor -->
+          <tr>
+            <td style="padding:0 40px;" align="center">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="200">
+                <tr>
+                  <td style="border-bottom:1px solid rgba(212,175,55,0.3);height:1px;line-height:1px;">&nbsp;</td>
+                  <td style="width:30px;text-align:center;color:#d4af37;font-size:14px;padding:0 4px;">✦</td>
+                  <td style="border-bottom:1px solid rgba(212,175,55,0.3);height:1px;line-height:1px;">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ===================================================
+               Cuerpo del newsletter
+               Reemplazar {{CONTENIDO_HTML}} con parrafos, imagenes,
+               subtitulos. USAR ESTILOS INLINE EN CADA ELEMENTO.
+               =================================================== -->
+          <tr>
+            <td style="padding:32px 40px;font-family:'Cormorant Garamond', Georgia, 'Times New Roman', serif;font-size:18px;line-height:1.75;color:#ede2c4;">
+              {{CONTENIDO_HTML}}
+
+              <!-- EJEMPLO de cómo formatear (borrar cuando pongas contenido real): -->
+              <!--
+              <p style="margin:0 0 16px 0;">
+                Querido lector, en este boletín compartimos una nueva reflexión
+                y te invitamos a un curso que recién estrenamos.
+              </p>
+
+              <h2 style="margin:32px 0 12px 0;font-family:'Cinzel', Georgia, serif;font-size:22px;color:#f5ecd7;font-weight:500;letter-spacing:0.5px;">
+                Un subtítulo de sección
+              </h2>
+
+              <p style="margin:0 0 16px 0;">
+                Aquí va otro párrafo con el cuerpo del contenido. Pueden ser
+                varios. Mantener frases de largo razonable para una lectura
+                cómoda en pantalla de celular.
+              </p>
+
+              <img src="https://www.tradicionmisticayhermetica.com/_astro/heka.xxxx.webp" alt="Heka" style="display:block;width:100%;max-width:520px;height:auto;border:1px solid rgba(230,196,100,0.18);border-radius:3px;margin:24px 0;" />
+
+              <p style="margin:0 0 16px 0;font-style:italic;color:#d7c8a4;">
+                "Una cita destacada, si el contenido lo amerita."
+              </p>
+              -->
+            </td>
+          </tr>
+
+          <!-- ===================================================
+               CTA principal (botón dorado)
+               =================================================== -->
+          {{#if CTA_TEXTO}}
+          <tr>
+            <td align="center" style="padding:8px 40px 40px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background:linear-gradient(180deg, #e6c464, #c9a25c);border:1px solid #a8863d;border-radius:2px;">
+                    <a href="{{CTA_URL}}"
+                       style="display:inline-block;padding:14px 32px;font-family:'Inter', Arial, sans-serif;font-size:12px;font-weight:500;letter-spacing:3px;color:#07060d;text-decoration:none;text-transform:uppercase;">
+                      {{CTA_TEXTO}}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {{/if}}
+
+          <!-- Ornamento de cierre -->
+          <tr>
+            <td style="padding:16px 40px 32px 40px;" align="center">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="120">
+                <tr>
+                  <td style="border-bottom:1px solid rgba(212,175,55,0.2);height:1px;line-height:1px;">&nbsp;</td>
+                  <td style="width:20px;text-align:center;color:#d4af37;font-size:12px;padding:0 4px;opacity:0.6;">☉</td>
+                  <td style="border-bottom:1px solid rgba(212,175,55,0.2);height:1px;line-height:1px;">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ===================================================
+               Footer: firma + links legales
+               =================================================== -->
+          <tr>
+            <td style="padding:24px 40px 32px 40px;background:#07060d;border-top:1px solid rgba(230,196,100,0.08);text-align:center;">
+              <p style="margin:0 0 12px 0;font-family:'Cormorant Garamond', Georgia, serif;font-size:15px;font-style:italic;color:#b8a984;">
+                Con afecto,
+              </p>
+              <p style="margin:0 0 4px 0;font-family:'Cinzel', Georgia, serif;font-size:13px;letter-spacing:3px;color:#e6c464;text-transform:uppercase;">
+                Emanuel Mari
+              </p>
+              <p style="margin:0 0 20px 0;font-family:'Cormorant Garamond', Georgia, serif;font-size:13px;font-style:italic;color:#8b7e5d;">
+                Tradición Mística y Hermética
+              </p>
+
+              <p style="margin:24px 0 8px 0;font-family:'Inter', Arial, sans-serif;font-size:11px;color:#8b7e5d;letter-spacing:0.5px;">
+                Recibís este mail porque estás suscripto a nuestro boletín.
+              </p>
+
+              <p style="margin:0;font-family:'Inter', Arial, sans-serif;font-size:11px;letter-spacing:0.5px;">
+                <a href="{{PREFERENCIAS_URL}}" style="color:#d4af37;text-decoration:underline;margin:0 8px;">Gestionar preferencias</a>
+                <span style="color:#5a5646;">·</span>
+                <a href="{{UNSUBSCRIBE_URL}}" style="color:#d4af37;text-decoration:underline;margin:0 8px;">Darme de baja</a>
+              </p>
+
+              <p style="margin:16px 0 0 0;font-family:'Inter', Arial, sans-serif;font-size:10px;color:#5a5646;">
+                <a href="{{SITE_URL}}" style="color:#8b7e5d;text-decoration:none;">tradicionmisticayhermetica.com</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- Fin contenedor -->
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

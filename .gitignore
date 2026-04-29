@@ -1,0 +1,56 @@
+# =============================================================================
+# .gitignore TM&H
+# =============================================================================
+
+# Datos sensibles (emails, nombres, telefonos, exports de WP/Classroom)
+data/
+
+# Backups WordPress (no van al repo: pesados y con PII)
+wp-extracted/
+*.wpress
+
+# Credenciales / variables de entorno
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Node / Astro
+node_modules/
+dist/
+.astro/
+.cache/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Builds de otras plataformas (futuro)
+.vercel/
+.netlify/
+.next/
+
+# Metadata local del CLI de Supabase (cada dev tiene su copia)
+supabase/.temp/
+**/supabase/.temp/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
+*~
+.history/

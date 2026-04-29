@@ -1,0 +1,162 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Ornament from "../../components/Ornament.astro";
+---
+
+<BaseLayout
+  title="Darse de baja"
+  description="Darse de baja del newsletter de Tradición Mística y Hermética."
+>
+  <section class="py-24">
+    <div class="container-prose max-w-xl">
+      <div class="text-center mb-12">
+        <span class="title-eyebrow">Newsletter</span>
+        <h1 class="text-4xl md:text-5xl font-display mt-6 mb-6 text-balance">
+          Darse de baja
+        </h1>
+      </div>
+
+      <Ornament symbol="✦" />
+
+      <div
+        id="estado-inicial"
+        class="card-altar p-8 md:p-10 text-center hidden"
+        data-state="inicial"
+      >
+        <p class="text-lg font-serif text-parchment-100 mb-6" id="texto-inicial">
+          Validando el link...
+        </p>
+        <div id="acciones-inicial" class="flex flex-col gap-3 hidden">
+          <button id="btn-confirmar" type="button" class="btn-gold w-full justify-center">
+            Confirmar baja
+          </button>
+          <a href="/" class="btn-ghost w-full justify-center">Cancelar y volver al sitio</a>
+        </div>
+      </div>
+
+      <div
+        id="estado-exito"
+        class="card-altar p-8 md:p-10 text-center hidden"
+        data-state="exito"
+      >
+        <p class="text-lg font-serif text-parchment-100 mb-3">
+          Listo. Te dimos de baja del newsletter.
+        </p>
+        <p class="text-sm text-parchment-300 mb-6" id="email-baja"></p>
+        <p class="text-sm text-parchment-200 mb-6">
+          Si fue un error, podés volver a suscribirte desde la página de
+          preferencias.
+        </p>
+        <a
+          href="#"
+          id="link-prefs"
+          class="btn-ghost w-full justify-center"
+        >Ir a preferencias</a>
+      </div>
+
+      <div
+        id="estado-error"
+        class="card-altar p-8 md:p-10 text-center hidden"
+        data-state="error"
+      >
+        <p class="text-lg font-serif text-parchment-100 mb-6" id="texto-error">
+          El link no es válido o expiró.
+        </p>
+        <p class="text-sm text-parchment-300 mb-6">
+          Si querés darte de baja, escribinos a
+          <a
+            href="mailto:tradicionmisticayhermetica@gmail.com"
+            class="link-subtle"
+          >tradicionmisticayhermetica@gmail.com</a>
+          y te damos de baja manualmente.
+        </p>
+        <a href="/" class="btn-ghost w-full justify-center">Volver al inicio</a>
+      </div>
+
+      <div class="text-center mt-10 text-xs text-parchment-400">
+        Respetamos tu decisión. La baja es inmediata y queda registrada.
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import {
+    obtenerEstadoNewsletter,
+    desuscribirNewsletter,
+  } from "../../lib/supabase";
+
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token")?.trim();
+
+  const $inicial = document.getElementById("estado-inicial") as HTMLDivElement;
+  const $exito = document.getElementById("estado-exito") as HTMLDivElement;
+  const $error = document.getElementById("estado-error") as HTMLDivElement;
+  const $textoInicial = document.getElementById("texto-inicial") as HTMLParagraphElement;
+  const $accionesInicial = document.getElementById("acciones-inicial") as HTMLDivElement;
+  const $btnConfirmar = document.getElementById("btn-confirmar") as HTMLButtonElement;
+  const $textoError = document.getElementById("texto-error") as HTMLParagraphElement;
+  const $emailBaja = document.getElementById("email-baja") as HTMLParagraphElement;
+  const $linkPrefs = document.getElementById("link-prefs") as HTMLAnchorElement;
+
+  function mostrar(cual: "inicial" | "exito" | "error") {
+    $inicial.classList.toggle("hidden", cual !== "inicial");
+    $exito.classList.toggle("hidden", cual !== "exito");
+    $error.classList.toggle("hidden", cual !== "error");
+  }
+
+  function ofuscarEmail(email: string): string {
+    const [user, dom] = email.split("@");
+    if (!user || !dom) return email;
+    const u = user.length > 2 ? user[0] + "***" + user.slice(-1) : user[0] + "***";
+    return `${u}@${dom}`;
+  }
+
+  async function init() {
+    if (!token) {
+      $textoError.textContent = "El link no incluye un token válido.";
+      mostrar("error");
+      return;
+    }
+
+    mostrar("inicial");
+    $textoInicial.textContent = "Validando el link...";
+
+    const estado = await obtenerEstadoNewsletter(token);
+
+    if (!estado.ok) {
+      $textoError.textContent = "El link no es válido o expiró.";
+      mostrar("error");
+      return;
+    }
+
+    if (!estado.suscripto) {
+      $textoInicial.textContent = `Tu email (${ofuscarEmail(estado.email ?? "")}) ya estaba dado de baja. No hay nada que hacer.`;
+      $accionesInicial.classList.add("hidden");
+      return;
+    }
+
+    $textoInicial.innerHTML = `
+      ¿Querés darte de baja del newsletter de
+      <strong>${ofuscarEmail(estado.email ?? "")}</strong>?
+      Dejarás de recibir nuestros emails.
+    `;
+    $accionesInicial.classList.remove("hidden");
+
+    $btnConfirmar.addEventListener("click", async () => {
+      $btnConfirmar.disabled = true;
+      $btnConfirmar.textContent = "Dando de baja…";
+      const resp = await desuscribirNewsletter(token);
+      if (resp.ok) {
+        $emailBaja.textContent = ofuscarEmail(resp.email ?? "");
+        $linkPrefs.href = `/newsletter/preferencias?token=${encodeURIComponent(token)}`;
+        mostrar("exito");
+      } else {
+        $textoError.textContent = "No pudimos procesar la baja. Probá de nuevo en unos minutos.";
+        mostrar("error");
+      }
+    });
+  }
+
+  init();
+</script>

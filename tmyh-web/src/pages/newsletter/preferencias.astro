@@ -1,0 +1,130 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Ornament from "../../components/Ornament.astro";
+---
+
+<BaseLayout
+  title="Preferencias del newsletter"
+  description="Gestioná tu suscripción al newsletter de Tradición Mística y Hermética."
+>
+  <section class="py-24">
+    <div class="container-prose max-w-xl">
+      <div class="text-center mb-12">
+        <span class="title-eyebrow">Newsletter</span>
+        <h1 class="text-4xl md:text-5xl font-display mt-6 mb-6 text-balance">
+          Preferencias
+        </h1>
+      </div>
+
+      <Ornament symbol="✦" />
+
+      <div id="card" class="card-altar p-8 md:p-10 text-center">
+        <p class="text-lg font-serif text-parchment-100 mb-2" id="titulo">
+          Validando el link...
+        </p>
+        <p class="text-sm text-parchment-300 mb-8" id="email-display"></p>
+
+        <div id="acciones" class="flex flex-col gap-3 hidden">
+          <button id="btn-toggle" type="button" class="btn-gold w-full justify-center"></button>
+          <a href="/" class="btn-ghost w-full justify-center">Volver al inicio</a>
+        </div>
+
+        <p id="msg" class="text-sm mt-6" aria-live="polite"></p>
+      </div>
+
+      <div class="text-center mt-10 text-xs text-parchment-400">
+        Cambios inmediatos. Quedan registrados para trazabilidad.
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import {
+    obtenerEstadoNewsletter,
+    desuscribirNewsletter,
+    resuscribirNewsletter,
+  } from "../../lib/supabase";
+
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token")?.trim();
+
+  const $titulo = document.getElementById("titulo") as HTMLParagraphElement;
+  const $email = document.getElementById("email-display") as HTMLParagraphElement;
+  const $acciones = document.getElementById("acciones") as HTMLDivElement;
+  const $btn = document.getElementById("btn-toggle") as HTMLButtonElement;
+  const $msg = document.getElementById("msg") as HTMLParagraphElement;
+
+  function ofuscarEmail(email: string): string {
+    const [user, dom] = email.split("@");
+    if (!user || !dom) return email;
+    const u = user.length > 2 ? user[0] + "***" + user.slice(-1) : user[0] + "***";
+    return `${u}@${dom}`;
+  }
+
+  function setMsg(texto: string, tipo: "ok" | "error" | "info") {
+    $msg.textContent = texto;
+    $msg.style.color =
+      tipo === "ok" ? "#e6c464" : tipo === "error" ? "#d97a6c" : "#b8a984";
+  }
+
+  function pintar(estado: { suscripto?: boolean; email?: string }) {
+    $email.textContent = ofuscarEmail(estado.email ?? "");
+    if (estado.suscripto) {
+      $titulo.innerHTML = `Estás <strong>suscripto</strong> al newsletter.`;
+      $btn.textContent = "Darme de baja";
+      $btn.dataset.accion = "baja";
+    } else {
+      $titulo.innerHTML = `Estás <strong>dado de baja</strong> del newsletter.`;
+      $btn.textContent = "Volver a suscribirme";
+      $btn.dataset.accion = "alta";
+    }
+    $acciones.classList.remove("hidden");
+  }
+
+  async function init() {
+    if (!token) {
+      $titulo.textContent = "El link no incluye un token válido.";
+      return;
+    }
+
+    const estado = await obtenerEstadoNewsletter(token);
+    if (!estado.ok) {
+      $titulo.textContent = "El link no es válido o expiró.";
+      $email.textContent = "";
+      return;
+    }
+    pintar(estado);
+  }
+
+  $btn?.addEventListener("click", async () => {
+    if (!token) return;
+    const accion = $btn.dataset.accion;
+    $btn.disabled = true;
+    const txtOriginal = $btn.textContent ?? "";
+    $btn.textContent = "Procesando…";
+    setMsg("", "info");
+
+    const resp =
+      accion === "baja"
+        ? await desuscribirNewsletter(token)
+        : await resuscribirNewsletter(token);
+
+    if (resp.ok) {
+      if (accion === "baja") {
+        setMsg("Listo. Te dimos de baja.", "ok");
+      } else {
+        setMsg("¡Gracias! Te volviste a suscribir.", "ok");
+      }
+      // Releer estado para actualizar el boton
+      const nuevo = await obtenerEstadoNewsletter(token);
+      if (nuevo.ok) pintar(nuevo);
+    } else {
+      setMsg("No pudimos procesar. Probá de nuevo en unos minutos.", "error");
+      $btn.disabled = false;
+      $btn.textContent = txtOriginal;
+    }
+  });
+
+  init();
+</script>

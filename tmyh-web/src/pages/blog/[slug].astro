@@ -1,0 +1,148 @@
+---
+import { Image } from "astro:assets";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Ornament from "../../components/Ornament.astro";
+import { posts, getPostsOrdenados } from "../../data/posts";
+import { resolverImagen } from "../../lib/images";
+
+export function getStaticPaths() {
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const imagenPost = await resolverImagen(post.imagen);
+
+const ordenados = getPostsOrdenados();
+const idx = ordenados.findIndex((p) => p.slug === post.slug);
+const anterior = idx < ordenados.length - 1 ? ordenados[idx + 1] : null;
+const siguiente = idx > 0 ? ordenados[idx - 1] : null;
+---
+
+<BaseLayout title={post.titulo} description={post.resumen}>
+  <article>
+    {/* ============================================================
+          Encabezado
+        ============================================================ */}
+    <section class="relative py-20 md:py-28 overflow-hidden">
+      <div class="stars-bg"></div>
+      <div class="container-prose relative z-10 max-w-3xl">
+        <a
+          href="/blog"
+          class="inline-flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-parchment-300 hover:text-[color:var(--color-gold-300)] mb-10"
+        >
+          ← Todas las reflexiones
+        </a>
+
+        <div class="flex items-center gap-3 mb-6 text-xs tracking-[0.2em] uppercase">
+          <span class="text-[color:var(--color-gold-400)]">
+            {post.categoria}
+          </span>
+          <span class="text-parchment-500">·</span>
+          <time class="text-parchment-400" datetime={post.fechaISO}>
+            {post.fechaLegible}
+          </time>
+        </div>
+
+        <div class="flex items-start gap-6">
+          <span
+            class="hidden md:block text-5xl text-[color:var(--color-gold-400)] leading-none"
+            >{post.simbolo}</span
+          >
+          <h1 class="text-4xl md:text-5xl font-display text-balance">
+            {post.titulo}
+          </h1>
+        </div>
+
+        <p class="mt-6 text-xs tracking-[0.2em] uppercase text-parchment-400">
+          Por {post.autor}
+        </p>
+      </div>
+    </section>
+
+    {/* ============================================================
+          Imagen de cabecera (opcional)
+        ============================================================ */}
+    {
+      imagenPost && (
+        <section class="pb-4 md:pb-8">
+          <div class="container-prose max-w-3xl">
+            <figure class="img-veil">
+              <Image
+                src={imagenPost}
+                alt={post.imagenAlt ?? post.titulo}
+                widths={[480, 800, 1200]}
+                sizes="(min-width: 1024px) 768px, 100vw"
+                class="img-altar"
+                loading="eager"
+              />
+            </figure>
+          </div>
+        </section>
+      )
+    }
+
+    <Ornament symbol="✦" />
+
+    {/* ============================================================
+          Cuerpo
+        ============================================================ */}
+    <section class="py-12">
+      <div class="container-prose max-w-3xl">
+        <div class="space-y-6 text-lg font-serif leading-relaxed text-parchment-100">
+          {post.parrafos.map((parrafo) => <p>{parrafo}</p>)}
+        </div>
+      </div>
+    </section>
+
+    <Ornament symbol="☉" />
+
+    {/* ============================================================
+          Navegación entre posts
+        ============================================================ */}
+    <section class="py-12">
+      <div class="container-prose max-w-3xl">
+        <div class="grid md:grid-cols-2 gap-6">
+          {
+            anterior ? (
+              <a
+                href={`/blog/${anterior.slug}`}
+                class="card-altar group block p-6"
+              >
+                <span class="text-xs tracking-[0.2em] uppercase text-parchment-400 block mb-2">
+                  ← Anterior
+                </span>
+                <span class="font-display text-lg text-parchment-100 group-hover:text-[color:var(--color-gold-300)] transition-colors">
+                  {anterior.titulo}
+                </span>
+              </a>
+            ) : (
+              <div />
+            )
+          }
+          {
+            siguiente && (
+              <a
+                href={`/blog/${siguiente.slug}`}
+                class="card-altar group block p-6 md:text-right"
+              >
+                <span class="text-xs tracking-[0.2em] uppercase text-parchment-400 block mb-2">
+                  Siguiente →
+                </span>
+                <span class="font-display text-lg text-parchment-100 group-hover:text-[color:var(--color-gold-300)] transition-colors">
+                  {siguiente.titulo}
+                </span>
+              </a>
+            )
+          }
+        </div>
+
+        <div class="text-center mt-12">
+          <a href="/blog" class="btn-gold">Ver todas las reflexiones</a>
+        </div>
+      </div>
+    </section>
+  </article>
+</BaseLayout>
