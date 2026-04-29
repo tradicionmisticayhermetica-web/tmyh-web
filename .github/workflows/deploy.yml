@@ -47,21 +47,22 @@ jobs:
 
       - name: Push dist/ a rama production
         run: |
-          git config user.name "tradicionmisticayhermetica-web"
-          git config user.email "tradicionmisticayhermetica@gmail.com"
-
           # Clonar solo la rama production en un directorio temporal
           git clone --branch production --single-branch \
             https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/tradicionmisticayhermetica-web/tmyh-web.git \
             /tmp/production
 
+          # Configurar identidad DENTRO del repo clonado
+          cd /tmp/production
+          git config user.name "tradicionmisticayhermetica-web"
+          git config user.email "tradicionmisticayhermetica@gmail.com"
+
           # Borrar contenido anterior (excepto .git)
           find /tmp/production -mindepth 1 -not -path '/tmp/production/.git*' -delete
 
-          # Copiar el nuevo build
-          cp -r tmyh-web/dist/. /tmp/production/
+          # Copiar el nuevo build (la ruta es relativa al workspace de Actions)
+          cp -r $GITHUB_WORKSPACE/tmyh-web/dist/. /tmp/production/
 
-          cd /tmp/production
           git add -A
 
           # Solo commitear si hay cambios
