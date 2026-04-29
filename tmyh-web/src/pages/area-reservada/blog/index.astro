@@ -1,0 +1,140 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Blog" active="blog">
+  <header class="mb-8 flex items-end justify-between gap-4 flex-wrap">
+    <div>
+      <p class="title-eyebrow">Backoffice</p>
+      <h1 class="font-display text-3xl text-parchment-50 mt-3">Blog</h1>
+      <p class="text-parchment-300 mt-2 font-serif italic">
+        Reflexiones y artículos publicados en el sitio.
+      </p>
+    </div>
+    <a href="/area-reservada/blog/nuevo" class="btn-gold shrink-0">
+      + Nuevo post
+    </a>
+  </header>
+
+  <!-- Filtros -->
+  <div class="flex items-center gap-2 mb-6 flex-wrap">
+    <button class="filtro-btn is-active" data-filtro="todos">Todos</button>
+    <button class="filtro-btn" data-filtro="borrador">Borradores</button>
+    <button class="filtro-btn" data-filtro="publicado">Publicados</button>
+    <button class="filtro-btn" data-filtro="archivado">Archivados</button>
+    <div class="flex-1"></div>
+    <span
+      id="contador"
+      class="text-[10px] uppercase tracking-widest text-parchment-400 px-2 py-1 border border-gold-400/20 rounded-sm bg-night-950/50"
+    >—</span>
+  </div>
+
+  <section id="lista-posts" class="card-altar divide-y divide-gold-400/10">
+    <div class="py-12 text-center text-parchment-400 text-sm font-serif italic">
+      Cargando posts…
+    </div>
+  </section>
+
+  <style>
+    .filtro-btn {
+      font-family: var(--font-sans);
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-parchment-300);
+      padding: 0.5rem 1rem;
+      border: 1px solid rgb(230 196 100 / 0.15);
+      border-radius: 2px;
+      background: rgb(11 10 18 / 0.5);
+      transition: all 180ms ease;
+      cursor: pointer;
+    }
+    .filtro-btn:hover { color: var(--color-gold-300); border-color: rgb(212 175 55 / 0.4); }
+    .filtro-btn.is-active {
+      color: var(--color-night-950);
+      background: linear-gradient(180deg, var(--color-gold-300), var(--color-gold-500));
+      border-color: var(--color-gold-600);
+    }
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+
+  <script>
+    import {
+      listarPosts,
+      formatearFecha,
+      type PostBlog,
+    } from "../../../lib/admin";
+
+    const lista = document.getElementById("lista-posts");
+    const contador = document.getElementById("contador");
+    let cache: PostBlog[] = [];
+    let filtroActual: string = "todos";
+
+    function escapeHtml(s: string): string {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    const BADGE: Record<string, string> = {
+      publicado: '<span class="text-[9px] uppercase tracking-widest text-gold-300 px-1.5 py-0.5 border border-gold-400/40 rounded-sm bg-gold-400/5">Publicado</span>',
+      borrador:  '<span class="text-[9px] uppercase tracking-widest text-parchment-400 px-1.5 py-0.5 border border-parchment-400/30 rounded-sm">Borrador</span>',
+      archivado: '<span class="text-[9px] uppercase tracking-widest text-parchment-600 px-1.5 py-0.5 border border-parchment-600/20 rounded-sm opacity-60">Archivado</span>',
+    };
+
+    function pintar(posts: PostBlog[]) {
+      if (!lista) return;
+      if (contador) contador.textContent = `${posts.length} ${posts.length === 1 ? "post" : "posts"}`;
+
+      if (posts.length === 0) {
+        lista.innerHTML = `
+          <div class="py-16 text-center">
+            <div class="text-2xl text-gold-400 mb-3 opacity-50">☉</div>
+            <p class="text-parchment-300 font-serif italic">No hay posts en esta vista.</p>
+            <a href="/area-reservada/blog/nuevo" class="btn-gold mt-6 inline-flex">+ Nuevo post</a>
+          </div>`;
+        return;
+      }
+
+      lista.innerHTML = posts.map((p) => `
+        <a href="/area-reservada/blog/${p.id}"
+           class="block px-6 py-5 hover:bg-gold-400/5 transition">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 flex-wrap mb-1">
+                <span class="font-display text-parchment-50">${escapeHtml(p.titulo)}</span>
+                ${BADGE[p.estado] ?? ""}
+              </div>
+              <div class="text-xs text-parchment-500 font-mono">/${escapeHtml(p.slug)}</div>
+              ${p.extracto ? `<p class="text-sm text-parchment-300 mt-2 font-serif line-clamp-2 max-w-2xl">${escapeHtml(p.extracto)}</p>` : ""}
+            </div>
+            <div class="text-[11px] text-parchment-400 uppercase tracking-widest whitespace-nowrap text-right shrink-0">
+              ${escapeHtml(formatearFecha(p.publicado_en ?? p.creado_en))}
+            </div>
+          </div>
+        </a>`).join("");
+    }
+
+    async function cargar(filtro: string) {
+      filtroActual = filtro;
+      if (lista) lista.innerHTML = `<div class="py-12 text-center text-parchment-400 text-sm font-serif italic">Cargando…</div>`;
+      cache = await listarPosts(200);
+      const visibles = filtro === "todos" ? cache : cache.filter((p) => p.estado === filtro);
+      pintar(visibles);
+    }
+
+    document.querySelectorAll<HTMLButtonElement>(".filtro-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filtro-btn").forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        cargar(btn.dataset.filtro ?? "todos");
+      });
+    });
+
+    cargar("todos");
+  </script>
+</AdminLayout>

@@ -1,0 +1,280 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import EditorBlog from "../../../components/EditorBlog.astro";
+---
+
+<AdminLayout title="Editar post" active="blog">
+  <a
+    href="/area-reservada/blog"
+    class="text-xs uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition inline-flex items-center gap-2 mb-6"
+  >
+    ← Volver al blog
+  </a>
+
+  <div id="estado-carga" class="card-altar p-12 text-center">
+    <div class="text-2xl text-gold-400 animate-soft-pulse">☉</div>
+    <p class="mt-3 text-sm text-parchment-300 font-serif italic">Cargando post…</p>
+  </div>
+
+  <div id="estado-error" class="card-altar p-12 text-center hidden">
+    <div class="text-2xl text-wine-600 mb-3">⚠</div>
+    <p class="font-display text-lg text-parchment-50">Post no encontrado</p>
+    <a href="/area-reservada/blog" class="btn-ghost mt-6 inline-flex">Volver</a>
+  </div>
+
+  <div id="contenido" class="hidden space-y-6">
+    <div id="estado-guardando" class="hidden fixed top-4 right-4 z-50 bg-gold-400 text-night-950 text-xs font-sans uppercase tracking-widest px-4 py-2 rounded-sm shadow-lg">
+      Guardando…
+    </div>
+
+    <!-- Header con estado -->
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <p class="title-eyebrow">Editando post</p>
+        <h1 id="header-titulo" class="font-display text-2xl text-parchment-50 mt-2"></h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="badge-estado" class="text-[10px] uppercase tracking-widest px-2 py-1 rounded-sm border"></span>
+        <a id="link-ver-post" href="#" target="_blank" rel="noopener"
+           class="text-xs uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition hidden">
+          Ver en el sitio →
+        </a>
+      </div>
+    </div>
+
+    <form id="form-post" class="space-y-6" novalidate>
+      <!-- Título -->
+      <div>
+        <label for="titulo" class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2">Título</label>
+        <input
+          id="titulo" name="titulo" type="text" required
+          class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-50 px-4 py-3 font-display text-2xl transition rounded-sm"
+        />
+      </div>
+
+      <!-- Slug + Extracto -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div>
+          <label for="slug" class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2">Slug (URL)</label>
+          <div class="flex items-center gap-0 bg-night-950/60 border border-gold-400/15 focus-within:border-gold-400/60 rounded-sm transition">
+            <span class="px-3 py-2.5 text-parchment-500 text-sm font-sans border-r border-gold-400/15 select-none">/blog/</span>
+            <input
+              id="slug" name="slug" type="text" required
+              class="flex-1 bg-transparent outline-none text-parchment-100 px-3 py-2.5 text-sm font-mono"
+            />
+          </div>
+        </div>
+        <div>
+          <label for="extracto" class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2">Extracto</label>
+          <input
+            id="extracto" name="extracto" type="text" maxlength="220"
+            class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-4 py-2.5 text-sm font-serif transition rounded-sm"
+          />
+        </div>
+      </div>
+
+      <!-- Editor -->
+      <div>
+        <label class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2">Contenido</label>
+        <div class="border border-gold-400/15 rounded-sm overflow-hidden">
+          <EditorBlog />
+        </div>
+      </div>
+
+      <!-- Etiquetas -->
+      <div>
+        <label for="etiquetas" class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2">Etiquetas (separadas por comas)</label>
+        <input
+          id="etiquetas" name="etiquetas" type="text"
+          class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-4 py-2.5 text-sm font-serif transition rounded-sm"
+        />
+      </div>
+
+      <!-- Status -->
+      <div id="status-post" class="hidden text-sm font-serif italic" role="status" aria-live="polite"></div>
+
+      <!-- Acciones -->
+      <div class="flex flex-wrap gap-3 pt-2 border-t border-gold-400/10">
+        <button id="btn-guardar" type="button" class="btn-ghost">Guardar cambios</button>
+        <button id="btn-publicar" type="button" class="btn-gold hidden">Publicar</button>
+        <button id="btn-despublicar" type="button" class="btn-ghost hidden">Volver a borrador</button>
+        <div class="flex-1"></div>
+        <button id="btn-archivar" type="button"
+          class="text-[11px] uppercase tracking-widest text-parchment-500 hover:text-wine-600 transition px-3 py-2">
+          Archivar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    import {
+      obtenerPost,
+      guardarPost,
+      archivarPost,
+      type PostBlog,
+    } from "../../../lib/admin";
+
+    let postId: string | null = null;
+    let contenidoJson: unknown = null;
+    let contenidoHtml = "";
+
+    // Escuchar cambios del editor Tiptap
+    document.getElementById("editor-blog-root")?.addEventListener(
+      "editor:change",
+      (e: Event) => {
+        const { json, html } = (e as CustomEvent).detail;
+        contenidoJson = json;
+        contenidoHtml = html;
+      },
+    );
+
+    function setText(id: string, value: string) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+    function show(id: string) { document.getElementById(id)?.classList.remove("hidden"); }
+    function hide(id: string) { document.getElementById(id)?.classList.add("hidden"); }
+    function setVal(id: string, value: string) {
+      const el = document.getElementById(id) as HTMLInputElement | null;
+      if (el) el.value = value;
+    }
+
+    function setStatus(msg: string, tipo: "ok" | "error" | "info") {
+      const el = document.getElementById("status-post");
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove("hidden", "text-gold-300", "text-wine-600", "text-parchment-300");
+      el.classList.add(
+        tipo === "ok" ? "text-gold-300"
+        : tipo === "error" ? "text-wine-600"
+        : "text-parchment-300",
+      );
+    }
+
+    function pintarEstado(estado: PostBlog["estado"]) {
+      const badge = document.getElementById("badge-estado");
+      if (!badge) return;
+      badge.className = "text-[10px] uppercase tracking-widest px-2 py-1 rounded-sm border";
+      if (estado === "publicado") {
+        badge.textContent = "Publicado";
+        badge.classList.add("text-gold-300", "border-gold-400/40", "bg-gold-400/5");
+        show("btn-despublicar"); hide("btn-publicar");
+        show("link-ver-post");
+      } else if (estado === "borrador") {
+        badge.textContent = "Borrador";
+        badge.classList.add("text-parchment-400", "border-parchment-400/30");
+        show("btn-publicar"); hide("btn-despublicar");
+        hide("link-ver-post");
+      } else {
+        badge.textContent = "Archivado";
+        badge.classList.add("text-parchment-600", "border-parchment-600/20", "opacity-60");
+        show("btn-publicar"); hide("btn-despublicar");
+      }
+    }
+
+    function recopilarDatos(estado: PostBlog["estado"]) {
+      return {
+        id: postId!,
+        titulo: (document.getElementById("titulo") as HTMLInputElement)?.value.trim() ?? "",
+        slug: (document.getElementById("slug") as HTMLInputElement)?.value.trim() ?? "",
+        extracto: (document.getElementById("extracto") as HTMLInputElement)?.value.trim() || null,
+        etiquetas: ((document.getElementById("etiquetas") as HTMLInputElement)?.value ?? "")
+          .split(",").map((e) => e.trim()).filter(Boolean),
+        contenido_json: contenidoJson,
+        contenido_html: contenidoHtml,
+        estado,
+      };
+    }
+
+    async function guardar(estado: PostBlog["estado"]) {
+      const datos = recopilarDatos(estado);
+      if (!datos.titulo) { setStatus("El título es obligatorio.", "error"); return; }
+      if (!datos.slug) { setStatus("El slug es obligatorio.", "error"); return; }
+
+      const guardando = document.getElementById("estado-guardando");
+      guardando?.classList.remove("hidden");
+      setStatus("Guardando…", "info");
+
+      const r = await guardarPost(datos as any);
+      guardando?.classList.add("hidden");
+
+      if (!r.ok) {
+        setStatus(`Error: ${r.error}`, "error");
+        return;
+      }
+
+      pintarEstado(estado);
+      setText("header-titulo", datos.titulo);
+
+      const linkVer = document.getElementById("link-ver-post") as HTMLAnchorElement | null;
+      if (linkVer && datos.slug) linkVer.href = `/blog/${datos.slug}`;
+
+      setStatus(
+        estado === "publicado"
+          ? "Post publicado. El sitio se actualizará en ~10 minutos."
+          : "Cambios guardados.",
+        "ok",
+      );
+    }
+
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      postId = window.location.pathname.split("/").pop() ?? null;
+
+      if (!postId) {
+        hide("estado-carga"); show("estado-error");
+        return;
+      }
+
+      const post = await obtenerPost(postId);
+      if (!post) {
+        hide("estado-carga"); show("estado-error");
+        return;
+      }
+
+      // Inicializar el editor con el contenido existente
+      const editorRoot = document.getElementById("editor-blog-root");
+      if (editorRoot && post.contenido_json) {
+        editorRoot.dataset.initial = JSON.stringify(post.contenido_json);
+      }
+
+      // Llenar los campos
+      setVal("titulo", post.titulo);
+      setVal("slug", post.slug);
+      setVal("extracto", post.extracto ?? "");
+      setVal("etiquetas", post.etiquetas?.join(", ") ?? "");
+      setText("header-titulo", post.titulo);
+
+      const linkVer = document.getElementById("link-ver-post") as HTMLAnchorElement | null;
+      if (linkVer) linkVer.href = `/blog/${post.slug}`;
+
+      pintarEstado(post.estado);
+
+      // Guardar referencia al JSON inicial del editor
+      contenidoJson = post.contenido_json;
+      contenidoHtml = post.contenido_html ?? "";
+
+      hide("estado-carga");
+      show("contenido");
+
+      // Botones
+      document.getElementById("btn-guardar")?.addEventListener("click", () => {
+        const estadoActual = post.estado;
+        guardar(estadoActual);
+      });
+      document.getElementById("btn-publicar")?.addEventListener("click", () => guardar("publicado"));
+      document.getElementById("btn-despublicar")?.addEventListener("click", () => guardar("borrador"));
+      document.getElementById("btn-archivar")?.addEventListener("click", async () => {
+        if (!confirm("¿Archivar este post? Ya no será visible en el sitio.")) return;
+        const r = await archivarPost(postId!);
+        if (r.ok) {
+          setStatus("Post archivado.", "ok");
+          pintarEstado("archivado");
+        } else {
+          setStatus(`Error: ${r.error}`, "error");
+        }
+      });
+    })();
+  </script>
+</AdminLayout>

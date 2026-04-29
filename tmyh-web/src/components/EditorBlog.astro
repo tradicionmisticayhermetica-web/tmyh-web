@@ -1,0 +1,423 @@
+---
+/**
+ * Editor de blog enriquecido para /area-reservada/blog.
+ *
+ * Usa Tiptap con StarterKit (negritas, cursivas, encabezados, listas,
+ * citas, divisores) + extensiones de imagen, link, YouTube y placeholder.
+ *
+ * Emite un evento custom "editor:change" con el detalle:
+ *   { json: object, html: string }
+ *
+ * Uso:
+ *   <EditorBlog
+ *     initialJson={post.contenido_json}
+ *     placeholder="Empezá a escribir…"
+ *   />
+ *
+ * client:load es requerido (Tiptap es puro browser).
+ */
+interface Props {
+  initialJson?: unknown;
+  placeholder?: string;
+}
+
+const {
+  initialJson,
+  placeholder = "Comenzá a escribir la reflexión…",
+} = Astro.props;
+---
+
+<div
+  id="editor-blog-root"
+  class="editor-blog-wrapper"
+  data-initial={JSON.stringify(initialJson ?? null)}
+  data-placeholder={placeholder}
+>
+  <!-- Barra de herramientas -->
+  <div
+    id="editor-toolbar"
+    class="editor-toolbar flex flex-wrap gap-1.5 p-2.5 border-b border-gold-400/15 bg-night-950/50"
+    role="toolbar"
+    aria-label="Herramientas de edición"
+  >
+    <!-- Bloque: texto -->
+    <div class="flex gap-1">
+      <button type="button" data-cmd="bold" title="Negrita" class="tb-btn">
+        <strong>N</strong>
+      </button>
+      <button type="button" data-cmd="italic" title="Cursiva" class="tb-btn italic">
+        I
+      </button>
+    </div>
+
+    <div class="tb-divider"></div>
+
+    <!-- Bloque: encabezados -->
+    <div class="flex gap-1">
+      <button type="button" data-cmd="h2" title="Título" class="tb-btn font-display">
+        H2
+      </button>
+      <button type="button" data-cmd="h3" title="Subtítulo" class="tb-btn font-display">
+        H3
+      </button>
+    </div>
+
+    <div class="tb-divider"></div>
+
+    <!-- Bloque: bloques especiales -->
+    <div class="flex gap-1">
+      <button type="button" data-cmd="blockquote" title="Cita" class="tb-btn">
+        ❝
+      </button>
+      <button type="button" data-cmd="bulletList" title="Lista" class="tb-btn">
+        ☰
+      </button>
+      <button type="button" data-cmd="orderedList" title="Lista numerada" class="tb-btn">
+        №
+      </button>
+      <button type="button" data-cmd="horizontalRule" title="Separador ☉" class="tb-btn text-gold-400">
+        ☉
+      </button>
+    </div>
+
+    <div class="tb-divider"></div>
+
+    <!-- Bloque: media -->
+    <div class="flex gap-1">
+      <button type="button" data-cmd="link" title="Insertar link" class="tb-btn">
+        🔗
+      </button>
+      <button type="button" data-cmd="image" title="Insertar imagen" class="tb-btn">
+        🖼
+      </button>
+      <button type="button" data-cmd="youtube" title="Insertar video YouTube" class="tb-btn">
+        ▶
+      </button>
+    </div>
+
+    <div class="tb-divider"></div>
+
+    <!-- Deshacer / Rehacer -->
+    <div class="flex gap-1">
+      <button type="button" data-cmd="undo" title="Deshacer" class="tb-btn opacity-70">
+        ↩
+      </button>
+      <button type="button" data-cmd="redo" title="Rehacer" class="tb-btn opacity-70">
+        ↪
+      </button>
+    </div>
+  </div>
+
+  <!-- Área editable -->
+  <div
+    id="editor-content"
+    class="editor-content min-h-[28rem] px-6 py-6 md:px-8 md:py-7 focus:outline-none font-serif text-parchment-100 text-lg leading-[1.75]"
+  ></div>
+</div>
+
+<!-- Input oculto para subir imágenes -->
+<input
+  type="file"
+  id="editor-image-input"
+  accept="image/*"
+  class="hidden"
+  aria-hidden="true"
+/>
+
+<style is:global>
+  /* Tipografía del editor igual que el sitio público */
+  .editor-content {
+    font-family: var(--font-serif);
+    color: var(--color-parchment-100);
+  }
+  .editor-content p {
+    margin-bottom: 1.25rem;
+  }
+  .editor-content h2 {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    color: var(--color-parchment-50);
+    margin: 2.5rem 0 1rem 0;
+    line-height: 1.25;
+  }
+  .editor-content h3 {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    color: var(--color-gold-300);
+    margin: 2rem 0 0.75rem 0;
+  }
+  .editor-content blockquote {
+    border-left: 2px solid var(--color-gold-500);
+    padding: 0.5rem 0 0.5rem 1.5rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+    color: var(--color-parchment-200);
+  }
+  .editor-content hr {
+    border: none;
+    text-align: center;
+    margin: 2rem 0;
+    color: var(--color-gold-400);
+    opacity: 0.6;
+  }
+  .editor-content hr::after {
+    content: "☉";
+    font-size: 1.2rem;
+  }
+  .editor-content ul {
+    list-style: none;
+    padding-left: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .editor-content ul li::before {
+    content: "◆";
+    color: var(--color-gold-500);
+    font-size: 0.55rem;
+    margin-right: 0.6rem;
+    vertical-align: middle;
+  }
+  .editor-content ol {
+    padding-left: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .editor-content ol li {
+    color: var(--color-parchment-100);
+    margin-bottom: 0.4rem;
+  }
+  .editor-content a {
+    color: var(--color-gold-300);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .editor-content strong {
+    color: var(--color-parchment-50);
+    font-weight: 600;
+  }
+  .editor-content em {
+    color: var(--color-parchment-200);
+  }
+  .editor-content img {
+    max-width: 100%;
+    border-radius: 2px;
+    margin: 1.5rem auto;
+    display: block;
+  }
+  .editor-content .youtube-embed {
+    margin: 1.5rem 0;
+    aspect-ratio: 16/9;
+    width: 100%;
+  }
+  .editor-content .youtube-embed iframe {
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+  }
+
+  /* Placeholder de Tiptap */
+  .editor-content p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: var(--color-parchment-500);
+    pointer-events: none;
+    height: 0;
+    font-style: italic;
+  }
+
+  /* Foco visible */
+  .editor-content:focus {
+    outline: none;
+  }
+  .editor-blog-wrapper:focus-within .editor-toolbar {
+    border-color: rgba(212, 175, 55, 0.25);
+  }
+
+  /* Botones de la toolbar */
+  .tb-btn {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.4rem;
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    color: var(--color-parchment-300);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 120ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tb-btn:hover {
+    color: var(--color-gold-300);
+    background: rgba(212, 175, 55, 0.08);
+    border-color: rgba(212, 175, 55, 0.2);
+  }
+  .tb-btn.is-active {
+    color: var(--color-night-950);
+    background: linear-gradient(180deg, var(--color-gold-300), var(--color-gold-500));
+    border-color: var(--color-gold-600);
+  }
+  .tb-divider {
+    width: 1px;
+    background: rgba(212, 175, 55, 0.15);
+    margin: 0.2rem 0.1rem;
+    align-self: stretch;
+  }
+</style>
+
+<script>
+  import { Editor } from "@tiptap/core";
+  import StarterKit from "@tiptap/starter-kit";
+  import Image from "@tiptap/extension-image";
+  import Link from "@tiptap/extension-link";
+  import Placeholder from "@tiptap/extension-placeholder";
+  import Youtube from "@tiptap/extension-youtube";
+  import { supabase } from "../lib/supabase";
+
+  const root = document.getElementById("editor-blog-root");
+  const contentEl = document.getElementById("editor-content");
+  const imageInput = document.getElementById(
+    "editor-image-input",
+  ) as HTMLInputElement | null;
+
+  if (!root || !contentEl) {
+    console.error("[EditorBlog] elementos no encontrados");
+  } else {
+    const initialJson = JSON.parse(root.dataset.initial ?? "null");
+    const placeholder = root.dataset.placeholder ?? "Comenzá a escribir…";
+
+    const editor = new Editor({
+      element: contentEl,
+      extensions: [
+        StarterKit.configure({
+          heading: { levels: [2, 3] },
+          bulletList: { keepMarks: true },
+          orderedList: { keepMarks: true },
+        }),
+        Image.configure({ inline: false, allowBase64: false }),
+        Link.configure({ openOnClick: false, autolink: true }),
+        Placeholder.configure({ placeholder }),
+        Youtube.configure({ width: "100%", height: 400 }),
+      ],
+      content: initialJson ?? "",
+      onUpdate: ({ editor }) => {
+        const json = editor.getJSON();
+        const html = editor.getHTML();
+        root.dispatchEvent(
+          new CustomEvent("editor:change", { detail: { json, html } }),
+        );
+        actualizarToolbar(editor);
+      },
+      onSelectionUpdate: ({ editor }) => {
+        actualizarToolbar(editor);
+      },
+    });
+
+    // ----------------------------------------------------------------
+    // Toolbar: comandos
+    // ----------------------------------------------------------------
+    function actualizarToolbar(ed: typeof editor) {
+      document.querySelectorAll<HTMLButtonElement>("[data-cmd]").forEach((btn) => {
+        const cmd = btn.dataset.cmd!;
+        const isActive =
+          cmd === "bold" ? ed.isActive("bold")
+          : cmd === "italic" ? ed.isActive("italic")
+          : cmd === "h2" ? ed.isActive("heading", { level: 2 })
+          : cmd === "h3" ? ed.isActive("heading", { level: 3 })
+          : cmd === "blockquote" ? ed.isActive("blockquote")
+          : cmd === "bulletList" ? ed.isActive("bulletList")
+          : cmd === "orderedList" ? ed.isActive("orderedList")
+          : false;
+        btn.classList.toggle("is-active", isActive);
+      });
+    }
+
+    document.querySelectorAll<HTMLButtonElement>("[data-cmd]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const cmd = btn.dataset.cmd!;
+        switch (cmd) {
+          case "bold":
+            editor.chain().focus().toggleBold().run();
+            break;
+          case "italic":
+            editor.chain().focus().toggleItalic().run();
+            break;
+          case "h2":
+            editor.chain().focus().toggleHeading({ level: 2 }).run();
+            break;
+          case "h3":
+            editor.chain().focus().toggleHeading({ level: 3 }).run();
+            break;
+          case "blockquote":
+            editor.chain().focus().toggleBlockquote().run();
+            break;
+          case "bulletList":
+            editor.chain().focus().toggleBulletList().run();
+            break;
+          case "orderedList":
+            editor.chain().focus().toggleOrderedList().run();
+            break;
+          case "horizontalRule":
+            editor.chain().focus().setHorizontalRule().run();
+            break;
+          case "undo":
+            editor.chain().focus().undo().run();
+            break;
+          case "redo":
+            editor.chain().focus().redo().run();
+            break;
+          case "link": {
+            const prevUrl = editor.getAttributes("link").href ?? "";
+            const url = window.prompt("URL del link:", prevUrl);
+            if (url === null) break;
+            if (url === "") {
+              editor.chain().focus().unsetLink().run();
+            } else {
+              editor.chain().focus().setLink({ href: url }).run();
+            }
+            break;
+          }
+          case "image":
+            imageInput?.click();
+            break;
+          case "youtube": {
+            const url = window.prompt("URL del video de YouTube:");
+            if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
+            break;
+          }
+        }
+      });
+    });
+
+    // ----------------------------------------------------------------
+    // Upload de imágenes a Supabase Storage (bucket blog-images)
+    // ----------------------------------------------------------------
+    imageInput?.addEventListener("change", async () => {
+      const file = imageInput.files?.[0];
+      if (!file) return;
+
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+      const { error } = await supabase.storage
+        .from("blog-images")
+        .upload(path, file, { upsert: false, contentType: file.type });
+
+      if (error) {
+        alert(`No se pudo subir la imagen: ${error.message}`);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("blog-images")
+        .getPublicUrl(path);
+
+      if (urlData?.publicUrl) {
+        editor.chain().focus().setImage({ src: urlData.publicUrl }).run();
+      }
+
+      imageInput.value = "";
+    });
+  }
+</script>

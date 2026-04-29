@@ -89,6 +89,154 @@ export async function obtenerResumen(): Promise<ResumenPanel | null> {
   return data as ResumenPanel;
 }
 
+// =============================================================================
+// Posts del blog
+// =============================================================================
+
+export interface PostBlog {
+  id: string;
+  slug: string;
+  titulo: string;
+  extracto: string | null;
+  contenido_json: unknown | null;
+  contenido_html: string | null;
+  imagen_destacada: string | null;
+  autor_id: string | null;
+  estado: "borrador" | "publicado" | "archivado";
+  etiquetas: string[];
+  publicado_en: string | null;
+  creado_en: string;
+  actualizado_en: string;
+}
+
+export type EstadoPost = PostBlog["estado"];
+
+export interface ResultadoGuardarPost {
+  ok: boolean;
+  id?: string;
+  error?: string;
+}
+
+/** Lista todos los posts (admins ven borradores y archivados también). */
+export async function listarPosts(limite = 100): Promise<PostBlog[]> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select(
+      "id, slug, titulo, extracto, imagen_destacada, estado, etiquetas, publicado_en, creado_en, actualizado_en",
+    )
+    .order("creado_en", { ascending: false })
+    .limit(limite);
+
+  if (error) {
+    console.error("[admin.listarPosts]", error);
+    return [];
+  }
+  return (data ?? []) as PostBlog[];
+}
+
+/** Trae un post completo por id (incluyendo contenido_json y contenido_html). */
+export async function obtenerPost(id: string): Promise<PostBlog | null> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error("[admin.obtenerPost]", error);
+    return null;
+  }
+  return data as PostBlog;
+}
+
+/** Trae un post completo por slug (para el blog público). */
+export async function obtenerPostPorSlug(slug: string): Promise<PostBlog | null> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("slug", slug)
+    .eq("estado", "publicado")
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error("[admin.obtenerPostPorSlug]", error);
+    return null;
+  }
+  return data as PostBlog;
+}
+
+/** Lista los posts publicados para el blog público. */
+export async function listarPostsPublicos(limite = 50): Promise<PostBlog[]> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select(
+      "id, slug, titulo, extracto, imagen_destacada, etiquetas, publicado_en, creado_en",
+    )
+    .eq("estado", "publicado")
+    .order("publicado_en", { ascending: false })
+    .limit(limite);
+
+  if (error) {
+    console.error("[admin.listarPostsPublicos]", error);
+    return [];
+  }
+  return (data ?? []) as PostBlog[];
+}
+
+/** Crea o actualiza un post. Si no tiene `id`, crea uno nuevo. */
+export async function guardarPost(
+  datos: Partial<PostBlog> & { titulo: string; slug: string },
+): Promise<ResultadoGuardarPost> {
+  const { id, ...campos } = datos;
+
+  // Limpiar campos que no deben enviarse directamente
+  const { creado_en: _c, actualizado_en: _a, autor_id: _au, ...payload } = campos as any;
+
+  if (id) {
+    // Update
+    const { data, error } = await supabase
+      .from("posts")
+      .update(payload)
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      console.error("[admin.guardarPost] update", error);
+      return { ok: false, error: error.message };
+    }
+    return { ok: true, id: data?.id ?? id };
+  }
+
+  // Insert
+  const { data, error } = await supabase
+    .from("posts")
+    .insert(payload)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[admin.guardarPost] insert", error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, id: data?.id };
+}
+
+/** Elimina un post (soft delete: cambia estado a 'archivado'). */
+export async function archivarPost(id: string): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("posts")
+    .update({ estado: "archivado" })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
 /**
  * Formatea una fecha ISO a algo legible en es-AR.
  */

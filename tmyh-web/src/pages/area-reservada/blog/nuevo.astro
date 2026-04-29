@@ -1,0 +1,216 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import EditorBlog from "../../../components/EditorBlog.astro";
+---
+
+<AdminLayout title="Nuevo post" active="blog">
+  <a
+    href="/area-reservada/blog"
+    class="text-xs uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition inline-flex items-center gap-2 mb-6"
+  >
+    ← Volver al blog
+  </a>
+
+  <div id="estado-guardando" class="hidden fixed top-4 right-4 z-50 bg-gold-400 text-night-950 text-xs font-sans uppercase tracking-widest px-4 py-2 rounded-sm shadow-lg">
+    Guardando…
+  </div>
+
+  <form id="form-post" class="space-y-6" novalidate>
+    <!-- Título -->
+    <div>
+      <label for="titulo" class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2">
+        Título
+      </label>
+      <input
+        id="titulo"
+        name="titulo"
+        type="text"
+        required
+        placeholder="El símbolo como llave del alma"
+        class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-50 px-4 py-3 font-display text-2xl transition rounded-sm"
+      />
+    </div>
+
+    <!-- Slug -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div>
+        <label for="slug" class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2">
+          Slug (URL)
+        </label>
+        <div class="flex items-center gap-0 bg-night-950/60 border border-gold-400/15 focus-within:border-gold-400/60 rounded-sm transition">
+          <span class="px-3 py-2.5 text-parchment-500 text-sm font-sans border-r border-gold-400/15 select-none">/blog/</span>
+          <input
+            id="slug"
+            name="slug"
+            type="text"
+            required
+            placeholder="el-simbolo-como-llave"
+            class="flex-1 bg-transparent outline-none text-parchment-100 px-3 py-2.5 text-sm font-mono"
+          />
+        </div>
+      </div>
+      <div>
+        <label for="extracto" class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2">
+          Extracto (para la lista del blog)
+        </label>
+        <input
+          id="extracto"
+          name="extracto"
+          type="text"
+          maxlength="220"
+          placeholder="Una reflexión sobre…"
+          class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-4 py-2.5 text-sm font-serif transition rounded-sm"
+        />
+      </div>
+    </div>
+
+    <!-- Editor -->
+    <div>
+      <label class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2">
+        Contenido
+      </label>
+      <div class="border border-gold-400/15 rounded-sm overflow-hidden">
+        <EditorBlog placeholder="Comenzá a escribir la reflexión…" />
+      </div>
+    </div>
+
+    <!-- Etiquetas -->
+    <div>
+      <label for="etiquetas" class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2">
+        Etiquetas (separadas por comas)
+      </label>
+      <input
+        id="etiquetas"
+        name="etiquetas"
+        type="text"
+        placeholder="hermetismo, alquimia, símbolo"
+        class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-4 py-2.5 text-sm font-serif transition rounded-sm"
+      />
+    </div>
+
+    <!-- Estado y acciones -->
+    <div
+      id="status-post"
+      class="hidden text-sm font-serif italic"
+      role="status"
+      aria-live="polite"
+    ></div>
+
+    <div class="flex flex-wrap gap-3 pt-2 border-t border-gold-400/10">
+      <button
+        id="btn-guardar-borrador"
+        type="button"
+        class="btn-ghost"
+      >
+        Guardar borrador
+      </button>
+      <button
+        id="btn-publicar"
+        type="button"
+        class="btn-gold"
+      >
+        Publicar
+      </button>
+    </div>
+  </form>
+
+  <script>
+    import {
+      guardarPost,
+      type PostBlog,
+    } from "../../../lib/admin";
+
+    // Estado del editor
+    let contenidoJson: unknown = null;
+    let contenidoHtml = "";
+
+    // Escuchar cambios del editor Tiptap
+    document.getElementById("editor-blog-root")?.addEventListener(
+      "editor:change",
+      (e: Event) => {
+        const { json, html } = (e as CustomEvent).detail;
+        contenidoJson = json;
+        contenidoHtml = html;
+      },
+    );
+
+    // Auto-slug desde el título
+    const tituloInput = document.getElementById("titulo") as HTMLInputElement | null;
+    const slugInput = document.getElementById("slug") as HTMLInputElement | null;
+    let slugTocado = false;
+
+    slugInput?.addEventListener("input", () => { slugTocado = true; });
+    tituloInput?.addEventListener("input", () => {
+      if (slugTocado || !slugInput) return;
+      slugInput.value = tituloInput.value
+        .toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-");
+    });
+
+    function setStatus(msg: string, tipo: "ok" | "error" | "info") {
+      const el = document.getElementById("status-post");
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove("hidden", "text-gold-300", "text-wine-600", "text-parchment-300");
+      el.classList.add(
+        tipo === "ok" ? "text-gold-300"
+        : tipo === "error" ? "text-wine-600"
+        : "text-parchment-300"
+      );
+    }
+
+    function recopilarDatos(estado: PostBlog["estado"]): Partial<PostBlog> & { titulo: string; slug: string } {
+      const titulo = (document.getElementById("titulo") as HTMLInputElement)?.value.trim() ?? "";
+      const slug = (document.getElementById("slug") as HTMLInputElement)?.value.trim() ?? "";
+      const extracto = (document.getElementById("extracto") as HTMLInputElement)?.value.trim() || null;
+      const etiquetasStr = (document.getElementById("etiquetas") as HTMLInputElement)?.value ?? "";
+      const etiquetas = etiquetasStr.split(",").map((e) => e.trim()).filter(Boolean);
+
+      return {
+        titulo,
+        slug,
+        extracto,
+        contenido_json: contenidoJson,
+        contenido_html: contenidoHtml,
+        etiquetas,
+        estado,
+      };
+    }
+
+    async function guardar(estado: PostBlog["estado"]) {
+      const datos = recopilarDatos(estado);
+      if (!datos.titulo) { setStatus("El título es obligatorio.", "error"); return; }
+      if (!datos.slug) { setStatus("El slug es obligatorio.", "error"); return; }
+
+      const guardando = document.getElementById("estado-guardando");
+      guardando?.classList.remove("hidden");
+      setStatus("Guardando…", "info");
+
+      const r = await guardarPost(datos);
+      guardando?.classList.add("hidden");
+
+      if (!r.ok) {
+        setStatus(`Error al guardar: ${r.error}`, "error");
+        return;
+      }
+
+      setStatus(
+        estado === "publicado"
+          ? "Post publicado. El sitio se actualizará en ~10 minutos."
+          : "Borrador guardado.",
+        "ok",
+      );
+
+      // Redirigir al detalle del post para poder seguir editando
+      setTimeout(() => {
+        window.location.href = `/area-reservada/blog/${r.id}`;
+      }, 1200);
+    }
+
+    document.getElementById("btn-guardar-borrador")?.addEventListener("click", () => guardar("borrador"));
+    document.getElementById("btn-publicar")?.addEventListener("click", () => guardar("publicado"));
+  </script>
+</AdminLayout>

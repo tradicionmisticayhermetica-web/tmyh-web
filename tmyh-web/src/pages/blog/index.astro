@@ -1,9 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Ornament from "../../components/Ornament.astro";
-import { getPostsOrdenados } from "../../data/posts";
-
-const posts = getPostsOrdenados();
 ---
 
 <BaseLayout
@@ -18,50 +15,76 @@ const posts = getPostsOrdenados();
           Blog
         </h1>
         <p class="text-lg font-serif text-parchment-200 leading-relaxed">
-          Breves apuntes sobre hermetismo, iniciación, alquimia y símbolo. Textos
-          escritos a lo largo de los años, más como piedras en el camino que
-          como doctrina cerrada.
+          Breves apuntes sobre hermetismo, iniciación, alquimia y símbolo.
         </p>
       </div>
 
       <Ornament symbol="✦" />
 
-      <div class="space-y-6 mt-12">
-        {
-          posts.map((post) => (
-            <a
-              href={`/blog/${post.slug}`}
-              class="card-altar group block p-8 md:p-10 relative overflow-hidden"
-            >
-              <div class="absolute top-6 right-6 text-3xl text-[color:var(--color-gold-500)] opacity-30 transition-opacity group-hover:opacity-60">
-                {post.simbolo}
-              </div>
+      <div id="lista-posts" class="space-y-6 mt-12">
+        <div class="text-center text-parchment-400 font-serif italic py-16">
+          Cargando reflexiones…
+        </div>
+      </div>
 
-              <div class="flex items-center gap-3 mb-4 text-xs tracking-[0.2em] uppercase">
-                <span class="text-[color:var(--color-gold-400)]">
-                  {post.categoria}
-                </span>
-                <span class="text-parchment-500">·</span>
-                <time class="text-parchment-400" datetime={post.fechaISO}>
-                  {post.fechaLegible}
-                </time>
-              </div>
-
-              <h2 class="text-2xl md:text-3xl font-display mb-4 text-parchment-50 group-hover:text-[color:var(--color-gold-300)] transition-colors">
-                {post.titulo}
-              </h2>
-
-              <p class="text-base font-serif text-parchment-200 leading-relaxed mb-6 max-w-2xl">
-                {post.resumen}
-              </p>
-
-              <span class="text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] group-hover:text-[color:var(--color-gold-300)]">
-                Leer reflexión →
-              </span>
-            </a>
-          ))
-        }
+      <div id="sin-posts" class="hidden text-center py-16">
+        <p class="text-parchment-300 font-serif italic">
+          Todavía no hay reflexiones publicadas. Volvé pronto.
+        </p>
       </div>
     </div>
   </section>
+
+  <script>
+    import { listarPostsPublicos, formatearFecha, type PostBlog } from "../../lib/admin";
+
+    const lista = document.getElementById("lista-posts");
+    const sinPosts = document.getElementById("sin-posts");
+
+    function escapeHtml(s: string): string {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function formatearFechaLegible(iso: string): string {
+      try {
+        return new Date(iso).toLocaleDateString("es-AR", {
+          timeZone: "America/Argentina/Buenos_Aires",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+      } catch { return iso; }
+    }
+
+    (async () => {
+      const posts = await listarPostsPublicos(50);
+
+      if (!lista) return;
+
+      if (posts.length === 0) {
+        lista.innerHTML = "";
+        sinPosts?.classList.remove("hidden");
+        return;
+      }
+
+      lista.innerHTML = posts.map((p: PostBlog) => `
+        <a href="/blog/${escapeHtml(p.slug)}"
+           class="card-altar group block p-8 md:p-10 relative overflow-hidden">
+          <div class="flex items-center gap-3 mb-4 text-xs tracking-[0.2em] uppercase">
+            ${p.etiquetas?.length ? `<span class="text-[color:var(--color-gold-400)]">${escapeHtml(p.etiquetas[0])}</span><span class="text-parchment-500">·</span>` : ""}
+            <time class="text-parchment-400">
+              ${escapeHtml(formatearFechaLegible(p.publicado_en ?? p.creado_en))}
+            </time>
+          </div>
+          <h2 class="text-2xl md:text-3xl font-display mb-4 text-parchment-50 group-hover:text-[color:var(--color-gold-300)] transition-colors">
+            ${escapeHtml(p.titulo)}
+          </h2>
+          ${p.extracto ? `<p class="text-base font-serif text-parchment-200 leading-relaxed mb-6 max-w-2xl">${escapeHtml(p.extracto)}</p>` : ""}
+          <span class="text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] group-hover:text-[color:var(--color-gold-300)]">
+            Leer reflexión →
+          </span>
+        </a>`).join("");
+    })();
+  </script>
 </BaseLayout>

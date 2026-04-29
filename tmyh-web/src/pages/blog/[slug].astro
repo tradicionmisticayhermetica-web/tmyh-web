@@ -1,148 +1,206 @@
 ---
-import { Image } from "astro:assets";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Ornament from "../../components/Ornament.astro";
-import { posts, getPostsOrdenados } from "../../data/posts";
-import { resolverImagen } from "../../lib/images";
-
-export function getStaticPaths() {
-  return posts.map((post) => ({
-    params: { slug: post.slug },
-    props: { post },
-  }));
-}
-
-const { post } = Astro.props;
-const imagenPost = await resolverImagen(post.imagen);
-
-const ordenados = getPostsOrdenados();
-const idx = ordenados.findIndex((p) => p.slug === post.slug);
-const anterior = idx < ordenados.length - 1 ? ordenados[idx + 1] : null;
-const siguiente = idx > 0 ? ordenados[idx - 1] : null;
 ---
 
-<BaseLayout title={post.titulo} description={post.resumen}>
+<BaseLayout title="Cargando…" description="">
   <article>
-    {/* ============================================================
-          Encabezado
-        ============================================================ */}
-    <section class="relative py-20 md:py-28 overflow-hidden">
-      <div class="stars-bg"></div>
-      <div class="container-prose relative z-10 max-w-3xl">
-        <a
-          href="/blog"
-          class="inline-flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-parchment-300 hover:text-[color:var(--color-gold-300)] mb-10"
-        >
-          ← Todas las reflexiones
-        </a>
+    <div id="estado-carga" class="py-40 text-center">
+      <div class="text-2xl text-gold-400 animate-soft-pulse">☉</div>
+      <p class="mt-4 text-sm text-parchment-300 font-serif italic">Cargando…</p>
+    </div>
 
-        <div class="flex items-center gap-3 mb-6 text-xs tracking-[0.2em] uppercase">
-          <span class="text-[color:var(--color-gold-400)]">
-            {post.categoria}
-          </span>
-          <span class="text-parchment-500">·</span>
-          <time class="text-parchment-400" datetime={post.fechaISO}>
-            {post.fechaLegible}
-          </time>
-        </div>
+    <div id="estado-404" class="hidden py-40 text-center">
+      <p class="font-display text-2xl text-parchment-50 mb-4">Reflexión no encontrada</p>
+      <a href="/blog" class="btn-gold">Ver todas las reflexiones</a>
+    </div>
 
-        <div class="flex items-start gap-6">
-          <span
-            class="hidden md:block text-5xl text-[color:var(--color-gold-400)] leading-none"
-            >{post.simbolo}</span
+    <div id="contenido" class="hidden">
+      {/* Hero */}
+      <section class="relative py-20 md:py-28 overflow-hidden">
+        <div class="stars-bg"></div>
+        <div class="container-prose relative z-10 max-w-3xl">
+          <a
+            href="/blog"
+            class="inline-flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-parchment-300 hover:text-[color:var(--color-gold-300)] mb-10"
           >
-          <h1 class="text-4xl md:text-5xl font-display text-balance">
-            {post.titulo}
-          </h1>
+            ← Todas las reflexiones
+          </a>
+
+          <div id="hero-meta" class="flex items-center gap-3 mb-6 text-xs tracking-[0.2em] uppercase"></div>
+
+          <h1 id="post-titulo" class="text-4xl md:text-5xl font-display text-balance"></h1>
+          <p id="post-autor" class="mt-6 text-xs tracking-[0.2em] uppercase text-parchment-400"></p>
         </div>
+      </section>
 
-        <p class="mt-6 text-xs tracking-[0.2em] uppercase text-parchment-400">
-          Por {post.autor}
-        </p>
+      <Ornament symbol="✦" />
+
+      {/* Imagen destacada */}
+      <div id="post-imagen-wrapper" class="hidden pb-4 md:pb-8">
+        <div class="container-prose max-w-3xl">
+          <figure class="img-veil">
+            <img id="post-imagen" src="" alt="" class="img-altar w-full h-auto" loading="eager" />
+          </figure>
+        </div>
       </div>
-    </section>
 
-    {/* ============================================================
-          Imagen de cabecera (opcional)
-        ============================================================ */}
-    {
-      imagenPost && (
-        <section class="pb-4 md:pb-8">
-          <div class="container-prose max-w-3xl">
-            <figure class="img-veil">
-              <Image
-                src={imagenPost}
-                alt={post.imagenAlt ?? post.titulo}
-                widths={[480, 800, 1200]}
-                sizes="(min-width: 1024px) 768px, 100vw"
-                class="img-altar"
-                loading="eager"
-              />
-            </figure>
+      {/* Cuerpo */}
+      <section class="py-12">
+        <div class="container-prose max-w-3xl">
+          <div
+            id="post-cuerpo"
+            class="blog-content text-lg font-serif leading-[1.8] text-parchment-100"
+          ></div>
+        </div>
+      </section>
+
+      <Ornament symbol="☉" />
+
+      {/* Etiquetas */}
+      <section class="pb-8">
+        <div class="container-prose max-w-3xl">
+          <div id="post-etiquetas" class="flex flex-wrap gap-2"></div>
+        </div>
+      </section>
+
+      {/* Navegación entre posts */}
+      <section class="py-12 border-t border-gold-400/10">
+        <div class="container-prose max-w-3xl">
+          <div class="text-center">
+            <a href="/blog" class="btn-gold">Ver todas las reflexiones</a>
           </div>
-        </section>
-      )
-    }
-
-    <Ornament symbol="✦" />
-
-    {/* ============================================================
-          Cuerpo
-        ============================================================ */}
-    <section class="py-12">
-      <div class="container-prose max-w-3xl">
-        <div class="space-y-6 text-lg font-serif leading-relaxed text-parchment-100">
-          {post.parrafos.map((parrafo) => <p>{parrafo}</p>)}
         </div>
-      </div>
-    </section>
-
-    <Ornament symbol="☉" />
-
-    {/* ============================================================
-          Navegación entre posts
-        ============================================================ */}
-    <section class="py-12">
-      <div class="container-prose max-w-3xl">
-        <div class="grid md:grid-cols-2 gap-6">
-          {
-            anterior ? (
-              <a
-                href={`/blog/${anterior.slug}`}
-                class="card-altar group block p-6"
-              >
-                <span class="text-xs tracking-[0.2em] uppercase text-parchment-400 block mb-2">
-                  ← Anterior
-                </span>
-                <span class="font-display text-lg text-parchment-100 group-hover:text-[color:var(--color-gold-300)] transition-colors">
-                  {anterior.titulo}
-                </span>
-              </a>
-            ) : (
-              <div />
-            )
-          }
-          {
-            siguiente && (
-              <a
-                href={`/blog/${siguiente.slug}`}
-                class="card-altar group block p-6 md:text-right"
-              >
-                <span class="text-xs tracking-[0.2em] uppercase text-parchment-400 block mb-2">
-                  Siguiente →
-                </span>
-                <span class="font-display text-lg text-parchment-100 group-hover:text-[color:var(--color-gold-300)] transition-colors">
-                  {siguiente.titulo}
-                </span>
-              </a>
-            )
-          }
-        </div>
-
-        <div class="text-center mt-12">
-          <a href="/blog" class="btn-gold">Ver todas las reflexiones</a>
-        </div>
-      </div>
-    </section>
+      </section>
+    </div>
   </article>
 </BaseLayout>
+
+<style is:global>
+  /* Estilos del cuerpo del post (HTML generado por Tiptap) */
+  .blog-content p { margin-bottom: 1.5rem; }
+  .blog-content h2 {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    color: var(--color-parchment-50);
+    margin: 3rem 0 1.25rem 0;
+    line-height: 1.25;
+  }
+  .blog-content h3 {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    color: var(--color-gold-300);
+    margin: 2rem 0 0.75rem 0;
+  }
+  .blog-content blockquote {
+    border-left: 2px solid var(--color-gold-500);
+    padding: 0.5rem 0 0.5rem 1.5rem;
+    margin: 2rem 0;
+    font-style: italic;
+    color: var(--color-parchment-200);
+  }
+  .blog-content hr {
+    border: none;
+    text-align: center;
+    margin: 2.5rem 0;
+    color: var(--color-gold-400);
+    opacity: 0.6;
+  }
+  .blog-content hr::after { content: "☉"; font-size: 1.2rem; }
+  .blog-content ul { list-style: none; padding-left: 1.5rem; margin-bottom: 1.5rem; }
+  .blog-content ul li::before {
+    content: "◆";
+    color: var(--color-gold-500);
+    font-size: 0.55rem;
+    margin-right: 0.6rem;
+    vertical-align: middle;
+  }
+  .blog-content ol { padding-left: 1.5rem; margin-bottom: 1.5rem; }
+  .blog-content ol li { color: var(--color-parchment-100); margin-bottom: 0.4rem; }
+  .blog-content a {
+    color: var(--color-gold-300);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .blog-content strong { color: var(--color-parchment-50); font-weight: 600; }
+  .blog-content em { color: var(--color-parchment-200); }
+  .blog-content img {
+    max-width: 100%;
+    border-radius: 2px;
+    margin: 2rem auto;
+    display: block;
+  }
+  .blog-content iframe {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: 2px;
+    margin: 2rem 0;
+    display: block;
+  }
+</style>
+
+<script>
+  import { obtenerPostPorSlug, type PostBlog } from "../../lib/admin";
+
+  function show(id: string) { document.getElementById(id)?.classList.remove("hidden"); }
+  function hide(id: string) { document.getElementById(id)?.classList.add("hidden"); }
+  function setText(id: string, v: string) { const el = document.getElementById(id); if (el) el.textContent = v; }
+  function setHtml(id: string, v: string) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
+
+  function formatearFecha(iso: string): string {
+    try {
+      return new Date(iso).toLocaleDateString("es-AR", {
+        timeZone: "America/Argentina/Buenos_Aires",
+        day: "numeric", month: "long", year: "numeric",
+      });
+    } catch { return iso; }
+  }
+
+  (async () => {
+    const slug = window.location.pathname.replace(/^\/blog\/?/, "").replace(/\/$/, "");
+    if (!slug) { hide("estado-carga"); show("estado-404"); return; }
+
+    const post: PostBlog | null = await obtenerPostPorSlug(slug);
+    if (!post) { hide("estado-carga"); show("estado-404"); return; }
+
+    // Actualizar título de la página
+    document.title = `${post.titulo} · Tradición Mística y Hermética`;
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc && post.extracto) metaDesc.setAttribute("content", post.extracto);
+
+    // Hero meta
+    const fecha = formatearFecha(post.publicado_en ?? post.creado_en);
+    const etiqueta = post.etiquetas?.[0];
+    const heroMeta = document.getElementById("hero-meta");
+    if (heroMeta) {
+      heroMeta.innerHTML = [
+        etiqueta ? `<span class="text-[color:var(--color-gold-400)]">${etiqueta}</span><span class="text-parchment-500">·</span>` : "",
+        `<time class="text-parchment-400">${fecha}</time>`,
+      ].join(" ");
+    }
+
+    setText("post-titulo", post.titulo);
+    setText("post-autor", "Por Emanuel Mari");
+
+    // Imagen destacada
+    if (post.imagen_destacada) {
+      const img = document.getElementById("post-imagen") as HTMLImageElement | null;
+      if (img) { img.src = post.imagen_destacada; img.alt = post.titulo; }
+      show("post-imagen-wrapper");
+    }
+
+    // Cuerpo (HTML de Tiptap)
+    setHtml("post-cuerpo", post.contenido_html ?? "<p>Este post no tiene contenido aún.</p>");
+
+    // Etiquetas
+    const etiquetasEl = document.getElementById("post-etiquetas");
+    if (etiquetasEl && post.etiquetas?.length) {
+      etiquetasEl.innerHTML = post.etiquetas.map((e) =>
+        `<span class="text-[10px] uppercase tracking-widest text-parchment-400 px-2 py-1 border border-gold-400/15 rounded-sm">${e}</span>`
+      ).join("");
+    }
+
+    hide("estado-carga");
+    show("contenido");
+  })();
+</script>
