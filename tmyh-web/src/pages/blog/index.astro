@@ -69,7 +69,7 @@ import Ornament from "../../components/Ornament.astro";
       }
 
       lista.innerHTML = posts.map((p: PostBlog) => `
-        <a href="/blog/${escapeHtml(p.slug)}"
+        <a href="/blog/post?slug=${escapeHtml(p.slug)}"
            class="card-altar group block p-8 md:p-10 relative overflow-hidden">
           <div class="flex items-center gap-3 mb-4 text-xs tracking-[0.2em] uppercase">
             ${p.etiquetas?.length ? `<span class="text-[color:var(--color-gold-400)]">${escapeHtml(p.etiquetas[0])}</span><span class="text-parchment-500">·</span>` : ""}

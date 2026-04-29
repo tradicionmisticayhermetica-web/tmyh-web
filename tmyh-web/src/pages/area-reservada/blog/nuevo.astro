@@ -204,9 +204,9 @@ import EditorBlog from "../../../components/EditorBlog.astro";
         "ok",
       );
 
-      // Redirigir al detalle del post para poder seguir editando
+      // Redirigir al editor del post para poder seguir editando
       setTimeout(() => {
-        window.location.href = `/area-reservada/blog/${r.id}`;
+        window.location.href = `/area-reservada/blog/editar?id=${r.id}`;
       }, 1200);
     }
 

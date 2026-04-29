@@ -157,7 +157,8 @@ import Ornament from "../../components/Ornament.astro";
   }
 
   (async () => {
-    const slug = window.location.pathname.replace(/^\/blog\/?/, "").replace(/\/$/, "");
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get("slug") ?? window.location.pathname.replace(/^\/blog\/?/, "").replace(/\/$/, "");
     if (!slug) { hide("estado-carga"); show("estado-404"); return; }
 
     const post: PostBlog | null = await obtenerPostPorSlug(slug);

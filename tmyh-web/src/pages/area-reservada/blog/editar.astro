@@ -208,7 +208,7 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       setText("header-titulo", datos.titulo);
 
       const linkVer = document.getElementById("link-ver-post") as HTMLAnchorElement | null;
-      if (linkVer && datos.slug) linkVer.href = `/blog/${datos.slug}`;
+      if (linkVer && datos.slug) linkVer.href = `/blog/post?slug=${datos.slug}`;
 
       setStatus(
         estado === "publicado"
@@ -220,7 +220,7 @@ import EditorBlog from "../../../components/EditorBlog.astro";
 
     (async () => {
       const params = new URLSearchParams(window.location.search);
-      postId = window.location.pathname.split("/").pop() ?? null;
+      postId = params.get("id");
 
       if (!postId) {
         hide("estado-carga"); show("estado-error");
@@ -247,7 +247,7 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       setText("header-titulo", post.titulo);
 
       const linkVer = document.getElementById("link-ver-post") as HTMLAnchorElement | null;
-      if (linkVer) linkVer.href = `/blog/${post.slug}`;
+      if (linkVer) linkVer.href = `/blog/post?slug=${post.slug}`;
 
       pintarEstado(post.estado);
 

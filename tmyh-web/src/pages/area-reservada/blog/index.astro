@@ -101,7 +101,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       }
 
       lista.innerHTML = posts.map((p) => `
-        <a href="/area-reservada/blog/${p.id}"
+        <a href="/area-reservada/blog/editar?id=${p.id}"
            class="block px-6 py-5 hover:bg-gold-400/5 transition">
           <div class="flex items-start justify-between gap-4">
             <div class="flex-1 min-w-0">
