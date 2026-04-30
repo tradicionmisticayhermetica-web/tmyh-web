@@ -301,17 +301,31 @@ const {
         Youtube.configure({ width: "100%", height: 400 }),
       ],
       content: initialJson ?? "",
-      onUpdate: ({ editor }) => {
-        const json = editor.getJSON();
-        const html = editor.getHTML();
-        root.dispatchEvent(
-          new CustomEvent("editor:change", { detail: { json, html } }),
-        );
-        actualizarToolbar(editor);
+      onUpdate: ({ editor: ed }) => {
+        const json = ed.getJSON();
+        const html = ed.getHTML();
+        root.dispatchEvent(new CustomEvent("editor:change", { detail: { json, html } }));
+        actualizarToolbar(ed);
       },
-      onSelectionUpdate: ({ editor }) => {
-        actualizarToolbar(editor);
+      onSelectionUpdate: ({ editor: ed }) => {
+        actualizarToolbar(ed);
       },
+    });
+
+    // Permite que páginas externas inyecten contenido DESPUÉS de que el editor
+    // ya se inicializó (necesario cuando el contenido se carga de forma async,
+    // ej. editar.astro que trae el post de Supabase).
+    root.addEventListener("editor:setContent", (e: Event) => {
+      const { json, html } = (e as CustomEvent).detail ?? {};
+      if (json) {
+        editor.commands.setContent(json, false);
+      } else if (html) {
+        editor.commands.setContent(html, false);
+      }
+      // Sincronizar el estado del editor hacia afuera
+      root.dispatchEvent(new CustomEvent("editor:change", {
+        detail: { json: editor.getJSON(), html: editor.getHTML() },
+      }));
     });
 
     // ----------------------------------------------------------------

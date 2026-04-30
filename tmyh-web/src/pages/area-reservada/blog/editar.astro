@@ -273,16 +273,20 @@ import EditorBlog from "../../../components/EditorBlog.astro";
         return;
       }
 
-      // Inicializar el editor con el contenido existente.
-      // Si contenido_json está vacío (posts migrados via SQL que solo tienen HTML),
-      // Tiptap acepta una cadena HTML directamente como contenido inicial.
+      // Cargar el contenido en el editor DESPUÉS de obtener el post.
+      // No podemos usar dataset.initial porque el editor ya arrancó vacío
+      // (se inicializa al cargar el DOM, antes de que este async termine).
+      // Usamos el evento editor:setContent que EditorBlog.astro escucha.
       const editorRoot = document.getElementById("editor-blog-root");
       if (editorRoot) {
         if (post.contenido_json) {
-          editorRoot.dataset.initial = JSON.stringify(post.contenido_json);
+          editorRoot.dispatchEvent(new CustomEvent("editor:setContent", {
+            detail: { json: post.contenido_json },
+          }));
         } else if (post.contenido_html) {
-          // JSON.stringify de un string → Tiptap recibe el HTML y lo parsea
-          editorRoot.dataset.initial = JSON.stringify(post.contenido_html);
+          editorRoot.dispatchEvent(new CustomEvent("editor:setContent", {
+            detail: { html: post.contenido_html },
+          }));
         }
       }
 
