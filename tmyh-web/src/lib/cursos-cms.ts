@@ -557,7 +557,6 @@ export async function listarCursosParaSitio(): Promise<Curso[]> {
       `${supabaseUrl}/rest/v1/cursos` +
       "?select=*" +
       "&eliminado_en=is.null" +
-      "&estado=in.(activo,proximo,historico)" +
       "&order=orden.asc,titulo.asc";
     const headers = {
       apikey: anonKey,
@@ -574,7 +573,6 @@ export async function listarCursosParaSitio(): Promise<Curso[]> {
         const urlSinEliminado =
           `${supabaseUrl}/rest/v1/cursos` +
           "?select=*" +
-          "&estado=in.(activo,proximo,historico)" +
           "&order=orden.asc,titulo.asc";
         resp = await fetch(urlSinEliminado, { headers });
       }
@@ -582,12 +580,18 @@ export async function listarCursosParaSitio(): Promise<Curso[]> {
     if (!resp.ok) return cursosBase;
 
     const rows = (await resp.json()) as CursoRow[];
-    const overrides = rows.map(cursoDesdeRow).filter(Boolean) as Curso[];
     const map = new Map<string, { curso: Curso; orden: number }>();
     cursosBase.forEach((c, i) => map.set(c.slug, { curso: c, orden: i + 1 }));
-    for (const c of overrides) {
-      const row = rows.find((r) => r.slug === c.slug);
-      map.set(c.slug, { curso: c, orden: row?.orden ?? 1000 });
+
+    for (const row of rows) {
+      const curso = cursoDesdeRow(row);
+      if (!curso) {
+        // Si un curso base existe en la tabla pero queda no público
+        // (borrador/inactivo/archivado), se oculta también en el sitio.
+        map.delete(row.slug);
+        continue;
+      }
+      map.set(curso.slug, { curso, orden: row.orden ?? 1000 });
     }
     return Array.from(map.values())
       .sort((a, b) => {

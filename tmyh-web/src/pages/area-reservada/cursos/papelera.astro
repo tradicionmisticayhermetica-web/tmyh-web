@@ -44,6 +44,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
     const lista = document.getElementById("lista-papelera");
     const status = document.getElementById("status");
+    const uiLoader = (window as any).__tmyhLoader;
 
     function setStatus(msg: string, tipo: "ok" | "error" | "info") {
       if (!status) return;
@@ -98,8 +99,14 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     }
 
     async function cargar() {
-      await purgarCursosPapelera();
-      const cursos = await listarCursosPapelera();
+      uiLoader?.show?.("Cargando papelera…");
+      let cursos: Awaited<ReturnType<typeof listarCursosPapelera>> = [];
+      try {
+        await purgarCursosPapelera();
+        cursos = await listarCursosPapelera();
+      } finally {
+        uiLoader?.hide?.();
+      }
       if (!lista) return;
       if (cursos.length === 0) {
         lista.innerHTML = `
@@ -132,14 +139,23 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         btn.addEventListener("click", async () => {
           const slug = decodeURIComponent(btn.dataset.restaurar ?? "");
           if (!slug) return;
-          const r = await restaurarCursoDePapelera(slug);
-          if (!r.ok) {
-            setStatus(`No se pudo restaurar: ${r.error}`, "error");
-            return;
+          uiLoader?.show?.("Restaurando curso…");
+          try {
+            const r = await restaurarCursoDePapelera(slug);
+            if (!r.ok) {
+              setStatus(`No se pudo restaurar: ${r.error}`, "error");
+              return;
+            }
+            const dep = await dispararDeployCursos(`restaurar:${slug}`);
+            if (!dep.ok) {
+              setStatus(`Curso restaurado, pero falló el deploy automático (${dep.error}).`, "error");
+              return;
+            }
+            setStatus("Curso restaurado correctamente.", "ok");
+            await cargar();
+          } finally {
+            uiLoader?.hide?.();
           }
-          await dispararDeployCursos(`restaurar:${slug}`);
-          setStatus("Curso restaurado correctamente.", "ok");
-          await cargar();
         });
       });
       lista.querySelectorAll<HTMLButtonElement>("[data-eliminar]").forEach((btn) => {
@@ -147,14 +163,23 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
           const slug = decodeURIComponent(btn.dataset.eliminar ?? "");
           if (!slug) return;
           if (!await confirmar("¿Eliminar definitivamente este curso? Esta acción no se puede deshacer.")) return;
-          const r = await eliminarCursoDefinitivo(slug);
-          if (!r.ok) {
-            setStatus(`No se pudo eliminar: ${r.error}`, "error");
-            return;
+          uiLoader?.show?.("Eliminando curso…");
+          try {
+            const r = await eliminarCursoDefinitivo(slug);
+            if (!r.ok) {
+              setStatus(`No se pudo eliminar: ${r.error}`, "error");
+              return;
+            }
+            const dep = await dispararDeployCursos(`eliminar:${slug}`);
+            if (!dep.ok) {
+              setStatus(`Curso eliminado de base, pero falló el deploy automático (${dep.error}).`, "error");
+              return;
+            }
+            setStatus("Curso eliminado definitivamente.", "ok");
+            await cargar();
+          } finally {
+            uiLoader?.hide?.();
           }
-          await dispararDeployCursos(`eliminar:${slug}`);
-          setStatus("Curso eliminado definitivamente.", "ok");
-          await cargar();
         });
       });
     }
