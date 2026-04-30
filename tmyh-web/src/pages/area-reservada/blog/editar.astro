@@ -100,7 +100,7 @@ import EditorBlog from "../../../components/EditorBlog.astro";
         <div class="flex flex-wrap gap-3">
           <button id="btn-guardar" type="button" class="btn-ghost">Guardar borrador</button>
           <button id="btn-publicar" type="button" class="btn-gold hidden">Publicar</button>
-          <button id="btn-publicar-revision" type="button" class="btn-gold hidden">Publicar revisión</button>
+          <button id="btn-publicar-revision" type="button" class="btn-gold hidden">↑ Publicar revisión</button>
           <button id="btn-despublicar" type="button" class="btn-ghost hidden">Volver a borrador</button>
           <div class="flex-1"></div>
           <button id="btn-archivar" type="button"
@@ -228,9 +228,11 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       } else if (estado === "borrador") {
         badge.textContent = "Borrador";
         badge.classList.add("text-parchment-400", "border-parchment-400/30");
-        // Borrador: "Guardar cambios" guarda y "Publicar" lo pone live
+        // Borrador: solo "Publicar" (no hay revisión pendiente que sea distinta al contenido)
         if (btnGuardar) btnGuardar.textContent = "Guardar cambios";
-        show("btn-publicar"); hide("btn-despublicar");
+        show("btn-publicar");
+        hide("btn-despublicar");
+        hide("btn-publicar-revision");
         hide("link-ver-post");
       } else {
         badge.textContent = "Archivado";
