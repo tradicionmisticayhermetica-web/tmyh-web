@@ -87,16 +87,26 @@ en otra Supabase, hay que correrlas en orden numérico.
 
 ## Edge function asociada
 
-`notificar-mensaje-contacto` es la única edge function activa. Se
-dispara con un Database Webhook cada vez que se inserta una fila en
-`mensajes_contacto`. Manda un email a Emanuel con los datos del
-mensaje y `Reply-To` al email del visitante para que el reply en
-Gmail vaya directo.
+Hay dos edge functions relevantes para el panel:
+
+- `notificar-mensaje-contacto`: se dispara con un Database Webhook cada
+  vez que se inserta una fila en `mensajes_contacto`. Manda un email a
+  Emanuel con los datos del mensaje y `Reply-To` al email del visitante
+  para que el reply en Gmail vaya directo.
+- `trigger-build`: permite disparar el workflow de build/deploy desde
+  eventos de contenido del backoffice (blog/cursos), para que los cambios
+  se reflejen en el sitio público.
 
 Para deployarla:
 
 ```powershell
 npx supabase functions deploy notificar-mensaje-contacto --no-verify-jwt
+```
+
+Para `trigger-build`:
+
+```powershell
+npx supabase functions deploy trigger-build --no-verify-jwt
 ```
 
 El flag `--no-verify-jwt` es importante: la llamada viene de un

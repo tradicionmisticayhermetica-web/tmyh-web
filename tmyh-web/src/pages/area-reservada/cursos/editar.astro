@@ -174,17 +174,6 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
   <input id="input-imagen" type="file" accept="image/*" class="hidden" />
 
-  <div id="dialog-confirm" class="fixed inset-0 z-[120] hidden items-center justify-center p-4 bg-midnight-950/78">
-    <div class="card-altar w-full max-w-lg p-6">
-      <h3 class="font-display text-xl text-parchment-50 mb-3">Confirmación</h3>
-      <p id="dialog-confirm-msg" class="text-parchment-200 font-serif"></p>
-      <div class="mt-6 flex items-center justify-end gap-2">
-        <button id="dialog-confirm-cancel" type="button" class="btn-ghost">Cancelar</button>
-        <button id="dialog-confirm-ok" type="button" class="btn-gold">Aceptar</button>
-      </div>
-    </div>
-  </div>
-
   <style is:global>
     #form-curso .label {
       display: block;
@@ -271,6 +260,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     const $inputImagen = document.getElementById("input-imagen") as HTMLInputElement | null;
     const params = new URLSearchParams(window.location.search);
     const slugInicial = (params.get("slug") ?? "").trim();
+    let slugPersistido = slugInicial;
     let slugTocado = false;
     let cursoExiste = false;
     const SIMBOLOS: Array<{ simbolo: string; nombre: string }> = [
@@ -333,30 +323,20 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
     function confirmar(msg: string): Promise<boolean> {
       return new Promise((resolve) => {
-        const dlg = document.getElementById("dialog-confirm");
-        const txt = document.getElementById("dialog-confirm-msg");
-        const ok = document.getElementById("dialog-confirm-ok");
-        const cancel = document.getElementById("dialog-confirm-cancel");
-        if (!dlg || !txt || !ok || !cancel) return resolve(window.confirm(msg));
-        txt.textContent = msg;
-        dlg.classList.remove("hidden");
-        dlg.classList.add("flex");
-        const cleanup = () => {
-          dlg.classList.add("hidden");
-          dlg.classList.remove("flex");
-          ok.removeEventListener("click", onOk);
-          cancel.removeEventListener("click", onCancel);
-        };
-        const onOk = () => {
-          cleanup();
-          resolve(true);
-        };
-        const onCancel = () => {
-          cleanup();
-          resolve(false);
-        };
-        ok.addEventListener("click", onOk);
-        cancel.addEventListener("click", onCancel);
+        const overlay = document.createElement("div");
+        overlay.className = "fixed inset-0 z-[998] flex items-center justify-center bg-night-950/80 backdrop-blur-sm";
+        overlay.innerHTML = `
+          <div class="card-altar p-8 max-w-md mx-4 space-y-5">
+            <p class="font-serif text-base text-parchment-100 leading-relaxed">${msg}</p>
+            <div class="flex gap-3 justify-end">
+              <button id="conf-cancel" class="btn-ghost text-sm">Cancelar</button>
+              <button id="conf-ok" class="btn-gold text-sm">Confirmar</button>
+            </div>
+          </div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector("#conf-ok")?.addEventListener("click", () => { overlay.remove(); resolve(true); });
+        overlay.querySelector("#conf-cancel")?.addEventListener("click", () => { overlay.remove(); resolve(false); });
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
       });
     }
 
@@ -530,6 +510,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
     function mostrarAccionesCurso(slug: string, existe: boolean) {
       cursoExiste = existe;
+      slugPersistido = slug;
       if (existe) {
         $btnPapelera?.classList.remove("hidden");
         $btnBorrar?.classList.remove("hidden");
@@ -651,7 +632,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       const dep = await dispararDeployCursos(r.slug ?? "curso");
       if (!dep.ok) {
         setStatus(
-          `Curso publicado, pero no pude disparar deploy automático (${dep.error}). Corré el deploy manual para verlo en /cursos.`,
+          `Curso publicado. No pude disparar el deploy automático (${dep.error}), pero el guardado quedó correcto.`,
           "error",
         );
         return;
@@ -682,10 +663,11 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
     $btnPapelera?.addEventListener("click", async () => {
       if (!cursoExiste) return;
-      const slug = ($("slug")?.value ?? "").trim();
+      const slug = slugPersistido || ($("slug")?.value ?? "").trim();
       if (!slug) return;
       const ok = await confirmar("¿Mover este curso a la papelera? Se podrá restaurar por 30 días.");
       if (!ok) return;
+      setStatus("Moviendo curso a papelera…", "info");
       const r = await moverCursoAPapelera(slug);
       if (!r.ok) {
         setStatus(`No se pudo mover a papelera: ${r.error}`, "error");
@@ -697,10 +679,11 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
     $btnBorrar?.addEventListener("click", async () => {
       if (!cursoExiste) return;
-      const slug = ($("slug")?.value ?? "").trim();
+      const slug = slugPersistido || ($("slug")?.value ?? "").trim();
       if (!slug) return;
       const ok = await confirmar("¿Eliminar definitivamente este curso? Esta acción no se puede deshacer.");
       if (!ok) return;
+      setStatus("Eliminando curso definitivamente…", "info");
       const r = await eliminarCursoDefinitivo(slug);
       if (!r.ok) {
         setStatus(`No se pudo borrar definitivamente: ${r.error}`, "error");

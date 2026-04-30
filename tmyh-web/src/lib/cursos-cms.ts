@@ -412,7 +412,16 @@ export async function moverCursoAPapelera(slug: string): Promise<{ ok: boolean; 
           eliminado_en: new Date().toISOString(),
         } as any)
         .eq("slug", slug);
-      if (up.error) return { ok: false, error: up.error.message };
+      if (up.error) {
+        const msgUp = String(up.error.message ?? "");
+        if (msgUp.includes("eliminado_en")) {
+          return {
+            ok: false,
+            error: "Falta aplicar la migración 014 en Supabase (columna eliminado_en).",
+          };
+        }
+        return { ok: false, error: up.error.message };
+      }
       return { ok: true };
     }
     return { ok: false, error: error.message };
@@ -454,11 +463,11 @@ export async function dispararDeployCursos(
   razon: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const payload = {
-    table: "posts",
+    table: "cursos",
     type: "UPDATE",
     record: {
-      estado: "publicado",
-      slug: `curso:${razon}`,
+      estado: "activo",
+      slug: razon,
       id: `curso-${Date.now()}`,
     },
   };

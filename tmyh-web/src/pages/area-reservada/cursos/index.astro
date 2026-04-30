@@ -32,6 +32,12 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     <button class="filtro-btn" data-filtro="borrador">Borradores</button>
     <button class="filtro-btn" data-filtro="archivado">Archivados</button>
     <div class="flex-1"></div>
+    <input
+      id="buscador"
+      type="search"
+      placeholder="Buscar por título, slug o descripción…"
+      class="bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-3 py-1.5 text-xs font-sans transition rounded-sm w-full sm:w-80"
+    />
     <span
       id="contador"
       class="text-[10px] uppercase tracking-widest text-parchment-400 px-2 py-1 border border-gold-400/20 rounded-sm bg-night-950/50"
@@ -89,7 +95,9 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
     let cursos: CursoEditable[] = [];
     let filtroActual = "todos";
+    let busquedaActual = "";
     const lista = document.getElementById("lista-cursos");
+    const buscador = document.getElementById("buscador") as HTMLInputElement | null;
     const contador = document.getElementById("contador");
 
     function escapeHtml(s: string): string {
@@ -138,12 +146,22 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       `).join("");
     }
 
+    function aplicarFiltroYBusqueda() {
+      const base = filtroActual === "todos"
+        ? cursos
+        : cursos.filter((c) => c.estado === filtroActual);
+      const q = busquedaActual.trim().toLowerCase();
+      if (!q) return pintar(base);
+      const filtrados = base.filter((c) => {
+        const blob = `${c.titulo} ${c.slug} ${c.descripcionCorta} ${c.modalidad} ${c.nivel}`.toLowerCase();
+        return blob.includes(q);
+      });
+      pintar(filtrados);
+    }
+
     function aplicarFiltro(filtro: string) {
       filtroActual = filtro;
-      const visibles = filtro === "todos"
-        ? cursos
-        : cursos.filter((c) => c.estado === filtro);
-      pintar(visibles);
+      aplicarFiltroYBusqueda();
     }
 
     (async () => {
@@ -157,6 +175,11 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         btn.classList.add("is-active");
         aplicarFiltro(btn.dataset.filtro ?? "todos");
       });
+    });
+
+    buscador?.addEventListener("input", () => {
+      busquedaActual = buscador.value;
+      aplicarFiltroYBusqueda();
     });
   </script>
 </AdminLayout>

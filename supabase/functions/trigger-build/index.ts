@@ -25,11 +25,17 @@ const GITHUB_TOKEN = Deno.env.get("GITHUB_TOKEN");
 const GITHUB_REPO =
   Deno.env.get("GITHUB_REPO") ??
   "tradicionmisticayhermetica-web/tmyh-web";
+const CORS_HEADERS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: CORS_HEADERS,
   });
 }
 
@@ -47,21 +53,25 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ ok: false, error: "json_invalido" }, 400);
   }
 
-  // Solo nos interesa INSERT y UPDATE en posts
-  if (payload?.table !== "posts") {
+  // Solo nos interesa INSERT y UPDATE en tablas con contenido público.
+  if (!["posts", "cursos"].includes(payload?.table)) {
     return jsonResponse({ ok: true, skipped: true, reason: "tabla no es posts" });
   }
   if (!["INSERT", "UPDATE"].includes(payload?.type)) {
     return jsonResponse({ ok: true, skipped: true, reason: "no es INSERT/UPDATE" });
   }
 
-  // Solo disparar el build si el post quedo publicado
+  // Solo disparar el build si el contenido quedó en un estado público.
   const record = payload?.record;
-  if (record?.estado !== "publicado") {
+  const esPostPublicado = payload.table === "posts" && record?.estado === "publicado";
+  const esCursoPublico =
+    payload.table === "cursos" &&
+    ["activo", "proximo", "historico"].includes(String(record?.estado ?? ""));
+  if (!esPostPublicado && !esCursoPublico) {
     return jsonResponse({
       ok: true,
       skipped: true,
-      reason: `post en estado '${record?.estado}', no se buildea`,
+      reason: `${payload.table} en estado '${record?.estado}', no se buildea`,
     });
   }
 
@@ -71,9 +81,10 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ ok: false, error: "config_github_token" }, 500);
   }
 
+  const prefijo = payload.table === "cursos" ? "curso" : "post";
   const reason = payload.type === "INSERT"
-    ? `nuevo post: ${record?.slug ?? record?.id}`
-    : `post actualizado: ${record?.slug ?? record?.id}`;
+    ? `nuevo ${prefijo}: ${record?.slug ?? record?.id}`
+    : `${prefijo} actualizado: ${record?.slug ?? record?.id}`;
 
   const ghRes = await fetch(
     `https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/deploy.yml/dispatches`,

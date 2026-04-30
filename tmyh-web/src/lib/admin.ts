@@ -24,6 +24,7 @@ export interface MensajeContacto {
   newsletter_optin: boolean;
   origen: string;
   contacto_id: string;
+  eliminado_en?: string | null;
 }
 
 export interface ResumenPanel {
@@ -43,8 +44,9 @@ export async function listarMensajes(
   const { data, error } = await supabase
     .from("mensajes_contacto")
     .select(
-      "id, creado_en, nombre, apellido, email, telefono, curso_interes, mensaje, newsletter_optin, origen, contacto_id",
+      "id, creado_en, nombre, apellido, email, telefono, curso_interes, mensaje, newsletter_optin, origen, contacto_id, eliminado_en",
     )
+    .is("eliminado_en", null)
     .order("creado_en", { ascending: false })
     .limit(limite);
 
@@ -72,6 +74,62 @@ export async function obtenerMensaje(
     return null;
   }
   return data as MensajeContacto;
+}
+
+export async function listarMensajesPapelera(
+  limite = 200,
+): Promise<MensajeContacto[]> {
+  const { data, error } = await supabase
+    .from("mensajes_contacto")
+    .select(
+      "id, creado_en, nombre, apellido, email, telefono, curso_interes, mensaje, newsletter_optin, origen, contacto_id, eliminado_en",
+    )
+    .not("eliminado_en", "is", null)
+    .order("eliminado_en", { ascending: false })
+    .limit(limite);
+
+  if (error) {
+    if (String(error.message ?? "").includes("eliminado_en")) return [];
+    console.error("[admin.listarMensajesPapelera]", error);
+    return [];
+  }
+  return (data ?? []) as MensajeContacto[];
+}
+
+export async function moverMensajeAPapelera(id: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase
+    .rpc("mover_mensaje_a_papelera", { p_mensaje_id: id });
+  if (error) return { ok: false, error: error.message };
+  const r = data as any;
+  if (!r?.ok) return { ok: false, error: r?.error ?? "error_rpc" };
+  return { ok: true };
+}
+
+export async function restaurarMensajeDePapelera(id: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase
+    .rpc("restaurar_mensaje_desde_papelera", { p_mensaje_id: id });
+  if (error) return { ok: false, error: error.message };
+  const r = data as any;
+  if (!r?.ok) return { ok: false, error: r?.error ?? "error_rpc" };
+  return { ok: true };
+}
+
+export async function eliminarMensajeDefinitivo(id: string): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("mensajes_contacto")
+    .delete()
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function purgarMensajesPapelera(): Promise<number> {
+  const { data, error } = await supabase.rpc("purgar_mensajes_papelera");
+  if (error) {
+    console.error("[admin.purgarMensajesPapelera]", error);
+    return 0;
+  }
+  return typeof data === "number" ? data : 0;
 }
 
 /**

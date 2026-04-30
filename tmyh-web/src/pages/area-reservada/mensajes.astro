@@ -4,12 +4,23 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 
 <AdminLayout title="Mensajes" active="mensajes">
   <header class="mb-8">
-    <p class="title-eyebrow">Bandeja</p>
-    <h1 class="font-display text-3xl text-parchment-50 mt-3">Mensajes recibidos</h1>
-    <p class="text-parchment-300 mt-2 font-serif italic">
-      Los mensajes que estás viendo también te llegan a tu casilla de email.
-      Respondelos desde ahí, acá no se almacena la conversación, así podés llevar el ida y vuelta de la charla con el alumno.
-    </p>
+    <div class="flex items-end justify-between gap-4 flex-wrap">
+      <div>
+        <p class="title-eyebrow">Bandeja</p>
+        <h1 class="font-display text-3xl text-parchment-50 mt-3">Mensajes recibidos</h1>
+        <p class="text-parchment-300 mt-2 font-serif italic">
+          Los mensajes que estás viendo también te llegan a tu casilla de email.
+          Respondelos desde ahí, acá no se almacena la conversación, así podés llevar el ida y vuelta de la charla con el alumno.
+        </p>
+      </div>
+      <a
+        href="/area-reservada/mensajes/papelera"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-sm border border-wine-500/40 bg-night-950/50 text-[11px] font-sans uppercase tracking-[0.14em] text-parchment-200 hover:text-parchment-50 hover:border-wine-400/55 hover:bg-wine-900/20 transition shrink-0"
+      >
+        <span class="text-sm opacity-90" aria-hidden="true">🗑</span>
+        Papelera
+      </a>
+    </div>
   </header>
 
   <div class="flex items-center gap-3 mb-6 flex-wrap">

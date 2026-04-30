@@ -172,11 +172,19 @@ quién puede leer y escribir qué filas. Las decisiones tomadas:
   formulario).
 - `perfiles` lo lee/edita el propio usuario y los admins.
 
-Las edge functions vienen del directorio `supabase/functions/`. Hoy
-hay una sola: `notificar-mensaje-contacto`, que se dispara con un
-Database Webhook cuando llega un mensaje y manda el aviso a Emanuel
-por mail vía Resend. Se despliega con
-`npx supabase functions deploy notificar-mensaje-contacto --no-verify-jwt`.
+Las edge functions vienen del directorio `supabase/functions/`. Hoy hay
+dos funciones activas:
+
+- `notificar-mensaje-contacto`: se dispara con un Database Webhook cuando
+  llega un mensaje y manda el aviso a Emanuel por mail vía Resend.
+- `trigger-build`: dispara el workflow `deploy.yml` de GitHub para
+  reconstruir y publicar el sitio cuando se publica contenido desde
+  backoffice (posts y cursos en estado público).
+
+Deploy:
+
+- `npx supabase functions deploy notificar-mensaje-contacto --no-verify-jwt`
+- `npx supabase functions deploy trigger-build --no-verify-jwt`
 
 ## Capa 5 — Email transaccional (Resend)
 
@@ -238,12 +246,15 @@ recién buildeado. Finalmente commiteá y pushea esa rama actualizada a
 GitHub.
 
 Eso deja la rama `production` en GitHub con el sitio compilado más
-reciente. Para que llegue al hosting, hay que abrir Ferozo, ir a
-`Mi Sitio Web → GIT`, encontrar el repo `tmyh-web` y hacer click en
-"Sincronizar". Ferozo entonces hace `git pull origin production`
-usando su clave SSH, baja los cambios y los pisa en
-`public_html/`. El sitio queda actualizado en el dominio en cuestión
-de segundos.
+reciente. Para que llegue al hosting existen dos caminos:
+
+1. Manual (siempre disponible): abrir Ferozo, ir a `Mi Sitio Web → GIT`,
+   encontrar el repo `tmyh-web` y hacer click en "Sincronizar".
+2. Automático (contenido desde backoffice): `trigger-build` dispara el
+   workflow en GitHub y el hosting actualiza por su mecanismo programado.
+
+En ambos casos, el resultado final es el mismo: `public_html/` queda con
+la versión nueva de `production`.
 
 Notar la asimetría intencional: el desarrollador empuja desde su PC al
 GitHub, y el hosting baja desde GitHub al servidor. GitHub queda en el

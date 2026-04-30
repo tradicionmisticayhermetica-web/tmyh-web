@@ -102,6 +102,18 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
       </div>
     </section>
 
+    <section class="card-altar p-6 lg:p-7">
+      <div class="flex items-center gap-3 flex-wrap">
+        <button id="btn-papelera" type="button" class="btn-ghost border border-wine-500/35">
+          Mover a papelera
+        </button>
+        <button id="btn-borrar" type="button" class="btn-ghost border border-wine-500/55 text-wine-300">
+          Eliminar definitivo
+        </button>
+      </div>
+      <div id="status-msg" class="hidden mt-4 text-sm font-serif italic" role="status" aria-live="polite"></div>
+    </section>
+
     {/* Aviso */}
     <section class="card-altar p-6 lg:p-7">
       <p class="font-serif text-base text-parchment-200 leading-relaxed">
@@ -115,10 +127,41 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
   <script>
     import {
       obtenerMensaje,
+      moverMensajeAPapelera,
+      eliminarMensajeDefinitivo,
       formatearFecha,
       nombreCompleto,
       type MensajeContacto,
     } from "../../lib/admin";
+
+    const statusMsg = document.getElementById("status-msg");
+    let mensajeActual: MensajeContacto | null = null;
+
+    function setStatus(msg: string, tipo: "ok" | "error" | "info") {
+      if (!statusMsg) return;
+      statusMsg.textContent = msg;
+      statusMsg.classList.remove("hidden", "text-gold-300", "text-wine-500", "text-parchment-300");
+      statusMsg.classList.add(tipo === "ok" ? "text-gold-300" : tipo === "error" ? "text-wine-500" : "text-parchment-300");
+    }
+
+    function confirmar(msg: string): Promise<boolean> {
+      return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.className = "fixed inset-0 z-[998] flex items-center justify-center bg-night-950/80 backdrop-blur-sm";
+        overlay.innerHTML = `
+          <div class="card-altar p-8 max-w-md mx-4 space-y-5">
+            <p class="font-serif text-base text-parchment-100 leading-relaxed">${msg}</p>
+            <div class="flex gap-3 justify-end">
+              <button id="conf-cancel" class="btn-ghost text-sm">Cancelar</button>
+              <button id="conf-ok" class="btn-gold text-sm">Confirmar</button>
+            </div>
+          </div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector("#conf-ok")?.addEventListener("click", () => { overlay.remove(); resolve(true); });
+        overlay.querySelector("#conf-cancel")?.addEventListener("click", () => { overlay.remove(); resolve(false); });
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+      });
+    }
 
     function setText(id: string, value: string) {
       const el = document.getElementById(id);
@@ -175,6 +218,29 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
       hide("estado-carga");
       show("contenido");
       pintar(m);
+      mensajeActual = m;
     })();
+
+    document.getElementById("btn-papelera")?.addEventListener("click", async () => {
+      if (!mensajeActual?.id) return;
+      const ok = await confirmar("¿Mover este mensaje a papelera? Lo podés restaurar luego.");
+      if (!ok) return;
+      setStatus("Moviendo mensaje a papelera…", "info");
+      const r = await moverMensajeAPapelera(mensajeActual.id);
+      if (!r.ok) return setStatus(`No se pudo mover: ${r.error}`, "error");
+      setStatus("Mensaje movido a papelera.", "ok");
+      setTimeout(() => { window.location.href = "/area-reservada/mensajes"; }, 900);
+    });
+
+    document.getElementById("btn-borrar")?.addEventListener("click", async () => {
+      if (!mensajeActual?.id) return;
+      const ok = await confirmar("¿Eliminar definitivamente este mensaje? Esta acción no se puede deshacer.");
+      if (!ok) return;
+      setStatus("Eliminando mensaje definitivamente…", "info");
+      const r = await eliminarMensajeDefinitivo(mensajeActual.id);
+      if (!r.ok) return setStatus(`No se pudo eliminar: ${r.error}`, "error");
+      setStatus("Mensaje eliminado definitivamente.", "ok");
+      setTimeout(() => { window.location.href = "/area-reservada/mensajes"; }, 900);
+    });
   </script>
 </AdminLayout>
