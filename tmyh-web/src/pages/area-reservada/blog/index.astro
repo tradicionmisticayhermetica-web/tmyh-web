@@ -11,10 +11,14 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         Reflexiones y artículos publicados en el sitio.
       </p>
     </div>
-    <div class="flex items-center gap-3 shrink-0">
-      <a href="/area-reservada/blog/papelera"
-         class="text-[11px] uppercase tracking-widest text-parchment-400 hover:text-wine-400 transition">
-        🗑 Papelera
+    <div class="flex items-center gap-3 shrink-0 flex-wrap">
+      <a
+        href="/area-reservada/blog/papelera"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-sm border border-wine-500/40 bg-night-950/50 text-[11px] font-sans uppercase tracking-[0.14em] text-parchment-200 hover:text-parchment-50 hover:border-wine-400/55 hover:bg-wine-900/20 transition"
+        title="Posts eliminados: restaurar o borrar definitivamente"
+      >
+        <span class="text-sm opacity-90" aria-hidden="true">🗑</span>
+        Papelera
       </a>
       <a href="/area-reservada/blog/nuevo" class="btn-gold">
         + Nuevo post

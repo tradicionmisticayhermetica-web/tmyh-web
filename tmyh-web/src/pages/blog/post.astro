@@ -212,10 +212,111 @@ import Ornament from "../../components/Ornament.astro";
 <script>
   import { obtenerPostPorSlug, type PostBlog } from "../../lib/admin";
 
+  const SITE_ORIGIN = "https://www.tradicionmisticayhermetica.com";
+
   function show(id: string) { document.getElementById(id)?.classList.remove("hidden"); }
   function hide(id: string) { document.getElementById(id)?.classList.add("hidden"); }
   function setText(id: string, v: string) { const el = document.getElementById(id); if (el) el.textContent = v; }
   function setHtml(id: string, v: string) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
+
+  function setMetaProperty(property: string, content: string) {
+    let el = document.querySelector(`meta[property="${property}"]`);
+    if (!el) {
+      el = document.createElement("meta");
+      el.setAttribute("property", property);
+      document.head.appendChild(el);
+    }
+    el.setAttribute("content", content);
+  }
+
+  function setMetaName(name: string, content: string) {
+    let el = document.querySelector(`meta[name="${name}"]`);
+    if (!el) {
+      el = document.createElement("meta");
+      el.setAttribute("name", name);
+      document.head.appendChild(el);
+    }
+    el.setAttribute("content", content);
+  }
+
+  function setCanonical(href: string) {
+    let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.setAttribute("rel", "canonical");
+      document.head.appendChild(link);
+    }
+    link.setAttribute("href", href);
+  }
+
+  function descriptionParaPost(post: PostBlog): string {
+    if (post.extracto?.trim()) return post.extracto.trim();
+    const html = post.contenido_html?.trim();
+    if (html) {
+      const div = document.createElement("div");
+      div.innerHTML = html;
+      const t = (div.textContent || "").replace(/\s+/g, " ").trim();
+      if (t) return t.length > 165 ? `${t.slice(0, 162)}…` : t;
+    }
+    return `${post.titulo} · Tradición Mística y Hermética`;
+  }
+
+  function aplicarHeadSeo(opts: {
+    titulo: string;
+    descripcion: string;
+    canonicalUrl: string;
+    imagenAbs: string | null;
+    fechaPublicacion: string | null;
+    fechaModificacion: string;
+  }) {
+    document.title = `${opts.titulo} · Tradición Mística y Hermética`;
+
+    setMetaName("description", opts.descripcion);
+
+    setMetaProperty("og:type", "article");
+    setMetaProperty("og:title", opts.titulo);
+    setMetaProperty("og:description", opts.descripcion);
+    setMetaProperty("og:url", opts.canonicalUrl);
+    setMetaProperty("og:site_name", "Tradición Mística y Hermética");
+    setMetaProperty("og:locale", "es_AR");
+
+    if (opts.imagenAbs) {
+      setMetaProperty("og:image", opts.imagenAbs);
+      setMetaProperty("og:image:alt", opts.titulo);
+    }
+
+    setMetaName("twitter:card", opts.imagenAbs ? "summary_large_image" : "summary");
+    setMetaName("twitter:title", opts.titulo);
+    setMetaName("twitter:description", opts.descripcion);
+    if (opts.imagenAbs) {
+      setMetaName("twitter:image", opts.imagenAbs);
+    }
+
+    setCanonical(opts.canonicalUrl);
+
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      headline: opts.titulo,
+      description: opts.descripcion,
+      datePublished: opts.fechaPublicacion || undefined,
+      dateModified: opts.fechaModificacion,
+      author: { "@type": "Person", name: "Emanuel Mari" },
+      publisher: { "@type": "Organization", name: "Tradición Mística y Hermética" },
+      mainEntityOfPage: { "@type": "WebPage", "@id": opts.canonicalUrl },
+      ...(opts.imagenAbs ? { image: [opts.imagenAbs] } : {}),
+    };
+
+    const id = "seo-jsonld-article";
+    let s = document.getElementById(id) as HTMLScriptElement | null;
+    if (!s) {
+      s = document.createElement("script") as HTMLScriptElement;
+      s.id = id;
+      s.type = "application/ld+json";
+      document.head.appendChild(s);
+    }
+    s.textContent = JSON.stringify(jsonLd);
+  }
 
   function formatearFecha(iso: string): string {
     try {
@@ -234,10 +335,23 @@ import Ornament from "../../components/Ornament.astro";
     const post: PostBlog | null = await obtenerPostPorSlug(slug);
     if (!post) { hide("estado-carga"); show("estado-404"); return; }
 
-    // Actualizar título de la página
-    document.title = `${post.titulo} · Tradición Mística y Hermética`;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc && post.extracto) metaDesc.setAttribute("content", post.extracto);
+    const pathPrefix = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "");
+    const canonicalUrl = `${SITE_ORIGIN}${pathPrefix}/blog/post?slug=${encodeURIComponent(slug)}`;
+    const descripcion = descriptionParaPost(post);
+
+    let imagenAbs: string | null = post.imagen_destacada?.trim() || null;
+    if (imagenAbs?.startsWith("/")) {
+      imagenAbs = `${SITE_ORIGIN}${pathPrefix}${imagenAbs}`;
+    }
+
+    aplicarHeadSeo({
+      titulo: post.titulo,
+      descripcion,
+      canonicalUrl,
+      imagenAbs,
+      fechaPublicacion: post.publicado_en,
+      fechaModificacion: post.actualizado_en || post.creado_en,
+    });
 
     // Hero meta
     const fecha = formatearFecha(post.publicado_en ?? post.creado_en);
