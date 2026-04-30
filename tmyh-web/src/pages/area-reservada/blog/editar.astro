@@ -274,20 +274,29 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       }
 
       // Cargar el contenido en el editor DESPUÉS de obtener el post.
-      // No podemos usar dataset.initial porque el editor ya arrancó vacío
-      // (se inicializa al cargar el DOM, antes de que este async termine).
-      // Usamos el evento editor:setContent que EditorBlog.astro escucha.
+      // Usamos requestAnimationFrame para garantizar que EditorBlog.astro
+      // ya terminó de inicializar su listener antes de disparar el evento.
       const editorRoot = document.getElementById("editor-blog-root");
-      if (editorRoot) {
-        if (post.contenido_json) {
-          editorRoot.dispatchEvent(new CustomEvent("editor:setContent", {
-            detail: { json: post.contenido_json },
-          }));
-        } else if (post.contenido_html) {
-          editorRoot.dispatchEvent(new CustomEvent("editor:setContent", {
-            detail: { html: post.contenido_html },
-          }));
-        }
+      console.log("[editar] post cargado:", { id: post.id, tieneJson: !!post.contenido_json, tieneHtml: !!post.contenido_html, editorRootEncontrado: !!editorRoot });
+
+      if (editorRoot && (post.contenido_json || post.contenido_html)) {
+        const dispatchContent = () => {
+          if (post.contenido_json) {
+            console.log("[editar] disparando editor:setContent con JSON");
+            editorRoot.dispatchEvent(new CustomEvent("editor:setContent", {
+              detail: { json: post.contenido_json },
+            }));
+          } else if (post.contenido_html) {
+            console.log("[editar] disparando editor:setContent con HTML, length:", post.contenido_html.length);
+            editorRoot.dispatchEvent(new CustomEvent("editor:setContent", {
+              detail: { html: post.contenido_html },
+            }));
+          }
+        };
+        // Intentar inmediatamente y también en el próximo frame para cubrir
+        // casos donde el editor todavía no terminó de inicializar
+        dispatchContent();
+        requestAnimationFrame(dispatchContent);
       }
 
       // Llenar los campos
