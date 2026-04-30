@@ -105,7 +105,7 @@ export interface Curso {
    asociado un monto distinto. PayPal se deriva del precio en USD.
    ──────────────────────────────────────────────────────────────────────── */
 const inscripcionComun: DatosInscripcion = {
-  email: "tradicionmisticayhermetica@gmail.com",
+  email: "contacto@tradicionmisticayhermetica.com",
   whatsapp: "5491165008996",
   paypalUser: "masajesonoro",
   cbu: "0720044188000037705222",
