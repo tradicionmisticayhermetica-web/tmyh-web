@@ -1,4 +1,4 @@
-import{o as h,g as E,d as x,b as y,m as k,c as B,p as I}from"./admin.DlNR_hA_.js";import{g as w}from"./blog-preview.CNhBN7Xz.js";import"./supabase.2Xnj7Pbd.js";function g(o){return new Promise(t=>{const e=document.createElement("div");e.className="fixed inset-0 z-[998] flex items-center justify-center bg-night-950/80 backdrop-blur-sm",e.innerHTML=`
+import{o as h,g as E,d as x,a as y,m as k,b as B,p as I}from"./admin.DCvhIUVN.js";import{g as w}from"./blog-preview.CNhBN7Xz.js";import"./supabase.2Xnj7Pbd.js";function g(o){return new Promise(t=>{const e=document.createElement("div");e.className="fixed inset-0 z-[998] flex items-center justify-center bg-night-950/80 backdrop-blur-sm",e.innerHTML=`
           <div class="card-altar p-8 max-w-md mx-4 space-y-5">
             <p class="font-serif text-base text-parchment-100 leading-relaxed">${o}</p>
             <div class="flex gap-3 justify-end">
