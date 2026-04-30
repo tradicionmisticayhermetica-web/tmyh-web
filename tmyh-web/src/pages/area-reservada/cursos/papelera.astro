@@ -95,6 +95,26 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       loaderFallback.classList.remove("flex");
     }
 
+    async function withTimeout<T>(
+      promise: Promise<T>,
+      ms: number,
+      label: string,
+    ): Promise<T> {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      try {
+        return await Promise.race<T>([
+          promise,
+          new Promise<T>((_, reject) => {
+            timer = setTimeout(() => {
+              reject(new Error(`timeout:${label}`));
+            }, ms);
+          }),
+        ]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    }
+
     function confirmar(msg: string): Promise<boolean> {
       return new Promise((resolve) => {
         const dlg = document.getElementById("dialog-confirm");
@@ -144,8 +164,25 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       showLoader("Cargando papelera…");
       let cursos: Awaited<ReturnType<typeof listarCursosPapelera>> = [];
       try {
-        await purgarCursosPapelera();
-        cursos = await listarCursosPapelera();
+        await withTimeout(purgarCursosPapelera(), 12000, "purgar_papelera");
+        cursos = await withTimeout(listarCursosPapelera(), 12000, "listar_papelera");
+      } catch (err) {
+        console.error("[cursos.papelera.cargar]", err);
+        setStatus(
+          "La papelera está tardando más de lo esperado. Reintentá en unos segundos.",
+          "error",
+        );
+        if (lista) {
+          lista.innerHTML = `
+            <div class="card-altar p-12 text-center">
+              <p class="text-parchment-300 font-serif italic">No se pudo cargar la papelera en tiempo razonable.</p>
+              <button id="btn-reintentar-papelera" class="btn-gold mt-5">Reintentar</button>
+            </div>`;
+          document.getElementById("btn-reintentar-papelera")?.addEventListener("click", () => {
+            cargar();
+          });
+        }
+        return;
       } finally {
         hideLoader();
       }
@@ -183,12 +220,20 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
           if (!slug) return;
           showLoader("Restaurando curso…");
           try {
-            const r = await restaurarCursoDePapelera(slug);
+            const r = await withTimeout(
+              restaurarCursoDePapelera(slug),
+              12000,
+              "restaurar_curso",
+            );
             if (!r.ok) {
               setStatus(`No se pudo restaurar: ${r.error}`, "error");
               return;
             }
-            const dep = await dispararDeployCursos(`restaurar:${slug}`);
+            const dep = await withTimeout(
+              dispararDeployCursos(`restaurar:${slug}`),
+              12000,
+              "deploy_restaurar",
+            );
             if (!dep.ok) {
               setStatus(`Curso restaurado, pero falló el deploy automático (${dep.error}).`, "error");
               return;
@@ -207,12 +252,20 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
           if (!await confirmar("¿Eliminar definitivamente este curso? Esta acción no se puede deshacer.")) return;
           showLoader("Eliminando curso…");
           try {
-            const r = await eliminarCursoDefinitivo(slug);
+            const r = await withTimeout(
+              eliminarCursoDefinitivo(slug),
+              12000,
+              "eliminar_curso",
+            );
             if (!r.ok) {
               setStatus(`No se pudo eliminar: ${r.error}`, "error");
               return;
             }
-            const dep = await dispararDeployCursos(`eliminar:${slug}`);
+            const dep = await withTimeout(
+              dispararDeployCursos(`eliminar:${slug}`),
+              12000,
+              "deploy_eliminar",
+            );
             if (!dep.ok) {
               setStatus(`Curso eliminado de base, pero falló el deploy automático (${dep.error}).`, "error");
               return;

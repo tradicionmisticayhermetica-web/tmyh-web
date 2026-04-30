@@ -427,6 +427,26 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       loaderFallback.classList.remove("flex");
     }
 
+    async function withTimeout<T>(
+      promise: Promise<T>,
+      ms: number,
+      label: string,
+    ): Promise<T> {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      try {
+        return await Promise.race<T>([
+          promise,
+          new Promise<T>((_, reject) => {
+            timer = setTimeout(() => {
+              reject(new Error(`timeout:${label}`));
+            }, ms);
+          }),
+        ]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    }
+
     function slugify(s: string): string {
       return s.toLowerCase()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -801,18 +821,28 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       setStatus("Moviendo curso a papelera…", "info");
       showLoader("Moviendo a papelera…");
       try {
-        const r = await moverCursoAPapelera(slug);
+        const r = await withTimeout(moverCursoAPapelera(slug), 12000, "mover_papelera");
         if (!r.ok) {
           setStatus(`No se pudo mover a papelera: ${r.error}`, "error");
           return;
         }
-        const dep = await dispararDeployCursos(`papelera:${slug}`);
+        const dep = await withTimeout(
+          dispararDeployCursos(`papelera:${slug}`),
+          12000,
+          "deploy_papelera",
+        );
         if (!dep.ok) {
           setStatus(`Curso enviado a papelera, pero falló el deploy automático (${dep.error}).`, "error");
           return;
         }
         setStatus("Curso movido a la papelera.", "ok");
         setTimeout(() => { window.location.href = "/area-reservada/cursos"; }, 900);
+      } catch (err) {
+        console.error("[cursos.editar.moverPapelera]", err);
+        setStatus(
+          "La operación tardó demasiado y fue cancelada. Reintentá en unos segundos.",
+          "error",
+        );
       } finally {
         hideLoader();
       }
@@ -827,18 +857,32 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       setStatus("Eliminando curso definitivamente…", "info");
       showLoader("Eliminando curso…");
       try {
-        const r = await eliminarCursoDefinitivo(slug);
+        const r = await withTimeout(
+          eliminarCursoDefinitivo(slug),
+          12000,
+          "eliminar_definitivo",
+        );
         if (!r.ok) {
           setStatus(`No se pudo borrar definitivamente: ${r.error}`, "error");
           return;
         }
-        const dep = await dispararDeployCursos(`eliminar:${slug}`);
+        const dep = await withTimeout(
+          dispararDeployCursos(`eliminar:${slug}`),
+          12000,
+          "deploy_eliminar",
+        );
         if (!dep.ok) {
           setStatus(`Curso eliminado de base, pero falló el deploy automático (${dep.error}).`, "error");
           return;
         }
         setStatus("Curso eliminado definitivamente.", "ok");
         setTimeout(() => { window.location.href = "/area-reservada/cursos"; }, 900);
+      } catch (err) {
+        console.error("[cursos.editar.eliminarDefinitivo]", err);
+        setStatus(
+          "La operación tardó demasiado y fue cancelada. Reintentá en unos segundos.",
+          "error",
+        );
       } finally {
         hideLoader();
       }
