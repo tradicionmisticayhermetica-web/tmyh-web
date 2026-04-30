@@ -460,7 +460,7 @@ export async function restaurarCursoDePapelera(slug: string): Promise<{ ok: bool
     ) {
       const up = await supabase
         .from("cursos")
-        .update({ estado: "inactivo" } as any)
+        .update({ estado: "activo", eliminado_en: null } as any)
         .eq("slug", slug);
       if (up.error) return { ok: false, error: up.error.message };
       return { ok: true };
@@ -469,6 +469,13 @@ export async function restaurarCursoDePapelera(slug: string): Promise<{ ok: bool
   }
   const r = data as any;
   if (!r?.ok) return { ok: false, error: r?.error ?? "error_rpc" };
+  // Aseguramos comportamiento de negocio: al restaurar, el curso vuelve
+  // a estado público con la misma URL.
+  const up = await supabase
+    .from("cursos")
+    .update({ estado: "activo", eliminado_en: null } as any)
+    .eq("slug", slug);
+  if (up.error) return { ok: false, error: up.error.message };
   return { ok: true };
 }
 
