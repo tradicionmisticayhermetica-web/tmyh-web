@@ -273,10 +273,17 @@ import EditorBlog from "../../../components/EditorBlog.astro";
         return;
       }
 
-      // Inicializar el editor con el contenido existente
+      // Inicializar el editor con el contenido existente.
+      // Si contenido_json está vacío (posts migrados via SQL que solo tienen HTML),
+      // Tiptap acepta una cadena HTML directamente como contenido inicial.
       const editorRoot = document.getElementById("editor-blog-root");
-      if (editorRoot && post.contenido_json) {
-        editorRoot.dataset.initial = JSON.stringify(post.contenido_json);
+      if (editorRoot) {
+        if (post.contenido_json) {
+          editorRoot.dataset.initial = JSON.stringify(post.contenido_json);
+        } else if (post.contenido_html) {
+          // JSON.stringify de un string → Tiptap recibe el HTML y lo parsea
+          editorRoot.dataset.initial = JSON.stringify(post.contenido_html);
+        }
       }
 
       // Llenar los campos
@@ -291,7 +298,7 @@ import EditorBlog from "../../../components/EditorBlog.astro";
 
       pintarEstado(post.estado);
 
-      // Guardar referencia al JSON inicial del editor
+      // Guardar referencia al contenido inicial (JSON si existe, HTML como fallback)
       contenidoJson = post.contenido_json;
       contenidoHtml = post.contenido_html ?? "";
 
