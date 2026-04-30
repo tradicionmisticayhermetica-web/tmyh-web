@@ -1,1 +1,0 @@
-const a="tmyh_blog_preview_v1";function o(e){sessionStorage.setItem(a,JSON.stringify(e));const r=`${"/".replace(/\/$/,"")}/area-reservada/blog/preview`;window.open(r,"_blank","noopener,noreferrer")}export{a as B,o as g};
