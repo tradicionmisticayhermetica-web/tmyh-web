@@ -35,6 +35,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
           Ver en el sitio
         </a>
       </div>
+      <p id="url-publica" class="hidden w-full mt-2 text-xs text-parchment-400 font-mono break-all"></p>
     </header>
 
     <section class="card-altar p-6 space-y-5">
@@ -255,6 +256,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     const $btnVer = document.getElementById("btn-ver-sitio") as HTMLAnchorElement | null;
     const $btnPapelera = document.getElementById("btn-papelera") as HTMLButtonElement | null;
     const $btnBorrar = document.getElementById("btn-borrar") as HTMLButtonElement | null;
+    const $urlPublica = document.getElementById("url-publica") as HTMLParagraphElement | null;
     const $panelSimbolos = document.getElementById("panel-simbolos");
     const $wrapSimbolos = document.getElementById("simbolos-popover-wrap");
     const $inputImagen = document.getElementById("input-imagen") as HTMLInputElement | null;
@@ -522,6 +524,11 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         $btnVer.href = `/cursos/${encodeURIComponent(slug)}`;
         $btnVer.classList.remove("hidden");
       }
+      if ($urlPublica && slug) {
+        const origin = window.location.origin || "";
+        $urlPublica.textContent = `URL pública: ${origin}/cursos/${slug}`;
+        $urlPublica.classList.remove("hidden");
+      }
     }
 
     function validarCurso(curso: CursoEditable): string | null {
@@ -622,7 +629,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     document.getElementById("btn-guardar")?.addEventListener("click", async () => {
       const r = await guardar();
       if (!r) return;
-      setStatus("Curso guardado correctamente.", "ok");
+      setStatus(`Curso guardado. URL generada: /cursos/${r.slug}`, "ok");
     });
 
     document.getElementById("btn-publicar")?.addEventListener("click", async () => {
@@ -637,7 +644,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         );
         return;
       }
-      setStatus("Curso publicado. En ~10-12 min debería verse en la grilla pública y la URL dejar de dar 404.", "ok");
+      setStatus(`Curso publicado correctamente. URL generada: /cursos/${r.slug}`, "ok");
     });
 
     (async () => {

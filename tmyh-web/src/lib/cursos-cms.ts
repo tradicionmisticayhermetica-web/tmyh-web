@@ -513,19 +513,32 @@ export async function listarCursosParaSitio(): Promise<Curso[]> {
   if (!supabaseUrl || !anonKey) return cursosBase;
 
   try {
-    const url =
+    const urlConEliminado =
       `${supabaseUrl}/rest/v1/cursos` +
       "?select=*" +
       "&eliminado_en=is.null" +
       "&estado=in.(activo,proximo,historico)" +
       "&order=orden.asc,titulo.asc";
-
-    const resp = await fetch(url, {
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
-      },
+    const headers = {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+    };
+    let resp = await fetch(urlConEliminado, {
+      headers,
     });
+    if (!resp.ok) {
+      const txt = await resp.text().catch(() => "");
+      // Compatibilidad: si la API aún no expone eliminado_en, reintentamos
+      // sin ese filtro para no bloquear la generación de rutas públicas.
+      if (txt.includes("eliminado_en")) {
+        const urlSinEliminado =
+          `${supabaseUrl}/rest/v1/cursos` +
+          "?select=*" +
+          "&estado=in.(activo,proximo,historico)" +
+          "&order=orden.asc,titulo.asc";
+        resp = await fetch(urlSinEliminado, { headers });
+      }
+    }
     if (!resp.ok) return cursosBase;
 
     const rows = (await resp.json()) as CursoRow[];
