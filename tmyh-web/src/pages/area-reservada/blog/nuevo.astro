@@ -111,6 +111,13 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       >
         Publicar
       </button>
+      <button
+        id="btn-vista-previa"
+        type="button"
+        class="btn-ghost border border-gold-400/20 max-lg:w-full max-lg:justify-center sm:ml-auto"
+      >
+        Vista previa
+      </button>
     </div>
   </form>
 
@@ -119,6 +126,7 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       guardarPost,
       type PostBlog,
     } from "../../../lib/admin";
+    import { guardarVistaPreviaYAbrir } from "../../../lib/blog-preview";
 
     // Estado del editor
     let contenidoJson: unknown = null;
@@ -212,5 +220,16 @@ import EditorBlog from "../../../components/EditorBlog.astro";
 
     document.getElementById("btn-guardar-borrador")?.addEventListener("click", () => guardar("borrador"));
     document.getElementById("btn-publicar")?.addEventListener("click", () => guardar("publicado"));
+    document.getElementById("btn-vista-previa")?.addEventListener("click", () => {
+      const datos = recopilarDatos("borrador");
+      guardarVistaPreviaYAbrir({
+        titulo: datos.titulo || "Sin título",
+        extracto: datos.extracto ?? null,
+        contenido_html: contenidoHtml?.trim()
+          ? contenidoHtml
+          : "<p class=\"text-parchment-400 italic\">Sin contenido en el editor.</p>",
+        etiquetas: datos.etiquetas ?? [],
+      });
+    });
   </script>
 </AdminLayout>

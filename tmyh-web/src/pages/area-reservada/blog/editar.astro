@@ -93,31 +93,22 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       <!-- Status -->
       <div id="status-post" class="hidden text-sm font-serif italic" role="status" aria-live="polite"></div>
 
-      <!-- Acciones -->
+      <!-- Acciones: publicación (alejadas de archivar / papelera a propósito) -->
       <div class="space-y-3 pt-2 border-t border-gold-400/10">
-
-        <!-- Fila principal de acciones -->
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap items-center gap-3">
           <button id="btn-guardar" type="button" class="btn-ghost">Guardar borrador</button>
           <button id="btn-publicar" type="button" class="btn-gold hidden">Publicar</button>
-          <button id="btn-publicar-revision" type="button" class="btn-gold hidden">↑ Publicar revisión</button>
           <button id="btn-despublicar" type="button" class="btn-ghost hidden">Volver a borrador</button>
-          <div class="flex-1"></div>
-          <button id="btn-archivar" type="button"
-            class="text-[11px] uppercase tracking-widest text-parchment-400 hover:text-parchment-100 transition px-3 py-2">
-            Archivar
-          </button>
-          <button id="btn-papelera" type="button"
-            class="text-[11px] uppercase tracking-widest text-parchment-500 hover:text-wine-500 transition px-3 py-2">
-            🗑 Papelera
+          <button id="btn-vista-previa" type="button" class="btn-ghost border border-gold-400/20 max-lg:w-full max-lg:justify-center lg:ml-auto">
+            Vista previa
           </button>
         </div>
 
-        <!-- Aviso de revisión pendiente (solo visible cuando hay borrador sobre un post publicado) -->
         <div id="aviso-borrador" class="hidden bg-gold-400/8 border border-gold-400/20 rounded-sm px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <p class="text-xs font-sans text-parchment-200">
-            <span class="text-gold-300 font-medium">Revisión pendiente</span> —
-            hay cambios guardados sin publicar. El sitio en vivo sigue mostrando la versión anterior.
+            <span class="text-gold-300 font-medium">Cambios guardados sin publicar</span> —
+            el sitio sigue mostrando la versión anterior hasta que uses
+            <span class="text-parchment-100 font-medium">Actualizar en el sitio</span>.
           </p>
           <button id="btn-descartar-borrador" type="button"
             class="text-[11px] uppercase tracking-widest text-parchment-400 hover:text-wine-400 transition shrink-0">
@@ -125,6 +116,23 @@ import EditorBlog from "../../../components/EditorBlog.astro";
           </button>
         </div>
 
+        <div class="mt-8 pt-6 border-t border-parchment-500/15 rounded-sm">
+          <p class="text-[10px] uppercase tracking-[0.2em] text-parchment-500 mb-3">Gestión del post</p>
+          <p class="text-xs text-parchment-400 mb-4 max-w-xl leading-relaxed">
+            Acciones que sacan el artículo del blog o lo envían a la papelera.
+            Están separadas de publicar para reducir clics accidentales.
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <button id="btn-archivar" type="button"
+              class="btn-ghost border border-parchment-400/25 text-parchment-200 hover:border-gold-400/40 hover:text-parchment-50 text-sm px-5 py-2.5">
+              Archivar
+            </button>
+            <button id="btn-papelera" type="button"
+              class="btn-ghost border border-wine-500/35 text-parchment-200 hover:border-wine-400/50 hover:text-parchment-50 text-sm px-5 py-2.5">
+              Mover a papelera
+            </button>
+          </div>
+        </div>
       </div>
     </form>
   </div>
@@ -140,6 +148,7 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       moverAPapelera,
       type PostBlog,
     } from "../../../lib/admin";
+    import { guardarVistaPreviaYAbrir } from "../../../lib/blog-preview";
 
     // Toast de notificación (reemplaza window.alert)
     function notificar(msg: string, tipo: "ok" | "error" | "info" = "info") {
@@ -216,29 +225,38 @@ import EditorBlog from "../../../components/EditorBlog.astro";
     function pintarEstado(estado: PostBlog["estado"]) {
       const badge = document.getElementById("badge-estado");
       const btnGuardar = document.getElementById("btn-guardar");
+      const btnPub = document.getElementById("btn-publicar");
       if (!badge) return;
       badge.className = "text-[10px] uppercase tracking-widest px-2 py-1 rounded-sm border";
       if (estado === "publicado") {
         badge.textContent = "Publicado";
         badge.classList.add("text-gold-300", "border-gold-400/40", "bg-gold-400/5");
-        // Publicado: "Guardar borrador" guarda sin publicar, "Volver a borrador" lo baja
         if (btnGuardar) btnGuardar.textContent = "Guardar borrador";
-        show("btn-despublicar"); hide("btn-publicar");
+        if (btnPub) {
+          btnPub.textContent = "Actualizar en el sitio";
+          show("btn-publicar");
+        }
+        show("btn-despublicar");
         show("link-ver-post");
       } else if (estado === "borrador") {
         badge.textContent = "Borrador";
         badge.classList.add("text-parchment-400", "border-parchment-400/30");
-        // Borrador: solo "Publicar" (no hay revisión pendiente que sea distinta al contenido)
         if (btnGuardar) btnGuardar.textContent = "Guardar cambios";
-        show("btn-publicar");
+        if (btnPub) {
+          btnPub.textContent = "Publicar";
+          show("btn-publicar");
+        }
         hide("btn-despublicar");
-        hide("btn-publicar-revision");
         hide("link-ver-post");
       } else {
         badge.textContent = "Archivado";
         badge.classList.add("text-parchment-600", "border-parchment-600/20", "opacity-60");
         if (btnGuardar) btnGuardar.textContent = "Guardar cambios";
-        show("btn-publicar"); hide("btn-despublicar");
+        if (btnPub) {
+          btnPub.textContent = "Publicar";
+          show("btn-publicar");
+        }
+        hide("btn-despublicar");
         hide("link-ver-post");
       }
     }
@@ -259,14 +277,8 @@ import EditorBlog from "../../../components/EditorBlog.astro";
 
     function mostrarAvisoBorrador(visible: boolean) {
       const aviso = document.getElementById("aviso-borrador");
-      const btnRevision = document.getElementById("btn-publicar-revision");
-      if (visible) {
-        aviso?.classList.remove("hidden");
-        btnRevision?.classList.remove("hidden");
-      } else {
-        aviso?.classList.add("hidden");
-        btnRevision?.classList.add("hidden");
-      }
+      if (visible) aviso?.classList.remove("hidden");
+      else aviso?.classList.add("hidden");
     }
 
     async function accionGuardar() {
@@ -391,7 +403,17 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       // Botones
       document.getElementById("btn-guardar")?.addEventListener("click", accionGuardar);
       document.getElementById("btn-publicar")?.addEventListener("click", accionPublicar);
-      document.getElementById("btn-publicar-revision")?.addEventListener("click", accionPublicar);
+      document.getElementById("btn-vista-previa")?.addEventListener("click", () => {
+        const campos = recopilarCampos();
+        guardarVistaPreviaYAbrir({
+          titulo: campos.titulo || "Sin título",
+          extracto: campos.extracto,
+          contenido_html: contenidoHtml?.trim()
+            ? contenidoHtml
+            : "<p class=\"text-parchment-400 italic\">Sin contenido en el editor.</p>",
+          etiquetas: campos.etiquetas,
+        });
+      });
       document.getElementById("btn-despublicar")?.addEventListener("click", async () => {
         const r = await guardarPost({ id: postId!, estado: "borrador" } as any);
         if (r.ok) { esPublicado = false; pintarEstado("borrador"); setStatus("Vuelto a borrador.", "ok"); }

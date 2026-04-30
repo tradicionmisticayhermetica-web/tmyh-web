@@ -9,12 +9,15 @@ interface Props {
   description?: string;
   /** Ruta relativa a /public de una imagen custom para esta página. Si no se pasa, usa /og-image.svg. */
   ogImage?: string;
+  /** No indexar (p. ej. borradores / vistas previas internas). */
+  noindex?: boolean;
 }
 
 const {
   title,
   description = "Escuela de Simbología, Espagiria y Tradición Hermética. Cursos online en vivo dirigidos por Emanuel Mari.",
   ogImage = "/og-image.svg",
+  noindex = false,
 } = Astro.props;
 
 const siteUrl = Astro.site ?? new URL("https://www.tradicionmisticayhermetica.com");
@@ -29,6 +32,7 @@ const fullTitle = `${title} · Tradición Mística y Hermética`;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#07060d" />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
 
     {/* Favicon: SVG escalable (navegadores modernos) */}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />

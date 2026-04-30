@@ -1,51 +1,51 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
-import Ornament from "../../components/Ornament.astro";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import Ornament from "../../../components/Ornament.astro";
 ---
 
-<BaseLayout title="Cargando…" description="">
+<BaseLayout
+  title="Vista previa"
+  description="Borrador local — no publicado"
+  noindex={true}
+>
   <article>
-    <div id="estado-carga" class="py-40 text-center">
-      <div class="text-2xl text-gold-400 animate-soft-pulse">☉</div>
-      <p class="mt-4 text-sm text-parchment-300 font-serif italic">Cargando…</p>
-    </div>
-
-    <div id="estado-404" class="hidden py-40 text-center">
-      <p class="font-display text-2xl text-parchment-50 mb-4">Reflexión no encontrada</p>
-      <a href="/blog" class="btn-gold">Ver todas las reflexiones</a>
+    <div id="estado-vacio" class="py-24 text-center hidden">
+      <p class="font-display text-xl text-parchment-200 mb-4">No hay vista previa</p>
+      <p class="text-sm text-parchment-400 mb-8 max-w-md mx-auto">
+        Abrila desde el editor del blog con el botón «Vista previa». Los datos viven solo en tu navegador.
+      </p>
+      <a href="/area-reservada/blog" class="btn-gold">Volver al panel del blog</a>
     </div>
 
     <div id="contenido" class="hidden">
-      {/* Hero */}
-      <section class="relative py-20 md:py-28 overflow-hidden">
+      <section class="relative py-16 md:py-24 overflow-hidden">
         <div class="stars-bg"></div>
         <div class="container-prose relative z-10 max-w-3xl">
-          <a
-            href="/blog"
-            class="inline-flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-parchment-300 hover:text-[color:var(--color-gold-300)] mb-10"
+          <p
+            class="inline-flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase text-gold-400 border border-gold-400/30 px-3 py-1.5 rounded-sm mb-8"
           >
-            ← Todas las reflexiones
-          </a>
+            Vista previa · no publicado
+          </p>
 
           <div id="hero-meta" class="flex items-center gap-3 mb-6 text-xs tracking-[0.2em] uppercase"></div>
 
-          <h1 id="post-titulo" class="text-4xl md:text-5xl font-display text-balance"></h1>
-          <p id="post-autor" class="mt-6 text-xs tracking-[0.2em] uppercase text-parchment-400"></p>
+          <h1 id="post-titulo" class="text-4xl md:text-5xl font-display text-balance text-parchment-50"></h1>
+          <p id="post-extracto" class="hidden mt-5 text-lg font-serif text-parchment-300 leading-relaxed"></p>
+          <p class="mt-6 text-xs tracking-[0.2em] uppercase text-parchment-400">Por Emanuel Mari</p>
+
+          <p class="mt-10">
+            <a
+              href="/area-reservada/blog"
+              class="text-xs tracking-[0.2em] uppercase text-parchment-400 hover:text-gold-300 transition"
+            >
+              ← Volver al panel
+            </a>
+          </p>
         </div>
       </section>
 
       <Ornament symbol="✦" />
 
-      {/* Imagen destacada */}
-      <div id="post-imagen-wrapper" class="hidden pb-4 md:pb-8">
-        <div class="container-prose max-w-3xl">
-          <figure class="img-veil">
-            <img id="post-imagen" src="" alt="" class="img-altar w-full h-auto" loading="eager" />
-          </figure>
-        </div>
-      </div>
-
-      {/* Cuerpo */}
       <section class="py-12">
         <div class="container-prose max-w-3xl">
           <div
@@ -57,19 +57,9 @@ import Ornament from "../../components/Ornament.astro";
 
       <Ornament symbol="☉" />
 
-      {/* Etiquetas */}
-      <section class="pb-8">
+      <section class="pb-12">
         <div class="container-prose max-w-3xl">
           <div id="post-etiquetas" class="flex flex-wrap gap-2"></div>
-        </div>
-      </section>
-
-      {/* Navegación entre posts */}
-      <section class="py-12 border-t border-gold-400/10">
-        <div class="container-prose max-w-3xl">
-          <div class="text-center">
-            <a href="/blog" class="btn-gold">Ver todas las reflexiones</a>
-          </div>
         </div>
       </section>
     </div>
@@ -77,7 +67,6 @@ import Ornament from "../../components/Ornament.astro";
 </BaseLayout>
 
 <style is:global>
-  /* Estilos del cuerpo del post (HTML generado por Tiptap) */
   .blog-content p { margin-bottom: 1.5rem; }
   .blog-content h2 {
     font-family: var(--font-display);
@@ -210,68 +199,72 @@ import Ornament from "../../components/Ornament.astro";
 </style>
 
 <script>
-  import { obtenerPostPorSlug, type PostBlog } from "../../lib/admin";
+  import {
+    BLOG_PREVIEW_STORAGE_KEY,
+    type BlogPreviewPayload,
+  } from "../../../lib/blog-preview";
 
-  function show(id: string) { document.getElementById(id)?.classList.remove("hidden"); }
-  function hide(id: string) { document.getElementById(id)?.classList.add("hidden"); }
-  function setText(id: string, v: string) { const el = document.getElementById(id); if (el) el.textContent = v; }
-  function setHtml(id: string, v: string) { const el = document.getElementById(id); if (el) el.innerHTML = v; }
-
-  function formatearFecha(iso: string): string {
-    try {
-      return new Date(iso).toLocaleDateString("es-AR", {
-        timeZone: "America/Argentina/Buenos_Aires",
-        day: "numeric", month: "long", year: "numeric",
-      });
-    } catch { return iso; }
+  function show(id: string) {
+    document.getElementById(id)?.classList.remove("hidden");
+  }
+  function hide(id: string) {
+    document.getElementById(id)?.classList.add("hidden");
   }
 
-  (async () => {
-    const params = new URLSearchParams(window.location.search);
-    const slug = params.get("slug") ?? window.location.pathname.replace(/^\/blog\/?/, "").replace(/\/$/, "");
-    if (!slug) { hide("estado-carga"); show("estado-404"); return; }
+  (function init() {
+    const raw = sessionStorage.getItem(BLOG_PREVIEW_STORAGE_KEY);
+    if (!raw) {
+      hide("contenido");
+      show("estado-vacio");
+      return;
+    }
 
-    const post: PostBlog | null = await obtenerPostPorSlug(slug);
-    if (!post) { hide("estado-carga"); show("estado-404"); return; }
+    let data: BlogPreviewPayload;
+    try {
+      data = JSON.parse(raw) as BlogPreviewPayload;
+    } catch {
+      hide("contenido");
+      show("estado-vacio");
+      return;
+    }
 
-    // Actualizar título de la página
-    document.title = `${post.titulo} · Tradición Mística y Hermética`;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc && post.extracto) metaDesc.setAttribute("content", post.extracto);
+    document.title = `${data.titulo} (vista previa) · Tradición Mística y Hermética`;
 
-    // Hero meta
-    const fecha = formatearFecha(post.publicado_en ?? post.creado_en);
-    const etiqueta = post.etiquetas?.[0];
+    const tituloEl = document.getElementById("post-titulo");
+    if (tituloEl) tituloEl.textContent = data.titulo || "Sin título";
+
+    if (data.extracto) {
+      const ex = document.getElementById("post-extracto");
+      if (ex) {
+        ex.textContent = data.extracto;
+        ex.classList.remove("hidden");
+      }
+    }
+
     const heroMeta = document.getElementById("hero-meta");
-    if (heroMeta) {
-      heroMeta.innerHTML = [
-        etiqueta ? `<span class="text-[color:var(--color-gold-400)]">${etiqueta}</span><span class="text-parchment-500">·</span>` : "",
-        `<time class="text-parchment-400">${fecha}</time>`,
-      ].join(" ");
+    if (heroMeta && data.etiquetas?.length) {
+      const primera = data.etiquetas[0];
+      heroMeta.innerHTML = `<span class="text-[color:var(--color-gold-400)]">${primera}</span>`;
     }
 
-    setText("post-titulo", post.titulo);
-    setText("post-autor", "Por Emanuel Mari");
-
-    // Imagen destacada
-    if (post.imagen_destacada) {
-      const img = document.getElementById("post-imagen") as HTMLImageElement | null;
-      if (img) { img.src = post.imagen_destacada; img.alt = post.titulo; }
-      show("post-imagen-wrapper");
+    const cuerpo = document.getElementById("post-cuerpo");
+    if (cuerpo) {
+      cuerpo.innerHTML =
+        data.contenido_html?.trim()
+          ? data.contenido_html
+          : "<p class=\"text-parchment-400 italic\">Sin contenido en el editor.</p>";
     }
 
-    // Cuerpo (HTML de Tiptap)
-    setHtml("post-cuerpo", post.contenido_html ?? "<p>Este post no tiene contenido aún.</p>");
-
-    // Etiquetas
     const etiquetasEl = document.getElementById("post-etiquetas");
-    if (etiquetasEl && post.etiquetas?.length) {
-      etiquetasEl.innerHTML = post.etiquetas.map((e) =>
-        `<span class="text-[10px] uppercase tracking-widest text-parchment-400 px-2 py-1 border border-gold-400/15 rounded-sm">${e}</span>`
-      ).join("");
+    if (etiquetasEl && data.etiquetas?.length) {
+      etiquetasEl.innerHTML = data.etiquetas
+        .map(
+          (e) =>
+            `<span class="text-[10px] uppercase tracking-widest text-parchment-400 px-2 py-1 border border-gold-400/15 rounded-sm">${e}</span>`,
+        )
+        .join("");
     }
 
-    hide("estado-carga");
     show("contenido");
   })();
 </script>

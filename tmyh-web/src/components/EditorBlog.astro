@@ -2,8 +2,7 @@
 /**
  * Editor de blog enriquecido para /area-reservada/blog.
  *
- * Usa Tiptap con StarterKit (negritas, cursivas, encabezados, listas,
- * citas, divisores) + extensiones de imagen, link, YouTube y placeholder.
+ * Usa Tiptap: texto, imagen/vídeo/PDF (subida o URL con ⌗), YouTube, tablas en dos columnas.
  *
  * Emite un evento custom "editor:change" con el detalle:
  *   { json: object, html: string }
@@ -82,16 +81,19 @@ const {
 
     <div class="tb-divider"></div>
 
-    <!-- Bloque: media -->
+    <!-- Bloque: media y maquetación -->
     <div class="flex gap-1">
       <button type="button" data-cmd="link" title="Insertar link" class="tb-btn">
         🔗
       </button>
-      <button type="button" data-cmd="image" title="Insertar imagen" class="tb-btn">
+      <button type="button" data-cmd="media" title="Subir imagen, vídeo o PDF desde tu equipo" class="tb-btn">
         🖼
       </button>
-      <button type="button" data-cmd="youtube" title="Insertar video YouTube" class="tb-btn">
-        ▶
+      <button type="button" data-cmd="mediaUrl" title="Insertar desde URL: imagen, vídeo, PDF o YouTube" class="tb-btn">
+        ⌗
+      </button>
+      <button type="button" data-cmd="twoCol" title="Dos columnas: texto e imagen lado a lado" class="tb-btn font-display text-[10px] px-1.5">
+        ⊞
       </button>
     </div>
 
@@ -115,11 +117,11 @@ const {
   ></div>
 </div>
 
-<!-- Input oculto para subir imágenes -->
+<!-- Input oculto: imágenes, vídeos y PDF -->
 <input
   type="file"
-  id="editor-image-input"
-  accept="image/*"
+  id="editor-media-input"
+  accept="image/*,video/*,application/pdf,.pdf"
   class="hidden"
   aria-hidden="true"
 />
@@ -212,6 +214,74 @@ const {
     height: 100%;
     border-radius: 2px;
   }
+  .editor-content .blog-content-video {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 2px;
+    margin: 1.5rem auto;
+    display: block;
+    background: rgb(0 0 0 / 0.35);
+  }
+  .editor-content .blog-pdf-block {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.65rem 1rem;
+    margin: 1.5rem 0;
+    padding: 0.85rem 1.1rem;
+    border: 1px solid rgb(212 175 55 / 0.2);
+    border-radius: 2px;
+    background: rgb(230 196 100 / 0.04);
+  }
+  .editor-content .blog-pdf-badge {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-parchment-500);
+  }
+  .editor-content a.blog-pdf-download {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-gold-400);
+    text-decoration: none;
+    border-bottom: 1px solid rgb(212 175 55 / 0.28);
+    padding-bottom: 1px;
+  }
+  .editor-content a.blog-pdf-download:hover {
+    color: var(--color-gold-300);
+    border-color: rgb(212 175 55 / 0.5);
+  }
+  .editor-content table.blog-layout-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    border: none;
+    table-layout: fixed;
+  }
+  .editor-content table.blog-layout-table td,
+  .editor-content table.blog-layout-table th {
+    border: none;
+    vertical-align: top;
+    padding: 0.5rem 0.75rem;
+    width: 50%;
+  }
+  @media (max-width: 640px) {
+    .editor-content table.blog-layout-table,
+    .editor-content table.blog-layout-table tbody,
+    .editor-content table.blog-layout-table tr {
+      display: block;
+      width: 100%;
+    }
+    .editor-content table.blog-layout-table td,
+    .editor-content table.blog-layout-table th {
+      display: block;
+      width: 100%;
+    }
+  }
 
   /* Placeholder de Tiptap */
   .editor-content p.is-editor-empty:first-child::before {
@@ -273,13 +343,59 @@ const {
   import Link from "@tiptap/extension-link";
   import Placeholder from "@tiptap/extension-placeholder";
   import Youtube from "@tiptap/extension-youtube";
+  import { Table } from "@tiptap/extension-table";
+  import { TableRow } from "@tiptap/extension-table-row";
+  import { TableCell } from "@tiptap/extension-table-cell";
+  import { TableHeader } from "@tiptap/extension-table-header";
+  import { Gapcursor } from "@tiptap/extension-gapcursor";
+  import { BlogVideo } from "../lib/tiptap-blog-video";
+  import { BlogPdf } from "../lib/tiptap-blog-pdf";
   import { supabase } from "../lib/supabase";
 
   const root = document.getElementById("editor-blog-root");
   const contentEl = document.getElementById("editor-content");
-  const imageInput = document.getElementById(
-    "editor-image-input",
+  const mediaInput = document.getElementById(
+    "editor-media-input",
   ) as HTMLInputElement | null;
+
+  function toastError(msg: string) {
+    const toast = document.createElement("div");
+    toast.className =
+      "fixed bottom-6 right-6 z-[999] px-5 py-3 rounded-sm shadow-xl font-sans text-sm max-w-sm bg-wine-700 text-parchment-50";
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      setTimeout(() => toast.remove(), 400);
+    }, 4000);
+  }
+
+  function isYoutubeUrl(url: string): boolean {
+    return /youtube\.com|youtu\.be/i.test(url);
+  }
+
+  function isDirectVideoUrl(url: string): boolean {
+    return /\.(mp4|webm|ogg|mov)(\?|#|$)/i.test(url);
+  }
+
+  function isPdfUrl(url: string): boolean {
+    return /\.pdf(\?|#|$)/i.test(url);
+  }
+
+  function nombreDesdePdfUrl(url: string): string | null {
+    try {
+      const u = new URL(url);
+      const seg = u.pathname.split("/").filter(Boolean).pop();
+      if (!seg || !/\.pdf$/i.test(seg)) return null;
+      return decodeURIComponent(seg);
+    } catch {
+      return null;
+    }
+  }
+
+  function esArchivoPdf(file: File): boolean {
+    return file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+  }
 
   if (!root || !contentEl) {
     console.error("[EditorBlog] elementos no encontrados");
@@ -295,10 +411,20 @@ const {
           bulletList: { keepMarks: true },
           orderedList: { keepMarks: true },
         }),
+        Gapcursor,
+        BlogVideo,
+        BlogPdf,
         Image.configure({ inline: false, allowBase64: false }),
         Link.configure({ openOnClick: false, autolink: true }),
         Placeholder.configure({ placeholder }),
         Youtube.configure({ width: "100%", height: 400 }),
+        Table.configure({
+          resizable: false,
+          HTMLAttributes: { class: "blog-layout-table" },
+        }),
+        TableRow,
+        TableHeader,
+        TableCell,
       ],
       content: initialJson ?? "",
       onUpdate: ({ editor: ed }) => {
@@ -416,74 +542,98 @@ const {
             });
             break;
           }
-          case "image":
-            imageInput?.click();
+          case "media":
+            mediaInput?.click();
             break;
-          case "youtube": {
-            const ytModal = document.createElement("div");
-            ytModal.className = "fixed inset-0 z-[998] flex items-center justify-center bg-night-950/80 backdrop-blur-sm";
-            ytModal.innerHTML = `
-              <div class="card-altar p-6 max-w-sm w-full mx-4 space-y-4">
-                <p class="text-[11px] uppercase tracking-widest text-parchment-400">URL del video de YouTube</p>
-                <input id="yt-url-input" type="url" placeholder="https://www.youtube.com/watch?v=..."
+          case "mediaUrl": {
+            const modal = document.createElement("div");
+            modal.className =
+              "fixed inset-0 z-[998] flex items-center justify-center bg-night-950/80 backdrop-blur-sm";
+            modal.innerHTML = `
+              <div class="card-altar p-6 max-w-md w-full mx-4 space-y-4">
+                <p class="font-display text-base text-parchment-100">Insertar desde URL</p>
+                <p class="text-xs text-parchment-500 leading-relaxed">
+                  Imagen, PDF, vídeo (.mp4, .webm…) o URL de YouTube.
+                </p>
+                <input id="media-url-input" type="url" placeholder="https://…"
                   class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-3 py-2 text-sm font-sans rounded-sm"/>
                 <div class="flex gap-2 justify-end">
-                  <button id="yt-cancel" class="btn-ghost text-xs">Cancelar</button>
-                  <button id="yt-ok" class="btn-gold text-xs">Insertar</button>
+                  <button id="media-cancel" class="btn-ghost text-xs">Cancelar</button>
+                  <button id="media-ok" class="btn-gold text-xs">Insertar</button>
                 </div>
               </div>`;
-            document.body.appendChild(ytModal);
-            const ytInput = ytModal.querySelector("#yt-url-input") as HTMLInputElement;
-            ytInput?.focus();
-            ytModal.querySelector("#yt-ok")?.addEventListener("click", () => {
-              const url = ytInput.value.trim();
-              if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
-              ytModal.remove();
+            document.body.appendChild(modal);
+            const urlField = modal.querySelector("#media-url-input") as HTMLInputElement;
+            const aplicarUrl = () => {
+              const url = urlField.value.trim();
+              if (!url) return;
+              if (isYoutubeUrl(url)) {
+                editor.chain().focus().setYoutubeVideo({ src: url }).run();
+              } else if (isPdfUrl(url)) {
+                const nombre = nombreDesdePdfUrl(url);
+                editor.chain().focus().setBlogPdf({ url, nombre }).run();
+              } else if (isDirectVideoUrl(url)) {
+                editor.chain().focus().setBlogVideo({ src: url }).run();
+              } else {
+                editor.chain().focus().setImage({ src: url }).run();
+              }
+              modal.remove();
+            };
+            modal.querySelector("#media-ok")?.addEventListener("click", aplicarUrl);
+            modal.querySelector("#media-cancel")?.addEventListener("click", () => modal.remove());
+            modal.addEventListener("click", (ev) => {
+              if (ev.target === modal) modal.remove();
             });
-            ytModal.querySelector("#yt-cancel")?.addEventListener("click", () => ytModal.remove());
-            ytInput?.addEventListener("keydown", (e) => {
-              if (e.key === "Enter") { const url = ytInput.value.trim(); if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run(); ytModal.remove(); }
-              if (e.key === "Escape") ytModal.remove();
+            urlField?.focus();
+            urlField?.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") aplicarUrl();
+              if (e.key === "Escape") modal.remove();
             });
             break;
           }
+          case "twoCol":
+            editor.chain().focus().insertTable({ rows: 1, cols: 2, withHeaderRow: false }).run();
+            break;
         }
       });
     });
 
-    // ----------------------------------------------------------------
-    // Upload de imágenes a Supabase Storage (bucket blog-images)
-    // ----------------------------------------------------------------
-    imageInput?.addEventListener("change", async () => {
-      const file = imageInput.files?.[0];
-      if (!file) return;
-
-      const ext = file.name.split(".").pop() ?? "jpg";
+    async function subirMedioEInsertar(file: File) {
+      const ext = file.name.split(".").pop() ?? "bin";
       const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
       const { error } = await supabase.storage
         .from("blog-images")
-        .upload(path, file, { upsert: false, contentType: file.type });
+        .upload(path, file, {
+          upsert: false,
+          contentType:
+            file.type
+            || (esArchivoPdf(file) ? "application/pdf" : "application/octet-stream"),
+        });
 
       if (error) {
-        // Toast en lugar de alert del navegador
-        const toast = document.createElement("div");
-        toast.className = "fixed bottom-6 right-6 z-[999] px-5 py-3 rounded-sm shadow-xl font-sans text-sm max-w-sm bg-wine-700 text-parchment-50";
-        toast.textContent = `No se pudo subir la imagen: ${error.message}`;
-        document.body.appendChild(toast);
-        setTimeout(() => { toast.style.opacity = "0"; setTimeout(() => toast.remove(), 400); }, 4000);
+        toastError(`No se pudo subir el archivo: ${error.message}`);
         return;
       }
 
-      const { data: urlData } = supabase.storage
-        .from("blog-images")
-        .getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("blog-images").getPublicUrl(path);
+      const pub = urlData?.publicUrl;
+      if (!pub) return;
 
-      if (urlData?.publicUrl) {
-        editor.chain().focus().setImage({ src: urlData.publicUrl }).run();
+      if (esArchivoPdf(file)) {
+        editor.chain().focus().setBlogPdf({ url: pub, nombre: file.name }).run();
+      } else if (file.type.startsWith("video/")) {
+        editor.chain().focus().setBlogVideo({ src: pub }).run();
+      } else {
+        editor.chain().focus().setImage({ src: pub }).run();
       }
+    }
 
-      imageInput.value = "";
+    mediaInput?.addEventListener("change", async () => {
+      const file = mediaInput.files?.[0];
+      if (!file) return;
+      await subirMedioEInsertar(file);
+      mediaInput.value = "";
     });
   }
 </script>

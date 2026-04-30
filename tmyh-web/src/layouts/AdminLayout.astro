@@ -25,6 +25,9 @@ interface Props {
 }
 
 const { title, active = "dashboard" } = Astro.props;
+
+const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+const hrefSitioPublico = baseUrl ? `${baseUrl}/` : "/";
 ---
 
 <!doctype html>
@@ -90,6 +93,16 @@ const { title, active = "dashboard" } = Astro.props;
         </div>
 
         <nav class="flex lg:flex-col px-3 py-3 lg:py-5 gap-1 overflow-x-auto">
+          <a
+            href={hrefSitioPublico}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="admin-nav-link border border-gold-400/15 bg-gold-400/[0.04] mb-0.5"
+            title="Abrir el sitio público en una pestaña nueva"
+          >
+            <span class="admin-nav-icon">↗</span>
+            <span>Ir al sitio</span>
+          </a>
           <a
             href="/area-reservada"
             data-nav="dashboard"
