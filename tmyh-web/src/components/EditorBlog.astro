@@ -317,20 +317,15 @@ const {
     // ej. editar.astro que trae el post de Supabase).
     root.addEventListener("editor:setContent", (e: Event) => {
       const { json, html } = (e as CustomEvent).detail ?? {};
-      console.log("[EditorBlog] editor:setContent recibido", { tieneJson: !!json, tieneHtml: !!html, htmlLength: html?.length });
       if (json) {
         editor.commands.setContent(json, false);
       } else if (html) {
         editor.commands.setContent(html, false);
       }
-      // Sincronizar el estado del editor hacia afuera
       root.dispatchEvent(new CustomEvent("editor:change", {
         detail: { json: editor.getJSON(), html: editor.getHTML() },
       }));
-      console.log("[EditorBlog] setContent completado, palabras visibles:", editor.getText().slice(0, 60));
     });
-
-    console.log("[EditorBlog] editor inicializado, listener editor:setContent activo");
 
     // ----------------------------------------------------------------
     // Toolbar: comandos
