@@ -20,6 +20,19 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     </div>
   </section>
 
+  <div id="status" class="hidden mt-5 text-sm font-serif italic" role="status" aria-live="polite"></div>
+
+  <div id="dialog-confirm" class="fixed inset-0 z-[120] hidden items-center justify-center p-4 bg-midnight-950/78">
+    <div class="card-altar w-full max-w-lg p-6">
+      <h3 class="font-display text-xl text-parchment-50 mb-3">Confirmación</h3>
+      <p id="dialog-confirm-msg" class="text-parchment-200 font-serif"></p>
+      <div class="mt-6 flex items-center justify-end gap-2">
+        <button id="dialog-confirm-cancel" type="button" class="btn-ghost">Cancelar</button>
+        <button id="dialog-confirm-ok" type="button" class="btn-gold">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     import {
       listarCursosPapelera,
@@ -29,6 +42,43 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     } from "../../../lib/cursos-cms";
 
     const lista = document.getElementById("lista-papelera");
+    const status = document.getElementById("status");
+
+    function setStatus(msg: string, tipo: "ok" | "error" | "info") {
+      if (!status) return;
+      status.textContent = msg;
+      status.classList.remove("hidden", "text-gold-300", "text-wine-500", "text-parchment-300");
+      status.classList.add(tipo === "ok" ? "text-gold-300" : tipo === "error" ? "text-wine-500" : "text-parchment-300");
+    }
+
+    function confirmar(msg: string): Promise<boolean> {
+      return new Promise((resolve) => {
+        const dlg = document.getElementById("dialog-confirm");
+        const txt = document.getElementById("dialog-confirm-msg");
+        const ok = document.getElementById("dialog-confirm-ok");
+        const cancel = document.getElementById("dialog-confirm-cancel");
+        if (!dlg || !txt || !ok || !cancel) return resolve(window.confirm(msg));
+        txt.textContent = msg;
+        dlg.classList.remove("hidden");
+        dlg.classList.add("flex");
+        const cleanup = () => {
+          dlg.classList.add("hidden");
+          dlg.classList.remove("flex");
+          ok.removeEventListener("click", onOk);
+          cancel.removeEventListener("click", onCancel);
+        };
+        const onOk = () => {
+          cleanup();
+          resolve(true);
+        };
+        const onCancel = () => {
+          cleanup();
+          resolve(false);
+        };
+        ok.addEventListener("click", onOk);
+        cancel.addEventListener("click", onCancel);
+      });
+    }
 
     function escapeHtml(s: string): string {
       return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -83,9 +133,10 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
           if (!slug) return;
           const r = await restaurarCursoDePapelera(slug);
           if (!r.ok) {
-            alert(`No se pudo restaurar: ${r.error}`);
+            setStatus(`No se pudo restaurar: ${r.error}`, "error");
             return;
           }
+          setStatus("Curso restaurado correctamente.", "ok");
           await cargar();
         });
       });
@@ -93,12 +144,13 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         btn.addEventListener("click", async () => {
           const slug = decodeURIComponent(btn.dataset.eliminar ?? "");
           if (!slug) return;
-          if (!window.confirm("¿Eliminar definitivamente este curso? Esta acción no se puede deshacer.")) return;
+          if (!await confirmar("¿Eliminar definitivamente este curso? Esta acción no se puede deshacer.")) return;
           const r = await eliminarCursoDefinitivo(slug);
           if (!r.ok) {
-            alert(`No se pudo eliminar: ${r.error}`);
+            setStatus(`No se pudo eliminar: ${r.error}`, "error");
             return;
           }
+          setStatus("Curso eliminado definitivamente.", "ok");
           await cargar();
         });
       });

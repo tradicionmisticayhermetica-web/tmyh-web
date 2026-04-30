@@ -28,6 +28,9 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         <button id="btn-papelera" type="button" class="btn-ghost text-xs hidden border border-wine-500/35">
           Mover a papelera
         </button>
+        <button id="btn-borrar" type="button" class="btn-ghost text-xs hidden border border-wine-500/55 text-wine-300">
+          Borrar definitivo
+        </button>
         <a id="btn-ver-sitio" href="#" target="_blank" rel="noopener" class="btn-ghost text-xs hidden">
           Ver en el sitio
         </a>
@@ -164,11 +167,23 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
     <div class="flex items-center gap-3 flex-wrap pt-2 border-t border-gold-400/10">
       <button id="btn-guardar" type="button" class="btn-gold">Guardar curso</button>
+      <button id="btn-publicar" type="button" class="btn-ghost border border-gold-400/35">Publicar</button>
       <a href="/area-reservada/cursos" class="btn-ghost">Cancelar</a>
     </div>
   </form>
 
   <input id="input-imagen" type="file" accept="image/*" class="hidden" />
+
+  <div id="dialog-confirm" class="fixed inset-0 z-[120] hidden items-center justify-center p-4 bg-midnight-950/78">
+    <div class="card-altar w-full max-w-lg p-6">
+      <h3 class="font-display text-xl text-parchment-50 mb-3">Confirmación</h3>
+      <p id="dialog-confirm-msg" class="text-parchment-200 font-serif"></p>
+      <div class="mt-6 flex items-center justify-end gap-2">
+        <button id="dialog-confirm-cancel" type="button" class="btn-ghost">Cancelar</button>
+        <button id="dialog-confirm-ok" type="button" class="btn-gold">Aceptar</button>
+      </div>
+    </div>
+  </div>
 
   <style is:global>
     #form-curso .label {
@@ -238,6 +253,8 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       obtenerCursoEditable,
       guardarCursoEditable,
       moverCursoAPapelera,
+      eliminarCursoDefinitivo,
+      dispararDeployCursos,
       subirImagenCurso,
       type CursoEditable,
     } from "../../../lib/cursos-cms";
@@ -248,6 +265,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     const $tituloEditor = document.getElementById("titulo-editor");
     const $btnVer = document.getElementById("btn-ver-sitio") as HTMLAnchorElement | null;
     const $btnPapelera = document.getElementById("btn-papelera") as HTMLButtonElement | null;
+    const $btnBorrar = document.getElementById("btn-borrar") as HTMLButtonElement | null;
     const $panelSimbolos = document.getElementById("panel-simbolos");
     const $wrapSimbolos = document.getElementById("simbolos-popover-wrap");
     const $inputImagen = document.getElementById("input-imagen") as HTMLInputElement | null;
@@ -314,7 +332,32 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     ];
 
     function confirmar(msg: string): Promise<boolean> {
-      return Promise.resolve(window.confirm(msg));
+      return new Promise((resolve) => {
+        const dlg = document.getElementById("dialog-confirm");
+        const txt = document.getElementById("dialog-confirm-msg");
+        const ok = document.getElementById("dialog-confirm-ok");
+        const cancel = document.getElementById("dialog-confirm-cancel");
+        if (!dlg || !txt || !ok || !cancel) return resolve(window.confirm(msg));
+        txt.textContent = msg;
+        dlg.classList.remove("hidden");
+        dlg.classList.add("flex");
+        const cleanup = () => {
+          dlg.classList.add("hidden");
+          dlg.classList.remove("flex");
+          ok.removeEventListener("click", onOk);
+          cancel.removeEventListener("click", onCancel);
+        };
+        const onOk = () => {
+          cleanup();
+          resolve(true);
+        };
+        const onCancel = () => {
+          cleanup();
+          resolve(false);
+        };
+        ok.addEventListener("click", onOk);
+        cancel.addEventListener("click", onCancel);
+      });
     }
 
     function setStatus(msg: string, tipo: "ok" | "error" | "info") {
@@ -485,6 +528,55 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       };
     }
 
+    function mostrarAccionesCurso(slug: string, existe: boolean) {
+      cursoExiste = existe;
+      if (existe) {
+        $btnPapelera?.classList.remove("hidden");
+        $btnBorrar?.classList.remove("hidden");
+      } else {
+        $btnPapelera?.classList.add("hidden");
+        $btnBorrar?.classList.add("hidden");
+      }
+      if ($btnVer && slug) {
+        $btnVer.href = `/cursos/${encodeURIComponent(slug)}`;
+        $btnVer.classList.remove("hidden");
+      }
+    }
+
+    function validarCurso(curso: CursoEditable): string | null {
+      if (!curso.titulo) return "El título es obligatorio.";
+      if (!curso.slug) return "El slug es obligatorio.";
+      if (!curso.descripcionCorta) return "La descripción corta es obligatoria.";
+      if (!curso.descripcionLarga.length) return "La descripción larga necesita al menos 1 párrafo.";
+      if (!curso.temas.length) return "Agregá al menos un tema en el temario.";
+      return null;
+    }
+
+    async function guardar(flushEstado?: CursoEditable["estado"]) {
+      const curso = recopilarCurso();
+      if (flushEstado) {
+        curso.estado = flushEstado;
+        if ($("estado")) $("estado")!.value = flushEstado;
+      }
+      const err = validarCurso(curso);
+      if (err) {
+        setStatus(err, "error");
+        return null;
+      }
+      setStatus(flushEstado ? "Publicando curso…" : "Guardando curso…", "info");
+      const r = await guardarCursoEditable(curso);
+      if (!r.ok) {
+        setStatus(`Error al guardar: ${r.error}`, "error");
+        return null;
+      }
+      const slugFinal = r.slug ?? curso.slug;
+      mostrarAccionesCurso(slugFinal, true);
+      if (params.get("slug") !== slugFinal) {
+        window.history.replaceState({}, "", `/area-reservada/cursos/editar?slug=${encodeURIComponent(slugFinal)}`);
+      }
+      return { ...r, slug: slugFinal };
+    }
+
     $("titulo")?.addEventListener("input", () => {
       if (slugTocado) return;
       const slug = slugify(($("titulo")?.value ?? "").trim());
@@ -547,26 +639,24 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     });
 
     document.getElementById("btn-guardar")?.addEventListener("click", async () => {
-      const curso = recopilarCurso();
-      if (!curso.titulo) return setStatus("El título es obligatorio.", "error");
-      if (!curso.slug) return setStatus("El slug es obligatorio.", "error");
-      if (!curso.descripcionCorta) return setStatus("La descripción corta es obligatoria.", "error");
-      if (!curso.descripcionLarga.length) return setStatus("La descripción larga necesita al menos 1 párrafo.", "error");
-      if (!curso.temas.length) return setStatus("Agregá al menos un tema en el temario.", "error");
-
-      setStatus("Guardando curso…", "info");
-      const r = await guardarCursoEditable(curso);
-      if (!r.ok) return setStatus(`Error al guardar: ${r.error}`, "error");
+      const r = await guardar();
+      if (!r) return;
       setStatus("Curso guardado correctamente.", "ok");
-      cursoExiste = true;
-      $btnPapelera?.classList.remove("hidden");
-      if ($btnVer) {
-        $btnVer.href = `/cursos/${encodeURIComponent(curso.slug)}`;
-        $btnVer.classList.remove("hidden");
+    });
+
+    document.getElementById("btn-publicar")?.addEventListener("click", async () => {
+      const r = await guardar("activo");
+      if (!r) return;
+      setStatus("Curso publicado. Disparando deploy del sitio…", "info");
+      const dep = await dispararDeployCursos(r.slug ?? "curso");
+      if (!dep.ok) {
+        setStatus(
+          `Curso publicado, pero no pude disparar deploy automático (${dep.error}). Corré el deploy manual para verlo en /cursos.`,
+          "error",
+        );
+        return;
       }
-      if (params.get("slug") !== curso.slug) {
-        window.history.replaceState({}, "", `/area-reservada/cursos/editar?slug=${encodeURIComponent(curso.slug)}`);
-      }
+      setStatus("Curso publicado. En ~10-12 min debería verse en la grilla pública y la URL dejar de dar 404.", "ok");
     });
 
     (async () => {
@@ -577,13 +667,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         if (curso) {
           $tituloEditor!.textContent = `Editar: ${curso.titulo}`;
           cargarEnFormulario(curso);
-          cursoExiste = Boolean(curso.id);
-          if (cursoExiste) $btnPapelera?.classList.remove("hidden");
-          else $btnPapelera?.classList.add("hidden");
-          if ($btnVer) {
-            $btnVer.href = `/cursos/${encodeURIComponent(curso.slug)}`;
-            $btnVer.classList.remove("hidden");
-          }
+          mostrarAccionesCurso(curso.slug, Boolean(curso.id));
           return;
         }
         setStatus("No se encontró el curso; podés crearlo desde cero.", "info");
@@ -608,6 +692,21 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         return;
       }
       setStatus("Curso movido a la papelera.", "ok");
+      setTimeout(() => { window.location.href = "/area-reservada/cursos"; }, 900);
+    });
+
+    $btnBorrar?.addEventListener("click", async () => {
+      if (!cursoExiste) return;
+      const slug = ($("slug")?.value ?? "").trim();
+      if (!slug) return;
+      const ok = await confirmar("¿Eliminar definitivamente este curso? Esta acción no se puede deshacer.");
+      if (!ok) return;
+      const r = await eliminarCursoDefinitivo(slug);
+      if (!r.ok) {
+        setStatus(`No se pudo borrar definitivamente: ${r.error}`, "error");
+        return;
+      }
+      setStatus("Curso eliminado definitivamente.", "ok");
       setTimeout(() => { window.location.href = "/area-reservada/cursos"; }, 900);
     });
   </script>

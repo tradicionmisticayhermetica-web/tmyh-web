@@ -50,6 +50,7 @@ interface CursoRow {
 export interface ResultadoGuardarCurso {
   ok: boolean;
   id?: string;
+  slug?: string;
   error?: string;
 }
 
@@ -390,14 +391,32 @@ export async function guardarCursoEditable(
     console.error("[cursos-cms.guardarCursoEditable]", error);
     return { ok: false, error: error.message };
   }
-  return { ok: true, id: (data as any)?.id };
+  return { ok: true, id: (data as any)?.id, slug: curso.slug };
 }
 
 export async function moverCursoAPapelera(slug: string): Promise<{ ok: boolean; error?: string }> {
   const { data, error } = await supabase.rpc("mover_curso_a_papelera", {
     p_slug: slug,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    const msg = String(error.message ?? "");
+    // Fallback por compatibilidad si la RPC aún no existe en producción.
+    if (
+      msg.includes("mover_curso_a_papelera") ||
+      msg.includes("does not exist")
+    ) {
+      const up = await supabase
+        .from("cursos")
+        .update({
+          estado: "archivado",
+          eliminado_en: new Date().toISOString(),
+        } as any)
+        .eq("slug", slug);
+      if (up.error) return { ok: false, error: up.error.message };
+      return { ok: true };
+    }
+    return { ok: false, error: error.message };
+  }
   const r = data as any;
   if (!r?.ok) return { ok: false, error: r?.error ?? "error_rpc" };
   return { ok: true };
@@ -429,6 +448,28 @@ export async function purgarCursosPapelera(): Promise<number> {
     return 0;
   }
   return typeof data === "number" ? data : 0;
+}
+
+export async function dispararDeployCursos(
+  razon: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const payload = {
+    table: "posts",
+    type: "UPDATE",
+    record: {
+      estado: "publicado",
+      slug: `curso:${razon}`,
+      id: `curso-${Date.now()}`,
+    },
+  };
+  const { error } = await supabase.functions.invoke("trigger-build", {
+    body: payload,
+  });
+  if (error) {
+    console.error("[cursos-cms.dispararDeployCursos]", error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 export async function subirImagenCurso(file: File): Promise<{ ok: boolean; url?: string; error?: string }> {
