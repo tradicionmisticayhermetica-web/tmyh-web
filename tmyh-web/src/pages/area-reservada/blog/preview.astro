@@ -12,7 +12,7 @@ import Ornament from "../../../components/Ornament.astro";
     <div id="estado-vacio" class="py-24 text-center hidden">
       <p class="font-display text-xl text-parchment-200 mb-4">No hay vista previa</p>
       <p class="text-sm text-parchment-400 mb-8 max-w-md mx-auto">
-        Abrila desde el editor del blog con el botón «Vista previa». Los datos viven solo en tu navegador.
+        Abrila desde el editor del blog con el botón «Vista previa». Los datos se guardan en tu navegador al usar ese botón.
       </p>
       <a href="/area-reservada/blog" class="btn-gold">Volver al panel del blog</a>
     </div>
@@ -212,7 +212,7 @@ import Ornament from "../../../components/Ornament.astro";
   }
 
   (function init() {
-    const raw = sessionStorage.getItem(BLOG_PREVIEW_STORAGE_KEY);
+    const raw = localStorage.getItem(BLOG_PREVIEW_STORAGE_KEY);
     if (!raw) {
       hide("contenido");
       show("estado-vacio");
