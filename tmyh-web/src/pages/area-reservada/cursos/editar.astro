@@ -680,6 +680,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         setStatus(`No se pudo mover a papelera: ${r.error}`, "error");
         return;
       }
+      await dispararDeployCursos(`papelera:${slug}`);
       setStatus("Curso movido a la papelera.", "ok");
       setTimeout(() => { window.location.href = "/area-reservada/cursos"; }, 900);
     });
@@ -696,6 +697,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         setStatus(`No se pudo borrar definitivamente: ${r.error}`, "error");
         return;
       }
+      await dispararDeployCursos(`eliminar:${slug}`);
       setStatus("Curso eliminado definitivamente.", "ok");
       setTimeout(() => { window.location.href = "/area-reservada/cursos"; }, 900);
     });

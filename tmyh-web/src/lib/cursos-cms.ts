@@ -264,6 +264,7 @@ function editableDesdeRow(row: CursoRow): CursoEditable {
 export async function listarCursosAdminConFallback(): Promise<CursoEditable[]> {
   let data: CursoRow[] | null = null;
   let error: any = null;
+  let sinColumnaEliminado = false;
   const q1 = await supabase
     .from("cursos")
     .select("*")
@@ -276,6 +277,7 @@ export async function listarCursosAdminConFallback(): Promise<CursoEditable[]> {
   // Compatibilidad temporal: si la migración nueva aún no corrió y falta
   // eliminado_en en el schema cache, volvemos a consultar sin ese filtro.
   if (error && String(error.message ?? "").includes("eliminado_en")) {
+    sinColumnaEliminado = true;
     const q2 = await supabase
       .from("cursos")
       .select("*")
@@ -290,6 +292,9 @@ export async function listarCursosAdminConFallback(): Promise<CursoEditable[]> {
 
   if (!error && data) {
     for (const row of data as CursoRow[]) {
+      // Compatibilidad sin eliminado_en: tratamos "archivado" como papelera
+      // para que no aparezca en el listado principal.
+      if (sinColumnaEliminado && row.estado === "archivado") continue;
       porSlug.set(row.slug, editableDesdeRow(row));
     }
   } else if (error) {
@@ -311,8 +316,16 @@ export async function listarCursosPapelera(): Promise<CursoEditable[]> {
     .not("eliminado_en", "is", null)
     .order("eliminado_en", { ascending: false });
   if (error) {
-    // Si la columna aún no existe en este proyecto, simplemente devolvemos vacío.
-    if (String(error.message ?? "").includes("eliminado_en")) return [];
+    // Compatibilidad sin eliminado_en: usamos estado=archivado como papelera.
+    if (String(error.message ?? "").includes("eliminado_en")) {
+      const alt = await supabase
+        .from("cursos")
+        .select("*")
+        .eq("estado", "archivado")
+        .order("actualizado_en", { ascending: false });
+      if (alt.error) return [];
+      return (alt.data as CursoRow[]).map(editableDesdeRow);
+    }
     console.error("[cursos-cms.listarCursosPapelera]", error);
     return [];
   }
@@ -405,6 +418,7 @@ export async function moverCursoAPapelera(slug: string): Promise<{ ok: boolean; 
       msg.includes("mover_curso_a_papelera") ||
       msg.includes("does not exist")
     ) {
+      // Fallback: con o sin eliminado_en, al menos archivamos.
       const up = await supabase
         .from("cursos")
         .update({
@@ -415,10 +429,12 @@ export async function moverCursoAPapelera(slug: string): Promise<{ ok: boolean; 
       if (up.error) {
         const msgUp = String(up.error.message ?? "");
         if (msgUp.includes("eliminado_en")) {
-          return {
-            ok: false,
-            error: "Falta aplicar la migración 014 en Supabase (columna eliminado_en).",
-          };
+          const up2 = await supabase
+            .from("cursos")
+            .update({ estado: "archivado" })
+            .eq("slug", slug);
+          if (up2.error) return { ok: false, error: up2.error.message };
+          return { ok: true };
         }
         return { ok: false, error: up.error.message };
       }
@@ -435,7 +451,22 @@ export async function restaurarCursoDePapelera(slug: string): Promise<{ ok: bool
   const { data, error } = await supabase.rpc("restaurar_curso_desde_papelera", {
     p_slug: slug,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    const msg = String(error.message ?? "");
+    if (
+      msg.includes("restaurar_curso_desde_papelera") ||
+      msg.includes("does not exist") ||
+      msg.includes("eliminado_en")
+    ) {
+      const up = await supabase
+        .from("cursos")
+        .update({ estado: "inactivo" } as any)
+        .eq("slug", slug);
+      if (up.error) return { ok: false, error: up.error.message };
+      return { ok: true };
+    }
+    return { ok: false, error: error.message };
+  }
   const r = data as any;
   if (!r?.ok) return { ok: false, error: r?.error ?? "error_rpc" };
   return { ok: true };
@@ -453,6 +484,15 @@ export async function eliminarCursoDefinitivo(slug: string): Promise<{ ok: boole
 export async function purgarCursosPapelera(): Promise<number> {
   const { data, error } = await supabase.rpc("purgar_cursos_papelera");
   if (error) {
+    // Compatibilidad sin RPC/columna: no hacemos purge automática.
+    const msg = String(error.message ?? "");
+    if (
+      msg.includes("purgar_cursos_papelera") ||
+      msg.includes("does not exist") ||
+      msg.includes("eliminado_en")
+    ) {
+      return 0;
+    }
     console.error("[cursos-cms.purgarCursosPapelera]", error);
     return 0;
   }

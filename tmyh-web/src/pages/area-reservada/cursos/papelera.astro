@@ -39,6 +39,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       restaurarCursoDePapelera,
       eliminarCursoDefinitivo,
       purgarCursosPapelera,
+      dispararDeployCursos,
     } from "../../../lib/cursos-cms";
 
     const lista = document.getElementById("lista-papelera");
@@ -136,6 +137,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
             setStatus(`No se pudo restaurar: ${r.error}`, "error");
             return;
           }
+          await dispararDeployCursos(`restaurar:${slug}`);
           setStatus("Curso restaurado correctamente.", "ok");
           await cargar();
         });
@@ -150,6 +152,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
             setStatus(`No se pudo eliminar: ${r.error}`, "error");
             return;
           }
+          await dispararDeployCursos(`eliminar:${slug}`);
           setStatus("Curso eliminado definitivamente.", "ok");
           await cargar();
         });
