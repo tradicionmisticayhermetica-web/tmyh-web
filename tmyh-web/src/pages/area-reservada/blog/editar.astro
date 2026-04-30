@@ -94,19 +94,37 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       <div id="status-post" class="hidden text-sm font-serif italic" role="status" aria-live="polite"></div>
 
       <!-- Acciones -->
-      <div class="flex flex-wrap gap-3 pt-2 border-t border-gold-400/10">
-        <button id="btn-guardar" type="button" class="btn-ghost">Guardar cambios</button>
-        <button id="btn-publicar" type="button" class="btn-gold hidden">Publicar</button>
-        <button id="btn-despublicar" type="button" class="btn-ghost hidden">Volver a borrador</button>
-        <div class="flex-1"></div>
-        <button id="btn-archivar" type="button"
-          class="text-[11px] uppercase tracking-widest text-parchment-400 hover:text-parchment-100 transition px-3 py-2">
-          Archivar
-        </button>
-        <button id="btn-papelera" type="button"
-          class="text-[11px] uppercase tracking-widest text-parchment-500 hover:text-wine-500 transition px-3 py-2">
-          🗑 Papelera
-        </button>
+      <div class="space-y-3 pt-2 border-t border-gold-400/10">
+
+        <!-- Fila principal de acciones -->
+        <div class="flex flex-wrap gap-3">
+          <button id="btn-guardar" type="button" class="btn-ghost">Guardar borrador</button>
+          <button id="btn-publicar" type="button" class="btn-gold hidden">Publicar</button>
+          <button id="btn-publicar-revision" type="button" class="btn-gold hidden">Publicar revisión</button>
+          <button id="btn-despublicar" type="button" class="btn-ghost hidden">Volver a borrador</button>
+          <div class="flex-1"></div>
+          <button id="btn-archivar" type="button"
+            class="text-[11px] uppercase tracking-widest text-parchment-400 hover:text-parchment-100 transition px-3 py-2">
+            Archivar
+          </button>
+          <button id="btn-papelera" type="button"
+            class="text-[11px] uppercase tracking-widest text-parchment-500 hover:text-wine-500 transition px-3 py-2">
+            🗑 Papelera
+          </button>
+        </div>
+
+        <!-- Aviso de revisión pendiente (solo visible cuando hay borrador sobre un post publicado) -->
+        <div id="aviso-borrador" class="hidden bg-gold-400/8 border border-gold-400/20 rounded-sm px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+          <p class="text-xs font-sans text-parchment-200">
+            <span class="text-gold-300 font-medium">Revisión pendiente</span> —
+            hay cambios guardados sin publicar. El sitio en vivo sigue mostrando la versión anterior.
+          </p>
+          <button id="btn-descartar-borrador" type="button"
+            class="text-[11px] uppercase tracking-widest text-parchment-400 hover:text-wine-400 transition shrink-0">
+            Descartar
+          </button>
+        </div>
+
       </div>
     </form>
   </div>
@@ -115,6 +133,9 @@ import EditorBlog from "../../../components/EditorBlog.astro";
     import {
       obtenerPost,
       guardarPost,
+      guardarBorrador,
+      publicarRevision,
+      descartarBorrador,
       archivarPost,
       moverAPapelera,
       type PostBlog,
@@ -194,68 +215,104 @@ import EditorBlog from "../../../components/EditorBlog.astro";
 
     function pintarEstado(estado: PostBlog["estado"]) {
       const badge = document.getElementById("badge-estado");
+      const btnGuardar = document.getElementById("btn-guardar");
       if (!badge) return;
       badge.className = "text-[10px] uppercase tracking-widest px-2 py-1 rounded-sm border";
       if (estado === "publicado") {
         badge.textContent = "Publicado";
         badge.classList.add("text-gold-300", "border-gold-400/40", "bg-gold-400/5");
+        // Publicado: "Guardar borrador" guarda sin publicar, "Volver a borrador" lo baja
+        if (btnGuardar) btnGuardar.textContent = "Guardar borrador";
         show("btn-despublicar"); hide("btn-publicar");
         show("link-ver-post");
       } else if (estado === "borrador") {
         badge.textContent = "Borrador";
         badge.classList.add("text-parchment-400", "border-parchment-400/30");
+        // Borrador: "Guardar cambios" guarda y "Publicar" lo pone live
+        if (btnGuardar) btnGuardar.textContent = "Guardar cambios";
         show("btn-publicar"); hide("btn-despublicar");
         hide("link-ver-post");
       } else {
         badge.textContent = "Archivado";
         badge.classList.add("text-parchment-600", "border-parchment-600/20", "opacity-60");
+        if (btnGuardar) btnGuardar.textContent = "Guardar cambios";
         show("btn-publicar"); hide("btn-despublicar");
+        hide("link-ver-post");
       }
     }
 
-    function recopilarDatos(estado: PostBlog["estado"]) {
+    let esPublicado = false;
+
+    function recopilarCampos() {
       return {
-        id: postId!,
-        titulo: (document.getElementById("titulo") as HTMLInputElement)?.value.trim() ?? "",
-        slug: (document.getElementById("slug") as HTMLInputElement)?.value.trim() ?? "",
+        titulo:   (document.getElementById("titulo") as HTMLInputElement)?.value.trim() ?? "",
+        slug:     (document.getElementById("slug") as HTMLInputElement)?.value.trim() ?? "",
         extracto: (document.getElementById("extracto") as HTMLInputElement)?.value.trim() || null,
         etiquetas: ((document.getElementById("etiquetas") as HTMLInputElement)?.value ?? "")
           .split(",").map((e) => e.trim()).filter(Boolean),
         contenido_json: contenidoJson,
         contenido_html: contenidoHtml,
-        estado,
       };
     }
 
-    async function guardar(estado: PostBlog["estado"]) {
-      const datos = recopilarDatos(estado);
-      if (!datos.titulo) { setStatus("El título es obligatorio.", "error"); return; }
-      if (!datos.slug) { setStatus("El slug es obligatorio.", "error"); return; }
+    function mostrarAvisoBorrador(visible: boolean) {
+      const aviso = document.getElementById("aviso-borrador");
+      const btnRevision = document.getElementById("btn-publicar-revision");
+      if (visible) {
+        aviso?.classList.remove("hidden");
+        btnRevision?.classList.remove("hidden");
+      } else {
+        aviso?.classList.add("hidden");
+        btnRevision?.classList.add("hidden");
+      }
+    }
 
+    async function accionGuardar() {
+      const campos = recopilarCampos();
+      if (!campos.titulo) { setStatus("El título es obligatorio.", "error"); return; }
+      if (!campos.slug)   { setStatus("El slug es obligatorio.", "error"); return; }
       const guardando = document.getElementById("estado-guardando");
       guardando?.classList.remove("hidden");
       setStatus("Guardando…", "info");
 
-      const r = await guardarPost(datos as any);
-      guardando?.classList.add("hidden");
-
-      if (!r.ok) {
-        setStatus(`Error: ${r.error}`, "error");
-        return;
+      let r: { ok: boolean; error?: string };
+      if (esPublicado) {
+        // Post publicado → guardar como revisión pendiente (no toca el live)
+        r = await guardarBorrador(postId!, campos);
+      } else {
+        // Post en borrador → guardar directamente
+        r = await guardarPost({ id: postId!, ...campos, estado: "borrador" } as any);
       }
+      guardando?.classList.add("hidden");
+      if (!r.ok) { setStatus(`Error al guardar: ${r.error}`, "error"); return; }
 
-      pintarEstado(estado);
-      setText("header-titulo", datos.titulo);
+      if (esPublicado) {
+        setStatus("Borrador guardado. El sitio en vivo no cambió.", "ok");
+        mostrarAvisoBorrador(true);
+      } else {
+        setStatus("Cambios guardados.", "ok");
+      }
+    }
 
+    async function accionPublicar() {
+      const campos = recopilarCampos();
+      if (!campos.titulo) { setStatus("El título es obligatorio.", "error"); return; }
+      if (!campos.slug)   { setStatus("El slug es obligatorio.", "error"); return; }
+      const guardando = document.getElementById("estado-guardando");
+      guardando?.classList.remove("hidden");
+      setStatus("Publicando…", "info");
+
+      const r = await publicarRevision(postId!, campos);
+      guardando?.classList.add("hidden");
+      if (!r.ok) { setStatus(`Error al publicar: ${r.error}`, "error"); return; }
+
+      esPublicado = true;
+      pintarEstado("publicado");
+      setText("header-titulo", campos.titulo);
       const linkVer = document.getElementById("link-ver-post") as HTMLAnchorElement | null;
-      if (linkVer && datos.slug) linkVer.href = `/blog/post?slug=${datos.slug}`;
-
-      setStatus(
-        estado === "publicado"
-          ? "Post publicado. El sitio se actualizará en ~10 minutos."
-          : "Cambios guardados.",
-        "ok",
-      );
+      if (linkVer) linkVer.href = `/blog/post?slug=${campos.slug}`;
+      mostrarAvisoBorrador(false);
+      setStatus("Publicado. El sitio se actualizará en ~10 minutos.", "ok");
     }
 
     (async () => {
@@ -303,42 +360,61 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       const linkVer = document.getElementById("link-ver-post") as HTMLAnchorElement | null;
       if (linkVer) linkVer.href = `/blog/post?slug=${post.slug}`;
 
+      esPublicado = post.estado === "publicado";
       pintarEstado(post.estado);
 
-      // Guardar referencia al contenido inicial (JSON si existe, HTML como fallback)
-      contenidoJson = post.contenido_json;
-      contenidoHtml = post.contenido_html ?? "";
+      // Cargar en el editor el borrador pendiente si existe, o el contenido publicado
+      contenidoJson = post.borrador_json ?? post.contenido_json;
+      contenidoHtml = post.borrador_html ?? post.contenido_html ?? "";
+
+      // Si hay borrador pendiente, cargar esos datos en los campos también
+      if (post.borrador_modificado_en) {
+        setVal("titulo", post.borrador_titulo ?? post.titulo);
+        setVal("slug", post.borrador_slug ?? post.slug);
+        setVal("extracto", post.borrador_extracto ?? post.extracto ?? "");
+        setVal("etiquetas", (post.borrador_etiquetas ?? post.etiquetas)?.join(", ") ?? "");
+        mostrarAvisoBorrador(true);
+      } else {
+        setVal("titulo", post.titulo);
+        setVal("slug", post.slug);
+        setVal("extracto", post.extracto ?? "");
+        setVal("etiquetas", post.etiquetas?.join(", ") ?? "");
+      }
+
+      setText("header-titulo", post.titulo);
 
       hide("estado-carga");
       show("contenido");
 
       // Botones
-      document.getElementById("btn-guardar")?.addEventListener("click", () => {
-        const estadoActual = post.estado;
-        guardar(estadoActual);
+      document.getElementById("btn-guardar")?.addEventListener("click", accionGuardar);
+      document.getElementById("btn-publicar")?.addEventListener("click", accionPublicar);
+      document.getElementById("btn-publicar-revision")?.addEventListener("click", accionPublicar);
+      document.getElementById("btn-despublicar")?.addEventListener("click", async () => {
+        const r = await guardarPost({ id: postId!, estado: "borrador" } as any);
+        if (r.ok) { esPublicado = false; pintarEstado("borrador"); setStatus("Vuelto a borrador.", "ok"); }
+        else setStatus(`Error: ${r.error}`, "error");
       });
-      document.getElementById("btn-publicar")?.addEventListener("click", () => guardar("publicado"));
-      document.getElementById("btn-despublicar")?.addEventListener("click", () => guardar("borrador"));
+      document.getElementById("btn-descartar-borrador")?.addEventListener("click", async () => {
+        if (!await confirmar("¿Descartar los cambios sin publicar? Se restaurará la última versión publicada.")) return;
+        const r = await descartarBorrador(postId!);
+        if (r.ok) {
+          mostrarAvisoBorrador(false);
+          setStatus("Borrador descartado. Recargando…", "ok");
+          setTimeout(() => window.location.reload(), 1200);
+        } else setStatus(`Error: ${r.error}`, "error");
+      });
       document.getElementById("btn-archivar")?.addEventListener("click", async () => {
-        if (!await confirmar("¿Archivar este post? Dejará de ser visible en el sitio, pero lo podés recuperar desde la sección Papelera.")) return;
+        if (!await confirmar("¿Archivar este post? Dejará de ser visible en el sitio, pero lo podés recuperar desde el filtro 'Archivados'.")) return;
         const r = await archivarPost(postId!);
-        if (r.ok) {
-          setStatus("Post archivado. Para verlo, usá el filtro 'Archivados'.", "ok");
-          pintarEstado("archivado");
-        } else {
-          setStatus(`Error: ${r.error}`, "error");
-        }
+        if (r.ok) { esPublicado = false; pintarEstado("archivado"); setStatus("Post archivado.", "ok"); }
+        else setStatus(`Error: ${r.error}`, "error");
       });
-
       document.getElementById("btn-papelera")?.addEventListener("click", async () => {
-        if (!await confirmar("¿Mover a la papelera? Quedará ahí por 30 días antes de eliminarse automáticamente. Podés restaurarlo o borrarlo definitivamente desde 'Papelera'.")) return;
+        if (!await confirmar("¿Mover a la papelera? Quedará ahí 30 días. Podés restaurarlo o borrarlo definitivamente desde 'Papelera'.")) return;
         const r = await moverAPapelera(postId!);
-        if (r.ok) {
-          setStatus("Post movido a la papelera.", "ok");
-          setTimeout(() => { window.location.href = "/area-reservada/blog"; }, 1200);
-        } else {
-          setStatus(`Error: ${r.error}`, "error");
-        }
+        if (r.ok) { setStatus("Post movido a la papelera.", "ok"); setTimeout(() => { window.location.href = "/area-reservada/blog"; }, 1200); }
+        else setStatus(`Error: ${r.error}`, "error");
       });
     })();
   </script>

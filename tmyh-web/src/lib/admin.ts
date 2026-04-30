@@ -108,6 +108,14 @@ export interface PostBlog {
   eliminado_en: string | null;
   creado_en: string;
   actualizado_en: string;
+  // Borrador de revisión (cambios en progreso que aún no se publicaron)
+  borrador_titulo?: string | null;
+  borrador_extracto?: string | null;
+  borrador_slug?: string | null;
+  borrador_json?: unknown | null;
+  borrador_html?: string | null;
+  borrador_etiquetas?: string[] | null;
+  borrador_modificado_en?: string | null;
 }
 
 export type EstadoPost = PostBlog["estado"];
@@ -243,6 +251,55 @@ export async function guardarPost(
     return { ok: false, error: error.message };
   }
   return { ok: true, id: data?.id };
+}
+
+/** Guarda un borrador de revisión sin tocar el contenido publicado. */
+export async function guardarBorrador(
+  id: string,
+  datos: { titulo: string; extracto?: string | null; slug: string; contenido_json?: unknown | null; contenido_html?: string | null; etiquetas?: string[] },
+): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("guardar_borrador_post", {
+    p_post_id:        id,
+    p_titulo:         datos.titulo,
+    p_extracto:       datos.extracto ?? null,
+    p_slug:           datos.slug,
+    p_contenido_json: datos.contenido_json ?? null,
+    p_contenido_html: datos.contenido_html ?? null,
+    p_etiquetas:      datos.etiquetas ?? [],
+  });
+  if (error) return { ok: false, error: error.message };
+  const r = data as any;
+  if (!r?.ok) return { ok: false, error: r?.error ?? "error_rpc" };
+  return { ok: true };
+}
+
+/** Publica la revisión pendiente (borra el borrador y actualiza el post live). */
+export async function publicarRevision(
+  id: string,
+  datos: { titulo: string; extracto?: string | null; slug: string; contenido_json?: unknown | null; contenido_html?: string | null; etiquetas?: string[] },
+): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("publicar_revision_post", {
+    p_post_id:        id,
+    p_titulo:         datos.titulo,
+    p_extracto:       datos.extracto ?? null,
+    p_slug:           datos.slug,
+    p_contenido_json: datos.contenido_json ?? null,
+    p_contenido_html: datos.contenido_html ?? null,
+    p_etiquetas:      datos.etiquetas ?? [],
+  });
+  if (error) return { ok: false, error: error.message };
+  const r = data as any;
+  if (!r?.ok) return { ok: false, error: r?.error ?? "error_rpc" };
+  return { ok: true };
+}
+
+/** Descarta el borrador de revisión sin modificar el contenido publicado. */
+export async function descartarBorrador(id: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("descartar_borrador_post", { p_post_id: id });
+  if (error) return { ok: false, error: error.message };
+  const r = data as any;
+  if (!r?.ok) return { ok: false, error: r?.error ?? "error_rpc" };
+  return { ok: true };
 }
 
 /** Archiva un post (oculto del blog pero recuperable). */
