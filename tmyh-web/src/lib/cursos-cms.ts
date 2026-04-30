@@ -7,6 +7,7 @@ type EstadoCursoCms =
   | "inactivo"
   | "proximo"
   | "historico"
+  | "edicion_cerrada"
   | "archivado";
 
 interface CursoRow {
@@ -78,7 +79,12 @@ function normalizarTemas(raw: unknown): Curso["temas"] {
 }
 
 function estadoBdASitio(estado: EstadoCursoCms): Curso["estado"] | null {
-  if (estado === "activo" || estado === "proximo" || estado === "historico") {
+  if (
+    estado === "activo" ||
+    estado === "proximo" ||
+    estado === "historico" ||
+    estado === "edicion_cerrada"
+  ) {
     return estado;
   }
   return null;
@@ -389,7 +395,8 @@ export async function guardarCursoEditable(
     publicado_en:
       curso.estado === "activo" ||
       curso.estado === "proximo" ||
-      curso.estado === "historico"
+      curso.estado === "historico" ||
+      curso.estado === "edicion_cerrada"
         ? new Date().toISOString()
         : null,
   };

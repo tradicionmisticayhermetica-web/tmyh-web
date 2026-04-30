@@ -26,7 +26,7 @@ const imagenRemota =
 const estadoLabel =
   curso.estado === "proximo"
     ? "Próximamente"
-    : curso.estado === "historico"
+    : (curso.estado === "historico" || curso.estado === "edicion_cerrada")
       ? "Edición cerrada"
       : "Inscripción abierta";
 
@@ -199,7 +199,7 @@ const paypalUrl = construirPaypalUrl(
           </h3>
 
           {
-            curso.estado === "historico" ? (
+            (curso.estado === "historico" || curso.estado === "edicion_cerrada") ? (
               <>
                 <p class="text-sm text-parchment-200 leading-relaxed mb-6">
                   Este programa ya se dictó. Si te interesa la temática, escribinos

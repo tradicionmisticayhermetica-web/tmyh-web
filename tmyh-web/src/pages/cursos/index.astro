@@ -7,7 +7,9 @@ import { listarCursosParaSitio } from "../../lib/cursos-cms";
 const cursos = await listarCursosParaSitio();
 const activos = cursos.filter((c) => c.estado === "activo");
 const proximos = cursos.filter((c) => c.estado === "proximo");
-const historicos = cursos.filter((c) => c.estado === "historico");
+const historicos = cursos.filter(
+  (c) => c.estado === "historico" || c.estado === "edicion_cerrada",
+);
 ---
 
 <BaseLayout

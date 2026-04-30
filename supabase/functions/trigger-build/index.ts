@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
   const esPostPublicado = payload.table === "posts" && record?.estado === "publicado";
   const esCursoPublico =
     payload.table === "cursos" &&
-    ["activo", "proximo", "historico"].includes(String(record?.estado ?? ""));
+    ["activo", "proximo", "historico", "edicion_cerrada"].includes(String(record?.estado ?? ""));
   if (!esPostPublicado && !esCursoPublico) {
     return jsonResponse({
       ok: true,

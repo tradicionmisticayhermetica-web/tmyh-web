@@ -81,8 +81,8 @@ export interface Curso {
   inicio?: string;
   /** Duración total (ej: "3 meses") */
   duracion?: string;
-  /** Si está activo, es histórico o próximo */
-  estado: "activo" | "proximo" | "historico";
+  /** Estado público del curso */
+  estado: "activo" | "proximo" | "historico" | "edicion_cerrada";
   /** Emoji o símbolo hermético decorativo */
   simbolo: string;
   /** Precios (solo para cursos activos) */

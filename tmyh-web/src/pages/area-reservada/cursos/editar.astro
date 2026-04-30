@@ -60,6 +60,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
             <option value="activo">Activo</option>
             <option value="inactivo">Inactivo</option>
             <option value="proximo">Próximo</option>
+            <option value="edicion_cerrada">Edición cerrada</option>
             <option value="historico">Histórico</option>
             <option value="archivado">Archivado</option>
           </select>
@@ -265,10 +266,18 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     let slugPersistido = slugInicial;
     let slugTocado = false;
     let cursoExiste = false;
-    const uiLoader = (window as any).__tmyhLoader;
+    let estadoPersistido: CursoEditable["estado"] | null = null;
+    let loaderFallback: HTMLDivElement | null = null;
     const ESTADOS_PUBLICABLES = new Set<CursoEditable["estado"]>([
       "activo",
       "proximo",
+      "edicion_cerrada",
+      "historico",
+    ]);
+    const ESTADOS_PUBLICOS = new Set<CursoEditable["estado"]>([
+      "activo",
+      "proximo",
+      "edicion_cerrada",
       "historico",
     ]);
     const SIMBOLOS: Array<{ simbolo: string; nombre: string }> = [
@@ -374,6 +383,48 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       $status.textContent = msg;
       $status.classList.remove("hidden", "text-gold-300", "text-wine-500", "text-parchment-300");
       $status.classList.add(tipo === "ok" ? "text-gold-300" : tipo === "error" ? "text-wine-500" : "text-parchment-300");
+    }
+
+    function ensureLoaderFallback() {
+      if (loaderFallback) return loaderFallback;
+      const wrap = document.createElement("div");
+      wrap.className = "hidden fixed inset-0 z-[1400] items-center justify-center bg-night-950/78 backdrop-blur-[2px]";
+      wrap.innerHTML = `
+        <div class="card-altar px-8 py-7 text-center min-w-[300px]">
+          <div class="loader-triad" aria-hidden="true">
+            <span class="loader-sym m">☿</span>
+            <span class="loader-sym a">🜍</span>
+            <span class="loader-sym s">🜔</span>
+          </div>
+          <p class="loader-msg mt-5 text-xs tracking-widest uppercase text-parchment-200">Procesando…</p>
+        </div>`;
+      document.body.appendChild(wrap);
+      loaderFallback = wrap;
+      return wrap;
+    }
+
+    function showLoader(msg = "Procesando…") {
+      const uiLoader = (window as any).__tmyhLoader;
+      if (uiLoader?.show) {
+        uiLoader.show(msg);
+        return;
+      }
+      const wrap = ensureLoaderFallback();
+      const msgEl = wrap.querySelector(".loader-msg");
+      if (msgEl) msgEl.textContent = msg;
+      wrap.classList.remove("hidden");
+      wrap.classList.add("flex");
+    }
+
+    function hideLoader() {
+      const uiLoader = (window as any).__tmyhLoader;
+      if (uiLoader?.hide) {
+        uiLoader.hide();
+        return;
+      }
+      if (!loaderFallback) return;
+      loaderFallback.classList.add("hidden");
+      loaderFallback.classList.remove("flex");
     }
 
     function slugify(s: string): string {
@@ -585,6 +636,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         return null;
       }
       const slugFinal = r.slug ?? curso.slug;
+      estadoPersistido = curso.estado;
       mostrarAccionesCurso(slugFinal, true);
       if (params.get("slug") !== slugFinal) {
         window.history.replaceState({}, "", `/area-reservada/cursos/editar?slug=${encodeURIComponent(slugFinal)}`);
@@ -643,7 +695,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       const file = $inputImagen.files?.[0];
       if (!file) return;
       setStatus("Subiendo imagen…", "info");
-      uiLoader?.show?.("Subiendo imagen…");
+      showLoader("Subiendo imagen…");
       try {
         const r = await subirImagenCurso(file);
         if (!r.ok || !r.url) {
@@ -654,18 +706,32 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         setStatus("Imagen subida y URL cargada.", "ok");
         $inputImagen.value = "";
       } finally {
-        uiLoader?.hide?.();
+        hideLoader();
       }
     });
 
     document.getElementById("btn-guardar")?.addEventListener("click", async () => {
-      uiLoader?.show?.("Guardando curso…");
+      const estadoAntes = estadoPersistido;
+      showLoader("Guardando curso…");
       try {
         const r = await guardar();
         if (!r) return;
+        const estadoActual = (($("estado")?.value ?? "borrador") as CursoEditable["estado"]);
+        const visAntes = estadoAntes ? ESTADOS_PUBLICOS.has(estadoAntes) : false;
+        const visAhora = ESTADOS_PUBLICOS.has(estadoActual);
+        if (visAntes || visAhora) {
+          const dep = await dispararDeployCursos(`guardar:${r.slug}`);
+          if (!dep.ok) {
+            setStatus(
+              `Curso guardado, pero falló el deploy automático (${dep.error}).`,
+              "error",
+            );
+            return;
+          }
+        }
         setStatus(`Curso guardado. URL generada: /cursos/${r.slug}`, "ok");
       } finally {
-        uiLoader?.hide?.();
+        hideLoader();
       }
     });
 
@@ -673,15 +739,15 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       const estadoElegido = (($("estado")?.value ?? "") as CursoEditable["estado"]);
       if (!ESTADOS_PUBLICABLES.has(estadoElegido)) {
         await avisar(
-          "Este curso no se puede publicar con estado Borrador o Archivado. Elegí un estado publicable (Activo, Próximo o Histórico) y volvé a intentar.",
+          "Este curso no se puede publicar con estado Borrador o Archivado. Elegí un estado publicable (Activo, Próximo, Edición cerrada o Histórico) y volvé a intentar.",
         );
         setStatus(
-          "Publicación bloqueada: seleccioná un estado publicable (Activo, Próximo o Histórico).",
+          "Publicación bloqueada: seleccioná un estado publicable (Activo, Próximo, Edición cerrada o Histórico).",
           "error",
         );
         return;
       }
-      uiLoader?.show?.("Publicando curso…");
+      showLoader("Publicando curso…");
       try {
         const r = await guardar(estadoElegido);
         if (!r) return;
@@ -699,7 +765,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
           "ok",
         );
       } finally {
-        uiLoader?.hide?.();
+        hideLoader();
       }
     });
 
@@ -711,6 +777,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         if (curso) {
           $tituloEditor!.textContent = `Editar: ${curso.titulo}`;
           cargarEnFormulario(curso);
+          estadoPersistido = curso.estado;
           mostrarAccionesCurso(curso.slug, Boolean(curso.id));
           return;
         }
@@ -720,6 +787,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       if ($("clases")) $("clases")!.value = "12";
       if ($("modalidad")) $("modalidad")!.value = "Grabado";
       if ($("estado")) $("estado")!.value = "borrador";
+      estadoPersistido = "borrador";
       if ($("simbolo")) $("simbolo")!.value = "✦";
       if ($("orden")) $("orden")!.value = "100";
     })();
@@ -731,7 +799,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       const ok = await confirmar("¿Mover este curso a la papelera? Se podrá restaurar por 30 días.");
       if (!ok) return;
       setStatus("Moviendo curso a papelera…", "info");
-      uiLoader?.show?.("Moviendo a papelera…");
+      showLoader("Moviendo a papelera…");
       try {
         const r = await moverCursoAPapelera(slug);
         if (!r.ok) {
@@ -746,7 +814,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         setStatus("Curso movido a la papelera.", "ok");
         setTimeout(() => { window.location.href = "/area-reservada/cursos"; }, 900);
       } finally {
-        uiLoader?.hide?.();
+        hideLoader();
       }
     });
 
@@ -757,7 +825,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       const ok = await confirmar("¿Eliminar definitivamente este curso? Esta acción no se puede deshacer.");
       if (!ok) return;
       setStatus("Eliminando curso definitivamente…", "info");
-      uiLoader?.show?.("Eliminando curso…");
+      showLoader("Eliminando curso…");
       try {
         const r = await eliminarCursoDefinitivo(slug);
         if (!r.ok) {
@@ -772,7 +840,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         setStatus("Curso eliminado definitivamente.", "ok");
         setTimeout(() => { window.location.href = "/area-reservada/cursos"; }, 900);
       } finally {
-        uiLoader?.hide?.();
+        hideLoader();
       }
     });
   </script>

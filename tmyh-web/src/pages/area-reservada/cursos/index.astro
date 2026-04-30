@@ -28,6 +28,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     <button class="filtro-btn" data-filtro="activo">Activos</button>
     <button class="filtro-btn" data-filtro="inactivo">Inactivos</button>
     <button class="filtro-btn" data-filtro="proximo">Próximos</button>
+    <button class="filtro-btn" data-filtro="edicion_cerrada">Edición cerrada</button>
     <button class="filtro-btn" data-filtro="historico">Históricos</button>
     <button class="filtro-btn" data-filtro="borrador">Borradores</button>
     <button class="filtro-btn" data-filtro="archivado">Archivados</button>
@@ -85,6 +86,8 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         '<span class="text-[9px] uppercase tracking-widest text-parchment-400 px-1.5 py-0.5 border border-parchment-400/30 rounded-sm">Inactivo</span>',
       proximo:
         '<span class="text-[9px] uppercase tracking-widest text-gold-300 px-1.5 py-0.5 border border-gold-300/30 rounded-sm">Próximo</span>',
+      edicion_cerrada:
+        '<span class="text-[9px] uppercase tracking-widest text-parchment-400 px-1.5 py-0.5 border border-parchment-400/30 rounded-sm">Edición cerrada</span>',
       historico:
         '<span class="text-[9px] uppercase tracking-widest text-parchment-500 px-1.5 py-0.5 border border-parchment-500/20 rounded-sm">Histórico</span>',
       borrador:

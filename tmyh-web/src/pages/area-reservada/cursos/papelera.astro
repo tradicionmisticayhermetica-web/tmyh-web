@@ -44,13 +44,55 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
     const lista = document.getElementById("lista-papelera");
     const status = document.getElementById("status");
-    const uiLoader = (window as any).__tmyhLoader;
+    let loaderFallback: HTMLDivElement | null = null;
 
     function setStatus(msg: string, tipo: "ok" | "error" | "info") {
       if (!status) return;
       status.textContent = msg;
       status.classList.remove("hidden", "text-gold-300", "text-wine-500", "text-parchment-300");
       status.classList.add(tipo === "ok" ? "text-gold-300" : tipo === "error" ? "text-wine-500" : "text-parchment-300");
+    }
+
+    function ensureLoaderFallback() {
+      if (loaderFallback) return loaderFallback;
+      const wrap = document.createElement("div");
+      wrap.className = "hidden fixed inset-0 z-[1400] items-center justify-center bg-night-950/78 backdrop-blur-[2px]";
+      wrap.innerHTML = `
+        <div class="card-altar px-8 py-7 text-center min-w-[300px]">
+          <div class="loader-triad" aria-hidden="true">
+            <span class="loader-sym m">☿</span>
+            <span class="loader-sym a">🜍</span>
+            <span class="loader-sym s">🜔</span>
+          </div>
+          <p class="loader-msg mt-5 text-xs tracking-widest uppercase text-parchment-200">Procesando…</p>
+        </div>`;
+      document.body.appendChild(wrap);
+      loaderFallback = wrap;
+      return wrap;
+    }
+
+    function showLoader(msg = "Procesando…") {
+      const uiLoader = (window as any).__tmyhLoader;
+      if (uiLoader?.show) {
+        uiLoader.show(msg);
+        return;
+      }
+      const wrap = ensureLoaderFallback();
+      const msgEl = wrap.querySelector(".loader-msg");
+      if (msgEl) msgEl.textContent = msg;
+      wrap.classList.remove("hidden");
+      wrap.classList.add("flex");
+    }
+
+    function hideLoader() {
+      const uiLoader = (window as any).__tmyhLoader;
+      if (uiLoader?.hide) {
+        uiLoader.hide();
+        return;
+      }
+      if (!loaderFallback) return;
+      loaderFallback.classList.add("hidden");
+      loaderFallback.classList.remove("flex");
     }
 
     function confirmar(msg: string): Promise<boolean> {
@@ -99,13 +141,13 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     }
 
     async function cargar() {
-      uiLoader?.show?.("Cargando papelera…");
+      showLoader("Cargando papelera…");
       let cursos: Awaited<ReturnType<typeof listarCursosPapelera>> = [];
       try {
         await purgarCursosPapelera();
         cursos = await listarCursosPapelera();
       } finally {
-        uiLoader?.hide?.();
+        hideLoader();
       }
       if (!lista) return;
       if (cursos.length === 0) {
@@ -139,7 +181,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         btn.addEventListener("click", async () => {
           const slug = decodeURIComponent(btn.dataset.restaurar ?? "");
           if (!slug) return;
-          uiLoader?.show?.("Restaurando curso…");
+          showLoader("Restaurando curso…");
           try {
             const r = await restaurarCursoDePapelera(slug);
             if (!r.ok) {
@@ -154,7 +196,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
             setStatus("Curso restaurado correctamente.", "ok");
             await cargar();
           } finally {
-            uiLoader?.hide?.();
+            hideLoader();
           }
         });
       });
@@ -163,7 +205,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
           const slug = decodeURIComponent(btn.dataset.eliminar ?? "");
           if (!slug) return;
           if (!await confirmar("¿Eliminar definitivamente este curso? Esta acción no se puede deshacer.")) return;
-          uiLoader?.show?.("Eliminando curso…");
+          showLoader("Eliminando curso…");
           try {
             const r = await eliminarCursoDefinitivo(slug);
             if (!r.ok) {
@@ -178,7 +220,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
             setStatus("Curso eliminado definitivamente.", "ok");
             await cargar();
           } finally {
-            uiLoader?.hide?.();
+            hideLoader();
           }
         });
       });

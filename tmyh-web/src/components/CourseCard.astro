@@ -18,7 +18,11 @@ const { curso } = Astro.props;
 
   <div class="flex items-center gap-2 mb-5">
     <span class="title-eyebrow !border-none !pb-0">
-      {curso.estado === "proximo" ? "Próximamente" : curso.estado === "historico" ? "Edición cerrada" : "Activo"}
+      {curso.estado === "proximo"
+        ? "Próximamente"
+        : (curso.estado === "historico" || curso.estado === "edicion_cerrada")
+          ? "Edición cerrada"
+          : "Activo"}
     </span>
     <span class="text-xs text-parchment-400">·</span>
     <span class="text-xs text-parchment-400">{curso.clases} clases</span>
