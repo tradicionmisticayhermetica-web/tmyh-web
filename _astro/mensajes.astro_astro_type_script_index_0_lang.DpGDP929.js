@@ -1,4 +1,4 @@
-import{i as p,n as x,f as m}from"./admin.B7XT4xF1.js";import"./supabase.2Xnj7Pbd.js";const n=document.getElementById("lista-mensajes"),r=document.getElementById("buscador"),c=document.getElementById("contador");let i=[];function s(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}function l(t){if(n){if(c&&(c.textContent=t.length===1?"1 mensaje":`${t.length} mensajes`),t.length===0){n.innerHTML=`
+import{i as p,n as x,f as m}from"./admin.DCvhIUVN.js";import"./supabase.2Xnj7Pbd.js";const n=document.getElementById("lista-mensajes"),r=document.getElementById("buscador"),c=document.getElementById("contador");let i=[];function s(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}function l(t){if(n){if(c&&(c.textContent=t.length===1?"1 mensaje":`${t.length} mensajes`),t.length===0){n.innerHTML=`
           <div class="py-16 text-center">
             <div class="text-2xl text-gold-400 mb-3 opacity-50">☉</div>
             <p class="text-parchment-300 font-serif italic">No hay mensajes que coincidan.</p>
