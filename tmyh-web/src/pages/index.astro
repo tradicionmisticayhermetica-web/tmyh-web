@@ -3,14 +3,18 @@ import { Image } from "astro:assets";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Ornament from "../components/Ornament.astro";
 import CourseCard from "../components/CourseCard.astro";
-import { cursos } from "../data/cursos";
+import { listarCursosParaSitio } from "../lib/cursos-cms";
 import fluddImg from "../assets/images/fludd.jpg";
 import mnemosineImg from "../assets/images/mnemosine.jpg";
 
+const cursos = await listarCursosParaSitio();
 const destacados = cursos.filter((c) => c.estado === "activo").slice(0, 3);
 ---
 
-<BaseLayout title="Inicio">
+<BaseLayout
+  title="Inicio"
+  description="Centro de estudios tradicionales de simbología, alquimia y hermetismo. Cursos online dirigidos por Emanuel Mari."
+>
   {/* ============================================================
         HERO
       ============================================================ */}

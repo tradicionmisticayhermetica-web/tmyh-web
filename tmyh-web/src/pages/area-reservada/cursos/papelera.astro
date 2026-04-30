@@ -1,0 +1,109 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Papelera cursos" active="cursos">
+  <header class="mb-8 flex items-end justify-between gap-4 flex-wrap">
+    <div>
+      <p class="title-eyebrow">Backoffice</p>
+      <h1 class="font-display text-3xl text-parchment-50 mt-3">Papelera de cursos</h1>
+      <p class="text-parchment-300 mt-2 font-serif italic">
+        Cursos eliminados. Se purgan automáticamente tras 30 días.
+      </p>
+    </div>
+    <a href="/area-reservada/cursos" class="btn-ghost">← Volver</a>
+  </header>
+
+  <section id="lista-papelera" class="space-y-4">
+    <div class="card-altar p-10 text-center text-parchment-400 text-sm font-serif italic">
+      Cargando…
+    </div>
+  </section>
+
+  <script>
+    import {
+      listarCursosPapelera,
+      restaurarCursoDePapelera,
+      eliminarCursoDefinitivo,
+      purgarCursosPapelera,
+    } from "../../../lib/cursos-cms";
+
+    const lista = document.getElementById("lista-papelera");
+
+    function escapeHtml(s: string): string {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function formatearFecha(iso: string | null | undefined): string {
+      if (!iso) return "—";
+      try {
+        return new Date(iso).toLocaleString("es-AR", {
+          day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+        });
+      } catch {
+        return iso;
+      }
+    }
+
+    async function cargar() {
+      await purgarCursosPapelera();
+      const cursos = await listarCursosPapelera();
+      if (!lista) return;
+      if (cursos.length === 0) {
+        lista.innerHTML = `
+          <div class="card-altar p-12 text-center">
+            <p class="text-parchment-300 font-serif italic">No hay cursos en papelera.</p>
+          </div>`;
+        return;
+      }
+
+      lista.innerHTML = cursos.map((c) => `
+        <article class="card-altar p-6">
+          <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="min-w-0 flex-1">
+              <div class="font-display text-xl text-parchment-50">${escapeHtml(c.titulo)}</div>
+              <div class="text-xs text-parchment-500 font-mono mt-1">/cursos/${escapeHtml(c.slug)}</div>
+              <p class="text-sm text-parchment-300 mt-3 font-serif">${escapeHtml(c.descripcionCorta)}</p>
+              <div class="text-[11px] uppercase tracking-widest text-parchment-400 mt-4">
+                eliminado: ${escapeHtml(formatearFecha(c.eliminadoEn))}
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button data-restaurar="${encodeURIComponent(c.slug)}" class="btn-ghost text-xs">Restaurar</button>
+              <button data-eliminar="${encodeURIComponent(c.slug)}" class="btn-ghost text-xs border border-wine-500/35 text-wine-400">Eliminar definitivo</button>
+            </div>
+          </div>
+        </article>
+      `).join("");
+
+      lista.querySelectorAll<HTMLButtonElement>("[data-restaurar]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const slug = decodeURIComponent(btn.dataset.restaurar ?? "");
+          if (!slug) return;
+          const r = await restaurarCursoDePapelera(slug);
+          if (!r.ok) {
+            alert(`No se pudo restaurar: ${r.error}`);
+            return;
+          }
+          await cargar();
+        });
+      });
+      lista.querySelectorAll<HTMLButtonElement>("[data-eliminar]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const slug = decodeURIComponent(btn.dataset.eliminar ?? "");
+          if (!slug) return;
+          if (!window.confirm("¿Eliminar definitivamente este curso? Esta acción no se puede deshacer.")) return;
+          const r = await eliminarCursoDefinitivo(slug);
+          if (!r.ok) {
+            alert(`No se pudo eliminar: ${r.error}`);
+            return;
+          }
+          await cargar();
+        });
+      });
+    }
+
+    cargar();
+  </script>
+</AdminLayout>

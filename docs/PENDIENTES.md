@@ -7,10 +7,9 @@ Infraestructura: `docs/arquitectura.md`.
 ## Orden de trabajo (visión general)
 
 1. **SEO** — técnico + migración de URLs + metadatos compartibles; base para que Google entienda el sitio y no se pierda el tráfico viejo.
-2. **Newsletter** — después del bloque SEO razonablemente listo: panel en área reservada, cola de envíos, métricas y análisis simples.
-3. **Cursos (backoffice)** — autogestión de fichas de curso al estilo del blog, alineado a las páginas públicas actuales (Heka / Simbología).
-4. **Contenido pendiente** — foto `/tradicion`, link MercadoPago del curso intro (cuando manden datos).
-5. **LMS / video / pagos** — fases grandes más adelante (ver abajo).
+2. **Cursos (backoffice)** — autogestión de fichas de curso al estilo del blog, alineado a las páginas públicas actuales (Heka / Simbología).
+3. **Newsletter** — dejar para el final: panel en área reservada, cola de envíos, métricas y análisis simples.
+4. **LMS / video / pagos** — fases grandes más adelante (ver abajo).
 
 ---
 
@@ -115,8 +114,8 @@ Objetivo: mismo **espíritu que el módulo Blog** (listado con cards, filtros po
 
 ## 4. Pendientes menores (contenido / producto)
 
-- [ ] Foto para `/tradicion`.
-- [ ] `linkMercadoPago` del Curso Introductorio Simbología Hermética en `cursos.ts`.
+- [x] Foto para `/tradicion` (**descartado por decisión de producto**).
+- [x] `linkMercadoPago` del Curso Introductorio Simbología Hermética (**cerrado hasta nuevo aviso**).
 
 ---
 

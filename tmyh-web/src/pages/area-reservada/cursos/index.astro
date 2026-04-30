@@ -1,0 +1,162 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Cursos" active="cursos">
+  <header class="mb-8 flex items-end justify-between gap-4 flex-wrap">
+    <div>
+      <p class="title-eyebrow">Backoffice</p>
+      <h1 class="font-display text-3xl text-parchment-50 mt-3">Cursos</h1>
+      <p class="text-parchment-300 mt-2 font-serif italic">
+        Alta y edición del catálogo de cursos.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a
+        href="/area-reservada/cursos/papelera"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-sm border border-wine-500/40 bg-night-950/50 text-[11px] font-sans uppercase tracking-[0.14em] text-parchment-200 hover:text-parchment-50 hover:border-wine-400/55 hover:bg-wine-900/20 transition"
+      >
+        <span class="text-sm opacity-90">🗑</span>
+        Papelera
+      </a>
+      <a href="/area-reservada/cursos/editar" class="btn-gold">+ Nuevo curso</a>
+    </div>
+  </header>
+
+  <div class="flex items-center gap-2 mb-6 flex-wrap">
+    <button class="filtro-btn is-active" data-filtro="todos">Todos</button>
+    <button class="filtro-btn" data-filtro="activo">Activos</button>
+    <button class="filtro-btn" data-filtro="inactivo">Inactivos</button>
+    <button class="filtro-btn" data-filtro="proximo">Próximos</button>
+    <button class="filtro-btn" data-filtro="historico">Históricos</button>
+    <button class="filtro-btn" data-filtro="borrador">Borradores</button>
+    <button class="filtro-btn" data-filtro="archivado">Archivados</button>
+    <div class="flex-1"></div>
+    <span
+      id="contador"
+      class="text-[10px] uppercase tracking-widest text-parchment-400 px-2 py-1 border border-gold-400/20 rounded-sm bg-night-950/50"
+    >—</span>
+  </div>
+
+  <section id="lista-cursos" class="space-y-4">
+    <div class="card-altar p-10 text-center text-parchment-400 text-sm font-serif italic">
+      Cargando cursos…
+    </div>
+  </section>
+
+  <style>
+    .filtro-btn {
+      font-family: var(--font-sans);
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-parchment-300);
+      padding: 0.5rem 1rem;
+      border: 1px solid rgb(230 196 100 / 0.15);
+      border-radius: 2px;
+      background: rgb(11 10 18 / 0.5);
+      transition: all 180ms ease;
+      cursor: pointer;
+    }
+    .filtro-btn:hover { color: var(--color-gold-300); border-color: rgb(212 175 55 / 0.4); }
+    .filtro-btn.is-active {
+      color: var(--color-night-950);
+      background: linear-gradient(180deg, var(--color-gold-300), var(--color-gold-500));
+      border-color: var(--color-gold-600);
+    }
+  </style>
+
+  <script>
+    import {
+      listarCursosAdminConFallback,
+      type CursoEditable,
+    } from "../../../lib/cursos-cms";
+
+    const BADGE: Record<string, string> = {
+      activo:
+        '<span class="text-[9px] uppercase tracking-widest text-gold-300 px-1.5 py-0.5 border border-gold-400/40 rounded-sm bg-gold-400/5">Activo</span>',
+      inactivo:
+        '<span class="text-[9px] uppercase tracking-widest text-parchment-400 px-1.5 py-0.5 border border-parchment-400/30 rounded-sm">Inactivo</span>',
+      proximo:
+        '<span class="text-[9px] uppercase tracking-widest text-gold-300 px-1.5 py-0.5 border border-gold-300/30 rounded-sm">Próximo</span>',
+      historico:
+        '<span class="text-[9px] uppercase tracking-widest text-parchment-500 px-1.5 py-0.5 border border-parchment-500/20 rounded-sm">Histórico</span>',
+      borrador:
+        '<span class="text-[9px] uppercase tracking-widest text-parchment-400 px-1.5 py-0.5 border border-parchment-400/30 rounded-sm">Borrador</span>',
+      archivado:
+        '<span class="text-[9px] uppercase tracking-widest text-wine-400 px-1.5 py-0.5 border border-wine-500/30 rounded-sm">Archivado</span>',
+    };
+
+    let cursos: CursoEditable[] = [];
+    let filtroActual = "todos";
+    const lista = document.getElementById("lista-cursos");
+    const contador = document.getElementById("contador");
+
+    function escapeHtml(s: string): string {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function formatearEstado(e: string): string {
+      return BADGE[e] ?? `<span class="text-[9px] uppercase tracking-widest text-parchment-400 px-1.5 py-0.5 border border-parchment-400/30 rounded-sm">${escapeHtml(e)}</span>`;
+    }
+
+    function pintar(items: CursoEditable[]) {
+      if (!lista) return;
+      if (contador) contador.textContent = `${items.length} ${items.length === 1 ? "curso" : "cursos"}`;
+      if (items.length === 0) {
+        lista.innerHTML = `
+          <div class="card-altar p-12 text-center">
+            <div class="text-2xl text-gold-400 mb-3 opacity-50">☉</div>
+            <p class="text-parchment-300 font-serif italic">No hay cursos en esta vista.</p>
+            <a href="/area-reservada/cursos/editar" class="btn-gold mt-6 inline-flex">+ Nuevo curso</a>
+          </div>`;
+        return;
+      }
+
+      lista.innerHTML = items.map((c) => `
+        <article class="card-altar p-6">
+          <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 mb-2 flex-wrap">
+                <span class="font-display text-xl text-parchment-50">${escapeHtml(c.titulo)}</span>
+                ${formatearEstado(c.estado)}
+                ${c.id ? "" : '<span class="text-[9px] uppercase tracking-widest text-parchment-500 px-1.5 py-0.5 border border-parchment-500/20 rounded-sm">base</span>'}
+              </div>
+              <div class="text-xs text-parchment-500 font-mono">/cursos/${escapeHtml(c.slug)}</div>
+              <p class="text-sm text-parchment-300 mt-3 font-serif">${escapeHtml(c.descripcionCorta)}</p>
+              <div class="text-[11px] uppercase tracking-widest text-parchment-400 mt-4">
+                orden ${escapeHtml(String(c.orden ?? 100))} · ${escapeHtml(c.modalidad)} · ${escapeHtml(String(c.clases))} clases
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <a href="/cursos/${encodeURIComponent(c.slug)}" target="_blank" rel="noopener" class="btn-ghost text-xs">Ver sitio</a>
+              <a href="/area-reservada/cursos/editar?slug=${encodeURIComponent(c.slug)}" class="btn-gold text-xs">Editar</a>
+            </div>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function aplicarFiltro(filtro: string) {
+      filtroActual = filtro;
+      const visibles = filtro === "todos"
+        ? cursos
+        : cursos.filter((c) => c.estado === filtro);
+      pintar(visibles);
+    }
+
+    (async () => {
+      cursos = await listarCursosAdminConFallback();
+      aplicarFiltro("todos");
+    })();
+
+    document.querySelectorAll<HTMLButtonElement>(".filtro-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filtro-btn").forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        aplicarFiltro(btn.dataset.filtro ?? "todos");
+      });
+    });
+  </script>
+</AdminLayout>

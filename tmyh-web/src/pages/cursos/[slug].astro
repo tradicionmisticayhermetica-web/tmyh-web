@@ -2,10 +2,12 @@
 import { Image } from "astro:assets";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Ornament from "../../components/Ornament.astro";
-import { cursos, esTemaConSubitems } from "../../data/cursos";
+import { esTemaConSubitems } from "../../data/cursos";
+import { listarCursosParaSitio } from "../../lib/cursos-cms";
 import { resolverImagen } from "../../lib/images";
 
-export function getStaticPaths() {
+export async function getStaticPaths() {
+  const cursos = await listarCursosParaSitio();
   return cursos.map((curso) => ({
     params: { slug: curso.slug },
     props: { curso },
@@ -14,6 +16,12 @@ export function getStaticPaths() {
 
 const { curso } = Astro.props;
 const imagenCurso = await resolverImagen(curso.imagen);
+const imagenRemota =
+  curso.imagen && !imagenCurso
+    ? /^(https?:)?\/\//i.test(curso.imagen) || curso.imagen.startsWith("/")
+      ? curso.imagen
+      : null
+    : null;
 
 const estadoLabel =
   curso.estado === "proximo"
@@ -134,18 +142,29 @@ const paypalUrl = construirPaypalUrl(
         Imagen evocativa del curso (antes del ornamento)
       ==================================================== */}
   {
-    imagenCurso && (
+    (imagenCurso || imagenRemota) && (
       <section class="pb-2 md:pb-4">
         <div class="container-prose max-w-4xl">
           <figure class="max-w-sm md:max-w-md mx-auto">
-            <Image
-              src={imagenCurso}
-              alt={curso.imagenAlt ?? curso.titulo}
-              widths={[320, 480, 720, 1200]}
-              sizes="(min-width: 768px) 448px, min(90vw, 384px)"
-              class="img-altar w-full h-auto"
-              loading="lazy"
-            />
+            {
+              imagenCurso ? (
+                <Image
+                  src={imagenCurso}
+                  alt={curso.imagenAlt ?? curso.titulo}
+                  widths={[320, 480, 720, 1200]}
+                  sizes="(min-width: 768px) 448px, min(90vw, 384px)"
+                  class="img-altar w-full h-auto"
+                  loading="lazy"
+                />
+              ) : (
+                <img
+                  src={imagenRemota!}
+                  alt={curso.imagenAlt ?? curso.titulo}
+                  class="img-altar w-full h-auto"
+                  loading="lazy"
+                />
+              )
+            }
             {curso.imagenAlt && (
               <figcaption class="mt-3 text-center text-[11px] italic text-parchment-400 font-serif leading-relaxed">
                 {curso.imagenAlt}

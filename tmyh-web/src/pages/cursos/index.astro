@@ -2,8 +2,9 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import CourseCard from "../../components/CourseCard.astro";
 import Ornament from "../../components/Ornament.astro";
-import { cursos } from "../../data/cursos";
+import { listarCursosParaSitio } from "../../lib/cursos-cms";
 
+const cursos = await listarCursosParaSitio();
 const activos = cursos.filter((c) => c.estado === "activo");
 const proximos = cursos.filter((c) => c.estado === "proximo");
 const historicos = cursos.filter((c) => c.estado === "historico");

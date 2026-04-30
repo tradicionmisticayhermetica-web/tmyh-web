@@ -1,0 +1,614 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Editor de curso" active="cursos">
+  <a
+    href="/area-reservada/cursos"
+    class="text-xs uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition inline-flex items-center gap-2 mb-6"
+  >
+    ← Volver a cursos
+  </a>
+
+  <div id="estado-carga" class="card-altar p-10 text-center hidden">
+    <div class="text-2xl text-gold-400 animate-soft-pulse">☉</div>
+    <p class="mt-3 text-sm text-parchment-300 font-serif italic">Cargando curso…</p>
+  </div>
+
+  <form id="form-curso" class="space-y-8" novalidate>
+    <header class="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <p class="title-eyebrow">Backoffice</p>
+        <h1 id="titulo-editor" class="font-display text-3xl text-parchment-50 mt-3">Nuevo curso</h1>
+        <p class="text-parchment-300 mt-2 font-serif italic">
+          Creación y edición de ficha completa (incluye temario, precios e inscripción).
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-papelera" type="button" class="btn-ghost text-xs hidden border border-wine-500/35">
+          Mover a papelera
+        </button>
+        <a id="btn-ver-sitio" href="#" target="_blank" rel="noopener" class="btn-ghost text-xs hidden">
+          Ver en el sitio
+        </a>
+      </div>
+    </header>
+
+    <section class="card-altar p-6 space-y-5">
+      <h2 class="font-display text-xl text-parchment-50">Datos base</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="space-y-2">
+          <span class="label">Título</span>
+          <input id="titulo" type="text" required class="input" />
+        </label>
+        <label class="space-y-2">
+          <span class="label">Subtítulo</span>
+          <input id="subtitulo" type="text" class="input" />
+        </label>
+        <label class="space-y-2">
+          <span class="label">Slug</span>
+          <input id="slug" type="text" required class="input font-mono" />
+        </label>
+        <label class="space-y-2">
+          <span class="label">Estado</span>
+          <select id="estado" class="input">
+            <option value="borrador">Borrador</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+            <option value="proximo">Próximo</option>
+            <option value="historico">Histórico</option>
+            <option value="archivado">Archivado</option>
+          </select>
+        </label>
+        <label class="space-y-2">
+          <span class="label">Símbolo</span>
+          <div class="flex gap-2 items-start">
+            <input id="simbolo" type="text" class="input" maxlength="8" />
+            <div id="simbolos-popover-wrap" class="relative shrink-0">
+              <button id="btn-simbolos" type="button" class="btn-ghost text-xs">Selección de símbolos</button>
+              <div
+                id="panel-simbolos"
+                class="hidden absolute z-40 bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[430px] max-w-[92vw] card-altar p-3 shadow-2xl"
+              >
+                <div id="simbolos-grid" class="grid grid-cols-7 gap-2"></div>
+              </div>
+            </div>
+          </div>
+        </label>
+        <label class="space-y-2">
+          <span class="label">Clases</span>
+          <input id="clases" type="number" min="1" step="1" class="input" />
+        </label>
+        <label class="space-y-2">
+          <span class="label">Modalidad</span>
+          <select id="modalidad" class="input">
+            <option>Grabado</option>
+            <option>Online en vivo</option>
+            <option>Híbrido</option>
+          </select>
+        </label>
+        <label class="space-y-2">
+          <span class="label">Nivel</span>
+          <input id="nivel" type="text" class="input" />
+        </label>
+        <label class="space-y-2">
+          <span class="label">Inicio</span>
+          <input id="inicio" type="text" class="input" />
+        </label>
+        <label class="space-y-2">
+          <span class="label">Duración</span>
+          <input id="duracion" type="text" class="input" />
+        </label>
+        <label class="space-y-2">
+          <span class="label">Orden en grilla</span>
+          <input id="orden" type="number" min="1" step="1" class="input" />
+        </label>
+        <label class="space-y-2 md:col-span-2">
+          <span class="label">Descripción corta</span>
+          <textarea id="descripcionCorta" rows="3" class="input"></textarea>
+        </label>
+        <label class="space-y-2 md:col-span-2">
+          <span class="label">Descripción larga (párrafos separados por línea en blanco)</span>
+          <textarea id="descripcionLarga" rows="8" class="input"></textarea>
+        </label>
+      </div>
+    </section>
+
+    <section class="card-altar p-6 space-y-4">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <h2 class="font-display text-xl text-parchment-50">Temario</h2>
+        <button id="btn-agregar-modulo" type="button" class="btn-ghost text-xs h-10 px-5">+ Agregar módulo</button>
+      </div>
+      <div id="temario-modulos" class="space-y-4"></div>
+      <p class="text-xs text-parchment-400">
+        Si dejás todos los títulos de módulo vacíos, el sistema guarda una lista simple (estilo Simbología).
+      </p>
+    </section>
+
+    <section class="card-altar p-6 space-y-5">
+      <h2 class="font-display text-xl text-parchment-50">Precios e inscripción</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="space-y-2"><span class="label">Precio ARS</span><input id="precioArgEfectivo" type="text" class="input" /></label>
+        <label class="space-y-2"><span class="label">Precio ARS transferencia</span><input id="precioArgTransferencia" type="text" class="input" /></label>
+        <label class="space-y-2"><span class="label">Precio internacional (USD)</span><input id="precioInternacionalUSD" type="text" class="input" /></label>
+        <label class="space-y-2 md:col-span-2"><span class="label">Nota precio</span><input id="precioNota" type="text" class="input" /></label>
+        <label class="space-y-2"><span class="label">Email</span><input id="inscripcionEmail" type="text" class="input" /></label>
+        <label class="space-y-2"><span class="label">WhatsApp (sin +)</span><input id="inscripcionWhatsapp" type="text" class="input" /></label>
+        <label class="space-y-2"><span class="label">Link MercadoPago</span><input id="inscripcionLinkMercadoPago" type="text" class="input" /></label>
+        <label class="space-y-2"><span class="label">Usuario PayPal.me</span><input id="inscripcionPaypalUser" type="text" class="input" /></label>
+        <label class="space-y-2"><span class="label">Banco</span><input id="inscripcionBanco" type="text" class="input" /></label>
+        <label class="space-y-2"><span class="label">CBU</span><input id="inscripcionCbu" type="text" class="input font-mono" /></label>
+        <label class="space-y-2"><span class="label">Alias</span><input id="inscripcionAlias" type="text" class="input font-mono" /></label>
+        <label class="space-y-2"><span class="label">CUIT</span><input id="inscripcionCuit" type="text" class="input font-mono" /></label>
+      </div>
+    </section>
+
+    <section class="card-altar p-6 space-y-5">
+      <h2 class="font-display text-xl text-parchment-50">Recursos y metadata</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="space-y-2">
+          <span class="label">Imagen (nombre archivo o URL)</span>
+          <div class="flex gap-2">
+            <input id="imagen" type="text" class="input" />
+            <button id="btn-subir-imagen" type="button" class="btn-ghost text-xs shrink-0">Adjuntar imagen</button>
+          </div>
+          <p class="text-[11px] text-parchment-400">Opcional. Puede ser nombre local o URL pública (Storage).</p>
+        </label>
+        <label class="space-y-2"><span class="label">Imagen alt</span><input id="imagenAlt" type="text" class="input" /></label>
+        <label class="space-y-2"><span class="label">Programa PDF (archivo en /public/assets)</span><input id="programaPdf" type="text" class="input" /></label>
+        <label class="space-y-2"><span class="label">Año original</span><input id="anioOriginal" type="text" class="input" /></label>
+      </div>
+    </section>
+
+    <div id="status" class="hidden text-sm font-serif italic" role="status" aria-live="polite"></div>
+
+    <div class="flex items-center gap-3 flex-wrap pt-2 border-t border-gold-400/10">
+      <button id="btn-guardar" type="button" class="btn-gold">Guardar curso</button>
+      <a href="/area-reservada/cursos" class="btn-ghost">Cancelar</a>
+    </div>
+  </form>
+
+  <input id="input-imagen" type="file" accept="image/*" class="hidden" />
+
+  <style is:global>
+    #form-curso .label {
+      display: block;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-parchment-400);
+    }
+    #form-curso .input {
+      width: 100%;
+      background: rgb(7 6 13 / 0.6);
+      border: 1px solid rgb(230 196 100 / 0.15);
+      color: var(--color-parchment-100);
+      padding: 0.7rem 0.85rem;
+      border-radius: 2px;
+      outline: none;
+      transition: border-color 180ms ease;
+    }
+    #form-curso .input:focus { border-color: rgb(230 196 100 / 0.6); }
+    #form-curso .tema-modulo {
+      border: 1px solid rgb(230 196 100 / 0.15);
+      border-radius: 2px;
+      padding: 1rem;
+      width: 100%;
+    }
+    #form-curso [data-role="items-wrap"] {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    #form-curso .tema-item-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 112px;
+      gap: 0.6rem;
+      width: 100%;
+      align-items: center;
+    }
+    #form-curso .tema-item-row [data-role="item-tema"] { min-width: 0; width: 100%; }
+    #form-curso .tema-item-row [data-remove-item] { height: 2.85rem; }
+    #simbolos-popover-wrap .simbolo-btn {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgb(230 196 100 / 0.2);
+      border-radius: 2px;
+      background: rgb(7 6 13 / 0.65);
+      color: var(--color-gold-300);
+      font-size: 2rem;
+      line-height: 1;
+      transition: all 160ms ease;
+    }
+    #simbolos-popover-wrap .simbolo-btn:hover {
+      color: var(--color-gold-200);
+      border-color: rgb(230 196 100 / 0.45);
+      background: rgb(230 196 100 / 0.08);
+      transform: translateY(-1px);
+    }
+  </style>
+
+  <script>
+    import {
+      obtenerCursoEditable,
+      guardarCursoEditable,
+      moverCursoAPapelera,
+      subirImagenCurso,
+      type CursoEditable,
+    } from "../../../lib/cursos-cms";
+
+    const $ = (id: string) => document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+    const $status = document.getElementById("status");
+    const $temario = document.getElementById("temario-modulos");
+    const $tituloEditor = document.getElementById("titulo-editor");
+    const $btnVer = document.getElementById("btn-ver-sitio") as HTMLAnchorElement | null;
+    const $btnPapelera = document.getElementById("btn-papelera") as HTMLButtonElement | null;
+    const $panelSimbolos = document.getElementById("panel-simbolos");
+    const $wrapSimbolos = document.getElementById("simbolos-popover-wrap");
+    const $inputImagen = document.getElementById("input-imagen") as HTMLInputElement | null;
+    const params = new URLSearchParams(window.location.search);
+    const slugInicial = (params.get("slug") ?? "").trim();
+    let slugTocado = false;
+    let cursoExiste = false;
+    const SIMBOLOS: Array<{ simbolo: string; nombre: string }> = [
+      // Orden solicitado
+      { simbolo: "🜂", nombre: "Fuego" },
+      { simbolo: "🜁", nombre: "Aire" },
+      { simbolo: "🜃", nombre: "Tierra" },
+      { simbolo: "🜄", nombre: "Agua" },
+      { simbolo: "✡", nombre: "Quintaesencia (unión de los cuatro)" },
+      { simbolo: "🜍", nombre: "Azufre" },
+      { simbolo: "☿", nombre: "Mercurio" },
+      { simbolo: "🜔", nombre: "Sal" },
+      { simbolo: "☉", nombre: "Sol" },
+      { simbolo: "☽", nombre: "Luna" },
+      { simbolo: "👁", nombre: "Ojo de la Providencia" },
+      { simbolo: "△", nombre: "Triángulo equilátero" },
+      { simbolo: "✝", nombre: "Cruz cristiana" },
+      { simbolo: "𓋹", nombre: "Ankh egipcio" },
+      { simbolo: "✡", nombre: "Estrella de David" },
+      { simbolo: "☪", nombre: "Símbolo islámico" },
+      { simbolo: "☯", nombre: "Yin Yang" },
+      { simbolo: "י", nombre: "Tetragramatón — Yod" },
+      { simbolo: "ה", nombre: "Tetragramatón — He" },
+      { simbolo: "ו", nombre: "Tetragramatón — Vav" },
+      { simbolo: "ה", nombre: "Tetragramatón — He final" },
+      // Egipcios restantes + banco ampliado
+      { simbolo: "𓂀", nombre: "Ojo de Horus" },
+      { simbolo: "𓆣", nombre: "Escarabajo" },
+      { simbolo: "𓃭", nombre: "León egipcio" },
+      { simbolo: "𓇯", nombre: "Estrella egipcia" },
+      { simbolo: "☩", nombre: "Cruz patada" },
+      { simbolo: "☧", nombre: "Cristograma" },
+      { simbolo: "⚜", nombre: "Flor de lis" },
+      { simbolo: "♁", nombre: "Tierra planetaria" },
+      { simbolo: "♃", nombre: "Júpiter" },
+      { simbolo: "♄", nombre: "Saturno" },
+      { simbolo: "♀", nombre: "Venus" },
+      { simbolo: "♂", nombre: "Marte" },
+      { simbolo: "⚯", nombre: "Símbolo hermético" },
+      { simbolo: "⚚", nombre: "Cruz alquímica" },
+      { simbolo: "⚘", nombre: "Rosa hermética" },
+      { simbolo: "✦", nombre: "Brillo" },
+      { simbolo: "✧", nombre: "Brillo fino" },
+      { simbolo: "⚝", nombre: "Estrella mística" },
+      { simbolo: "✶", nombre: "Estrella de seis rayos" },
+      { simbolo: "✷", nombre: "Estrella de ocho rayos" },
+      { simbolo: "✹", nombre: "Radial mística" },
+      { simbolo: "✺", nombre: "Destello" },
+      { simbolo: "✴", nombre: "Estrella negra" },
+      { simbolo: "✵", nombre: "Estrella circular" },
+      { simbolo: "❂", nombre: "Sol geométrico" },
+      { simbolo: "▽", nombre: "Triángulo invertido" },
+      { simbolo: "◆", nombre: "Rombo" },
+      { simbolo: "◇", nombre: "Rombo vacío" },
+      { simbolo: "◈", nombre: "Rombo brillante" },
+      { simbolo: "◉", nombre: "Círculo central" },
+      { simbolo: "⬡", nombre: "Hexágono" },
+      { simbolo: "⬢", nombre: "Hexágono sólido" },
+    ];
+
+    function confirmar(msg: string): Promise<boolean> {
+      return Promise.resolve(window.confirm(msg));
+    }
+
+    function setStatus(msg: string, tipo: "ok" | "error" | "info") {
+      if (!$status) return;
+      $status.textContent = msg;
+      $status.classList.remove("hidden", "text-gold-300", "text-wine-500", "text-parchment-300");
+      $status.classList.add(tipo === "ok" ? "text-gold-300" : tipo === "error" ? "text-wine-500" : "text-parchment-300");
+    }
+
+    function slugify(s: string): string {
+      return s.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .trim().replace(/\s+/g, "-");
+    }
+
+    function agregarModulo(titulo = "", items: string[] = [""]) {
+      if (!$temario) return;
+      const idx = Date.now() + Math.floor(Math.random() * 1000);
+      const mod = document.createElement("div");
+      mod.className = "tema-modulo";
+      mod.innerHTML = `
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <input data-role="titulo-modulo" type="text" class="input flex-1 min-w-0" placeholder="Título módulo (opcional)" value="${titulo.replace(/"/g, "&quot;")}" />
+          <button type="button" class="btn-ghost text-xs h-10 px-5 shrink-0" data-remove-modulo="${idx}">Eliminar módulo</button>
+        </div>
+        <div data-role="items-wrap"></div>
+        <button type="button" class="btn-ghost text-xs h-10 px-5 mt-3" data-add-item="${idx}">+ Agregar tema</button>
+      `;
+      $temario.appendChild(mod);
+
+      const wrap = mod.querySelector('[data-role="items-wrap"]') as HTMLDivElement | null;
+      if (!wrap) return;
+      const addItemRow = (txt = "") => {
+        const row = document.createElement("div");
+        row.className = "tema-item-row";
+        row.innerHTML = `
+          <input type="text" class="input" data-role="item-tema" placeholder="Tema o descripción" value="${txt.replace(/"/g, "&quot;")}" />
+          <button type="button" class="btn-ghost text-xs" data-remove-item>Quitar</button>
+        `;
+        wrap.appendChild(row);
+      };
+      (items.length ? items : [""]).forEach((x) => addItemRow(x));
+
+      mod.querySelector(`[data-add-item="${idx}"]`)?.addEventListener("click", () => addItemRow(""));
+      mod.querySelector(`[data-remove-modulo="${idx}"]`)?.addEventListener("click", () => mod.remove());
+      mod.addEventListener("click", (e) => {
+        const target = e.target as HTMLElement;
+        if (target.matches("[data-remove-item]")) {
+          target.closest(".tema-item-row")?.remove();
+        }
+      });
+    }
+
+    function serializarTemario(): CursoEditable["temas"] {
+      const modulos = Array.from(document.querySelectorAll(".tema-modulo")).map((mod, i) => {
+        const titulo = ((mod.querySelector('[data-role="titulo-modulo"]') as HTMLInputElement | null)?.value ?? "").trim();
+        const items = Array.from(mod.querySelectorAll('[data-role="item-tema"]'))
+          .map((el) => (el as HTMLInputElement).value.trim())
+          .filter(Boolean);
+        return { titulo, items, idx: i };
+      }).filter((m) => m.items.length > 0 || m.titulo);
+
+      if (modulos.length === 0) return [];
+      const todosSinTitulo = modulos.every((m) => !m.titulo);
+      if (todosSinTitulo) {
+        return modulos.flatMap((m) => m.items);
+      }
+      return modulos.map((m, i) => ({
+        titulo: m.titulo || `Módulo ${i + 1}`,
+        items: m.items,
+      }));
+    }
+
+    function parsearDescripcionLarga(texto: string): string[] {
+      return texto
+        .split(/\n\s*\n/g)
+        .map((p) => p.trim())
+        .filter(Boolean);
+    }
+
+    function cargarEnFormulario(curso: CursoEditable) {
+      const set = (id: string, val: string | number | undefined) => { const el = $(id); if (el) el.value = val == null ? "" : String(val); };
+      set("titulo", curso.titulo);
+      set("subtitulo", curso.subtitulo);
+      set("slug", curso.slug);
+      set("descripcionCorta", curso.descripcionCorta);
+      set("descripcionLarga", (curso.descripcionLarga ?? []).join("\n\n"));
+      set("clases", curso.clases);
+      set("modalidad", curso.modalidad);
+      set("nivel", curso.nivel);
+      set("inicio", curso.inicio);
+      set("duracion", curso.duracion);
+      set("orden", curso.orden);
+      set("estado", curso.estado);
+      set("simbolo", curso.simbolo);
+      set("precioArgEfectivo", curso.precio?.argEfectivo);
+      set("precioArgTransferencia", curso.precio?.argTransferencia);
+      set("precioInternacionalUSD", curso.precio?.internacionalUSD);
+      set("precioNota", curso.precio?.nota);
+      set("inscripcionEmail", curso.inscripcion?.email);
+      set("inscripcionWhatsapp", curso.inscripcion?.whatsapp);
+      set("inscripcionLinkMercadoPago", curso.inscripcion?.linkMercadoPago);
+      set("inscripcionPaypalUser", curso.inscripcion?.paypalUser);
+      set("inscripcionCbu", curso.inscripcion?.cbu);
+      set("inscripcionAlias", curso.inscripcion?.alias);
+      set("inscripcionBanco", curso.inscripcion?.banco);
+      set("inscripcionCuit", curso.inscripcion?.cuit);
+      set("imagen", curso.imagen);
+      set("imagenAlt", curso.imagenAlt);
+      set("programaPdf", curso.programaPdf);
+      set("anioOriginal", curso.anioOriginal);
+
+      $temario!.innerHTML = "";
+      const temas = curso.temas ?? [];
+      if (temas.length === 0) {
+        agregarModulo("", [""]);
+      } else {
+        const hayObjetos = temas.some((t) => typeof t === "object");
+        if (!hayObjetos) {
+          agregarModulo("", temas as string[]);
+        } else {
+          temas.forEach((t) => {
+            if (typeof t === "string") agregarModulo("", [t]);
+            else agregarModulo(t.titulo ?? "", t.items ?? [""]);
+          });
+        }
+      }
+    }
+
+    function recopilarCurso(): CursoEditable {
+      const get = (id: string) => ($(id)?.value ?? "").trim();
+      return {
+        slug: get("slug"),
+        titulo: get("titulo"),
+        subtitulo: get("subtitulo") || undefined,
+        descripcionCorta: get("descripcionCorta"),
+        descripcionLarga: parsearDescripcionLarga(get("descripcionLarga")),
+        clases: Number(get("clases") || 1),
+        modalidad: get("modalidad") as CursoEditable["modalidad"],
+        nivel: get("nivel"),
+        inicio: get("inicio") || undefined,
+        duracion: get("duracion") || undefined,
+        estado: get("estado") as CursoEditable["estado"],
+        simbolo: get("simbolo") || "✦",
+        temas: serializarTemario(),
+        precio: {
+          argEfectivo: get("precioArgEfectivo") || undefined,
+          argTransferencia: get("precioArgTransferencia") || undefined,
+          internacionalUSD: get("precioInternacionalUSD") || undefined,
+          nota: get("precioNota") || undefined,
+        },
+        inscripcion: {
+          email: get("inscripcionEmail") || undefined,
+          whatsapp: get("inscripcionWhatsapp") || undefined,
+          linkMercadoPago: get("inscripcionLinkMercadoPago") || undefined,
+          paypalUser: get("inscripcionPaypalUser") || undefined,
+          cbu: get("inscripcionCbu") || undefined,
+          alias: get("inscripcionAlias") || undefined,
+          banco: get("inscripcionBanco") || undefined,
+          cuit: get("inscripcionCuit") || undefined,
+        },
+        imagen: get("imagen") || undefined,
+        imagenAlt: get("imagenAlt") || undefined,
+        programaPdf: get("programaPdf") || undefined,
+        anioOriginal: get("anioOriginal") || undefined,
+        orden: Number(get("orden") || 100),
+      };
+    }
+
+    $("titulo")?.addEventListener("input", () => {
+      if (slugTocado) return;
+      const slug = slugify(($("titulo")?.value ?? "").trim());
+      if ($("slug")) $("slug")!.value = slug;
+    });
+    $("slug")?.addEventListener("input", () => { slugTocado = true; });
+
+    document.getElementById("btn-agregar-modulo")?.addEventListener("click", () => {
+      agregarModulo("", [""]);
+    });
+
+    document.getElementById("btn-simbolos")?.addEventListener("click", () => {
+      $panelSimbolos?.classList.toggle("hidden");
+    });
+
+    const gridSimbolos = document.getElementById("simbolos-grid");
+    if (gridSimbolos) {
+      gridSimbolos.innerHTML = SIMBOLOS.map((s) => `
+        <button
+          type="button"
+          class="simbolo-btn"
+          data-simbolo="${s.simbolo}"
+          title="${s.nombre}"
+          aria-label="${s.nombre}"
+        >
+          ${s.simbolo}
+        </button>
+      `).join("");
+      gridSimbolos.addEventListener("click", (e) => {
+        const t = e.target as HTMLElement;
+        const btn = t.closest("[data-simbolo]") as HTMLElement | null;
+        if (!btn) return;
+        const sym = btn.getAttribute("data-simbolo") ?? "✦";
+        if ($("simbolo")) $("simbolo")!.value = sym;
+        $panelSimbolos?.classList.add("hidden");
+      });
+    }
+    document.addEventListener("click", (e) => {
+      const target = e.target as Node;
+      if (!$panelSimbolos || !$wrapSimbolos) return;
+      if ($wrapSimbolos.contains(target)) return;
+      $panelSimbolos.classList.add("hidden");
+    });
+
+    document.getElementById("btn-subir-imagen")?.addEventListener("click", () => {
+      $inputImagen?.click();
+    });
+    $inputImagen?.addEventListener("change", async () => {
+      const file = $inputImagen.files?.[0];
+      if (!file) return;
+      setStatus("Subiendo imagen…", "info");
+      const r = await subirImagenCurso(file);
+      if (!r.ok || !r.url) {
+        setStatus(`No se pudo subir imagen: ${r.error}`, "error");
+        return;
+      }
+      if ($("imagen")) $("imagen")!.value = r.url;
+      setStatus("Imagen subida y URL cargada.", "ok");
+      $inputImagen.value = "";
+    });
+
+    document.getElementById("btn-guardar")?.addEventListener("click", async () => {
+      const curso = recopilarCurso();
+      if (!curso.titulo) return setStatus("El título es obligatorio.", "error");
+      if (!curso.slug) return setStatus("El slug es obligatorio.", "error");
+      if (!curso.descripcionCorta) return setStatus("La descripción corta es obligatoria.", "error");
+      if (!curso.descripcionLarga.length) return setStatus("La descripción larga necesita al menos 1 párrafo.", "error");
+      if (!curso.temas.length) return setStatus("Agregá al menos un tema en el temario.", "error");
+
+      setStatus("Guardando curso…", "info");
+      const r = await guardarCursoEditable(curso);
+      if (!r.ok) return setStatus(`Error al guardar: ${r.error}`, "error");
+      setStatus("Curso guardado correctamente.", "ok");
+      cursoExiste = true;
+      $btnPapelera?.classList.remove("hidden");
+      if ($btnVer) {
+        $btnVer.href = `/cursos/${encodeURIComponent(curso.slug)}`;
+        $btnVer.classList.remove("hidden");
+      }
+      if (params.get("slug") !== curso.slug) {
+        window.history.replaceState({}, "", `/area-reservada/cursos/editar?slug=${encodeURIComponent(curso.slug)}`);
+      }
+    });
+
+    (async () => {
+      if (slugInicial) {
+        document.getElementById("estado-carga")?.classList.remove("hidden");
+        const curso = await obtenerCursoEditable(slugInicial);
+        document.getElementById("estado-carga")?.classList.add("hidden");
+        if (curso) {
+          $tituloEditor!.textContent = `Editar: ${curso.titulo}`;
+          cargarEnFormulario(curso);
+          cursoExiste = Boolean(curso.id);
+          if (cursoExiste) $btnPapelera?.classList.remove("hidden");
+          else $btnPapelera?.classList.add("hidden");
+          if ($btnVer) {
+            $btnVer.href = `/cursos/${encodeURIComponent(curso.slug)}`;
+            $btnVer.classList.remove("hidden");
+          }
+          return;
+        }
+        setStatus("No se encontró el curso; podés crearlo desde cero.", "info");
+      }
+      agregarModulo("", [""]);
+      if ($("clases")) $("clases")!.value = "12";
+      if ($("modalidad")) $("modalidad")!.value = "Grabado";
+      if ($("estado")) $("estado")!.value = "borrador";
+      if ($("simbolo")) $("simbolo")!.value = "✦";
+      if ($("orden")) $("orden")!.value = "100";
+    })();
+
+    $btnPapelera?.addEventListener("click", async () => {
+      if (!cursoExiste) return;
+      const slug = ($("slug")?.value ?? "").trim();
+      if (!slug) return;
+      const ok = await confirmar("¿Mover este curso a la papelera? Se podrá restaurar por 30 días.");
+      if (!ok) return;
+      const r = await moverCursoAPapelera(slug);
+      if (!r.ok) {
+        setStatus(`No se pudo mover a papelera: ${r.error}`, "error");
+        return;
+      }
+      setStatus("Curso movido a la papelera.", "ok");
+      setTimeout(() => { window.location.href = "/area-reservada/cursos"; }, 900);
+    });
+  </script>
+</AdminLayout>
