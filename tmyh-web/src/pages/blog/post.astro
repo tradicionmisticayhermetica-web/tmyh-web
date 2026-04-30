@@ -249,16 +249,43 @@ import Ornament from "../../components/Ornament.astro";
     link.setAttribute("href", href);
   }
 
+  /** Texto de marca añadido al final de la meta descripción (OG / Google / Twitter). */
+  const SUFIJO_DESCRIPCION_SEO = "Alquimia. Centro de estudios tradicionales.";
+
   function descriptionParaPost(post: PostBlog): string {
-    if (post.extracto?.trim()) return post.extracto.trim();
-    const html = post.contenido_html?.trim();
-    if (html) {
-      const div = document.createElement("div");
-      div.innerHTML = html;
-      const t = (div.textContent || "").replace(/\s+/g, " ").trim();
-      if (t) return t.length > 165 ? `${t.slice(0, 162)}…` : t;
+    let principal: string;
+    if (post.extracto?.trim()) {
+      principal = post.extracto.trim();
+    } else {
+      const html = post.contenido_html?.trim();
+      if (html) {
+        const div = document.createElement("div");
+        div.innerHTML = html;
+        const t = (div.textContent || "").replace(/\s+/g, " ").trim();
+        if (t) {
+          const maxPrincipal = 140;
+          principal = t.length > maxPrincipal ? `${t.slice(0, maxPrincipal - 1)}…` : t;
+        } else {
+          principal = `${post.titulo} · Tradición Mística y Hermética`;
+        }
+      } else {
+        principal = `${post.titulo} · Tradición Mística y Hermética`;
+      }
     }
-    return `${post.titulo} · Tradición Mística y Hermética`;
+
+    const yaTieneMarca =
+      principal.toLowerCase().includes("centro de estudios tradicionales") &&
+      principal.toLowerCase().includes("alquimia");
+    if (yaTieneMarca) return principal;
+
+    const conMarca = `${principal} · ${SUFIJO_DESCRIPCION_SEO}`;
+    const maxTotal = 320;
+    if (conMarca.length <= maxTotal) return conMarca;
+
+    const sep = " · ";
+    const cupo = maxTotal - sep.length - SUFIJO_DESCRIPCION_SEO.length;
+    const recorte = cupo > 24 ? `${principal.slice(0, cupo - 1)}…` : principal;
+    return `${recorte}${sep}${SUFIJO_DESCRIPCION_SEO}`;
   }
 
   function aplicarHeadSeo(opts: {
