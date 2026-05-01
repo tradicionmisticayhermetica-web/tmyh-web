@@ -1,7 +1,27 @@
 # Tradición Mística y Hermética — robots.txt
-# Permite indexación completa del sitio y apunta al sitemap.
+# Permite indexación del contenido público y bloquea áreas privadas
+# o links únicos por usuario. Apunta al sitemap principal.
 
 User-agent: *
+
+# Áreas privadas (panel admin)
+Disallow: /area-reservada/
+
+# Páginas de autenticación
+Disallow: /login
+Disallow: /recuperar-password
+Disallow: /restablecer-password
+
+# Newsletter — links con token único por suscriptor
+Disallow: /newsletter/
+
+# Blog: la página /blog/post/ sin slug es el shell vacío;
+# las URLs reales de posts viven en /blog/post?slug=... y las
+# rastreables se listan desde /blog/.
+Disallow: /blog/post$
+Disallow: /blog/post/
+
+# Resto del sitio: indexable
 Allow: /
 
 Sitemap: https://www.tradicionmisticayhermetica.com/sitemap-index.xml
