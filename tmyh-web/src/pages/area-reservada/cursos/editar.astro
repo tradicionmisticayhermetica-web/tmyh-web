@@ -268,6 +268,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     let cursoExiste = false;
     let estadoPersistido: CursoEditable["estado"] | null = null;
     let loaderFallback: HTMLDivElement | null = null;
+    let loaderWatchdog: ReturnType<typeof setTimeout> | null = null;
     const ESTADOS_PUBLICABLES = new Set<CursoEditable["estado"]>([
       "activo",
       "proximo",
@@ -404,6 +405,14 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     }
 
     function showLoader(msg = "Procesando…") {
+      if (loaderWatchdog) clearTimeout(loaderWatchdog);
+      loaderWatchdog = setTimeout(() => {
+        hideLoader();
+        setStatus(
+          "La operación tardó demasiado. Verificá conexión/Supabase y reintentá.",
+          "error",
+        );
+      }, 15000);
       const uiLoader = (window as any).__tmyhLoader;
       if (uiLoader?.show) {
         uiLoader.show(msg);
@@ -417,6 +426,10 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     }
 
     function hideLoader() {
+      if (loaderWatchdog) {
+        clearTimeout(loaderWatchdog);
+        loaderWatchdog = null;
+      }
       const uiLoader = (window as any).__tmyhLoader;
       if (uiLoader?.hide) {
         uiLoader.hide();
