@@ -46,6 +46,22 @@ El despegue fuerte suele venir del **contenido útil y estable** en el tiempo, m
 
 ---
 
+## Hecho — backoffice cursos (referencia)
+
+| Ítem | Estado |
+|------|--------|
+| SQL `cursos` + RLS, papelera, estados | ✅ `014`, `016` |
+| Listado con filtros + buscador | ✅ |
+| Editor completo (título, slug, precios, inscripción, imagen, símbolo, temario por módulos) | ✅ |
+| Banco de símbolos con tooltips ordenado por categoría | ✅ |
+| Estado `edicion_cerrada` + validación al publicar | ✅ |
+| Mover a papelera / restaurar / eliminar definitivo + deploy automático | ✅ |
+| Mensajes: papelera + restaurar + eliminar definitivo + buscador | ✅ |
+| Loader global del sitio (☿ + 🜍 + 🜔 → ☉) con watchdog 15 s | ✅ |
+| Despliegue inmediato Ferozo via GitHub webhook (sin SSH) | ✅ |
+
+---
+
 ## 2. Newsletter (después de SEO)
 
 Objetivo: **autonomía** de Emanuel para armar envíos sin depender de terceros, con visibilidad de estado y analíticas suficientes para decidir.
