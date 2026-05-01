@@ -350,6 +350,7 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       cancelarCampana,
       eliminarCampana,
       enviarPruebaCampana,
+      correrWorkerNewsletter,
       listarPostsPublicadosParaSeleccion,
       progresoCampana,
       estimacionRestante,
@@ -544,9 +545,13 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       } else if (c.estado === "lista" || c.estado === "enviando") {
         html += `
           <p class="text-xs text-parchment-400 italic font-serif">
-            La campaña está en cola. Se irán enviando lotes según el límite de Resend.
+            La campaña está en cola. Se procesa automáticamente cada hora.
           </p>
           <div class="flex items-center gap-2 ml-auto">
+            <button type="button" id="btn-procesar-ahora"
+                    class="text-[11px] uppercase tracking-widest text-gold-300 hover:text-gold-200 transition px-3 py-1.5 border border-gold-400/30 rounded-sm">
+              Procesar lote ahora
+            </button>
             <button type="button" id="btn-pausar"
                     class="text-[11px] uppercase tracking-widest text-amber-300 hover:text-amber-200 transition px-3 py-1.5 border border-amber-400/30 rounded-sm">
               Pausar
@@ -588,6 +593,7 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       document.getElementById("btn-pausar")?.addEventListener("click", onPausar);
       document.getElementById("btn-cancelar")?.addEventListener("click", onCancelar);
       document.getElementById("btn-eliminar")?.addEventListener("click", onEliminar);
+      document.getElementById("btn-procesar-ahora")?.addEventListener("click", onProcesarAhora);
     }
 
     function pintarBloqueProgreso(c: CampanaConPosts) {
@@ -966,6 +972,48 @@ import EditorBlog from "../../../components/EditorBlog.astro";
         if (!r.ok) {
           mostrarMensaje(`No se pudo pausar: ${r.error}`, "error");
           return;
+        }
+        const c = await obtenerCampana(estado.campana.id);
+        if (c) {
+          estado.campana = c;
+          pintarHeader(c);
+        }
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function onProcesarAhora() {
+      if (!estado.campana) return;
+      ocultarMensaje();
+      const continuar = await confirmar({
+        titulo: "¿Procesar un lote ahora?",
+        cuerpo:
+          "Vamos a mandar un lote (hasta 12 mails) sin esperar al cron horario. Sirve para arrancar la campaña apenas la encolaste.",
+        confirmar: "Sí, procesar",
+        cancelar: "Mejor no",
+        peligroso: false,
+      });
+      if (!continuar) return;
+      showLoader("Procesando lote…");
+      try {
+        const r = await correrWorkerNewsletter();
+        if (!r.ok) {
+          mostrarMensaje(`No se pudo procesar: ${r.error ?? "error desconocido"}`, "error");
+          return;
+        }
+        if (r.skipped === "cuota_diaria_agotada") {
+          mostrarMensaje(
+            `Cuota diaria agotada (${r.enviados_hoy}/${r.cuota_diaria}). Se reanuda mañana.`,
+            "info",
+          );
+        } else if (r.skipped === "sin_pendientes") {
+          mostrarMensaje("No quedan envíos pendientes en la cola.", "info");
+        } else {
+          mostrarMensaje(
+            `Lote procesado: ${r.enviados ?? 0} enviados, ${r.fallidos ?? 0} fallidos, ${r.rebotes ?? 0} rebotes. Total hoy: ${r.enviados_hoy}/${r.cuota_diaria}.`,
+            "ok",
+          );
         }
         const c = await obtenerCampana(estado.campana.id);
         if (c) {

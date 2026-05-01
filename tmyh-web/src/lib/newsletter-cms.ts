@@ -376,6 +376,38 @@ export interface ResultadoEnvioPrueba {
 }
 
 /**
+ * Dispara una corrida del worker `procesar-newsletter-cola` para arrancar
+ * el envío sin esperar al próximo tick del cron.
+ */
+export interface ResultadoCorrerWorker {
+  ok: boolean;
+  procesados?: number;
+  enviados?: number;
+  fallidos?: number;
+  rebotes?: number;
+  optin_revocado?: number;
+  enviados_hoy?: number;
+  cuota_diaria?: number;
+  skipped?: string;
+  error?: string;
+}
+
+export async function correrWorkerNewsletter(): Promise<ResultadoCorrerWorker> {
+  const { data, error } = await supabase.functions.invoke(
+    "procesar-newsletter-cola",
+    { body: {} },
+  );
+  if (error) {
+    console.error("[newsletter.correrWorker] invoke", error);
+    return { ok: false, error: error.message };
+  }
+  if (!data?.ok) {
+    return { ok: false, error: data?.error ?? "error_desconocido" };
+  }
+  return data;
+}
+
+/**
  * Manda una copia de la campaña a una dirección puntual sin tocar las filas
  * de envío masivo. Útil para validar el render antes de encolar.
  */
