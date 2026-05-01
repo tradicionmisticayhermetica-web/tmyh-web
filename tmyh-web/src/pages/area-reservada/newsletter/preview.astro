@@ -1,0 +1,162 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Vista previa" active="newsletter">
+  <a
+    href="#"
+    id="link-volver"
+    class="text-xs uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition inline-flex items-center gap-2 mb-6"
+  >
+    ← Volver al editor
+  </a>
+
+  <header class="mb-6 flex items-end justify-between gap-4 flex-wrap">
+    <div>
+      <p class="title-eyebrow">Vista previa</p>
+      <h1
+        id="titulo-preview"
+        class="font-display text-2xl text-parchment-50 mt-3"
+      >
+        —
+      </h1>
+      <p class="text-xs text-parchment-400 mt-2 font-serif italic">
+        Así se va a ver el email cuando llegue a la bandeja del suscriptor.
+        El link de baja al final es real (en este preview, sin token).
+      </p>
+    </div>
+    <div class="flex items-center gap-2 shrink-0 flex-wrap">
+      <select
+        id="modo-preview"
+        class="bg-night-950/60 border border-gold-400/15 outline-none text-parchment-100 px-3 py-2 text-xs font-sans rounded-sm"
+      >
+        <option value="desktop">Desktop · 600px</option>
+        <option value="mobile">Mobile · 360px</option>
+      </select>
+      <button
+        type="button"
+        id="btn-actualizar"
+        class="text-[11px] uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition px-3 py-1.5 border border-gold-400/20 rounded-sm"
+      >
+        Recargar
+      </button>
+    </div>
+  </header>
+
+  <div class="card-altar p-0 overflow-hidden">
+    <div
+      id="iframe-wrap"
+      class="bg-night-950 transition-all duration-200"
+      style="padding: 0;"
+    >
+      <iframe
+        id="iframe-preview"
+        title="Vista previa del email"
+        class="block w-full bg-night-950"
+        style="height: 800px; border: 0; margin: 0 auto;"
+      ></iframe>
+    </div>
+  </div>
+
+  <p
+    id="estado"
+    class="text-xs text-parchment-400 mt-4"
+    aria-live="polite"
+  ></p>
+
+  <script>
+    import { obtenerCampana } from "../../../lib/newsletter-cms";
+    import {
+      renderEmailHtml,
+      type PostParaEmail,
+    } from "../../../lib/newsletter-render";
+
+    const params = new URLSearchParams(window.location.search);
+    const campanaId = params.get("id");
+
+    if (!campanaId) {
+      window.location.replace("/area-reservada/newsletter");
+    }
+
+    const $titulo = document.getElementById("titulo-preview") as HTMLElement;
+    const $iframe = document.getElementById("iframe-preview") as HTMLIFrameElement;
+    const $iframeWrap = document.getElementById("iframe-wrap") as HTMLElement;
+    const $estado = document.getElementById("estado") as HTMLElement;
+    const $modo = document.getElementById("modo-preview") as HTMLSelectElement;
+    const $btnActualizar = document.getElementById("btn-actualizar") as HTMLButtonElement;
+    const $linkVolver = document.getElementById("link-volver") as HTMLAnchorElement;
+
+    function baseSitio(): string {
+      // En el preview servido desde el dominio actual usamos el mismo origen
+      // para que los links absolutos funcionen al hacer click.
+      return window.location.origin;
+    }
+
+    function aplicarModo(modo: string) {
+      if (modo === "mobile") {
+        $iframe.style.maxWidth = "360px";
+      } else {
+        $iframe.style.maxWidth = "100%";
+      }
+    }
+
+    async function cargar() {
+      $estado.textContent = "Cargando campaña…";
+      const c = await obtenerCampana(campanaId!);
+      if (!c) {
+        $estado.textContent = "La campaña no existe.";
+        return;
+      }
+
+      $titulo.textContent = c.asunto || "(sin asunto)";
+      $linkVolver.href = `/area-reservada/newsletter/editar?id=${c.id}`;
+
+      const posts: PostParaEmail[] = c.posts.map((p) => ({
+        titulo: p.titulo ?? "(sin título)",
+        slug: p.slug ?? "",
+        extracto: p.extracto ?? null,
+        imagen_destacada: p.imagen_destacada ?? null,
+        publicado_en: p.publicado_en ?? null,
+      }));
+
+      const html = renderEmailHtml({
+        asunto: c.asunto,
+        introHtml: c.intro_html,
+        imagenDestacada: c.imagen_destacada,
+        posts,
+        baseSitio: baseSitio(),
+        tokenUnsubscribe: null, // en preview no hay contacto real
+        nombreDestinatario: null,
+        esPreview: true,
+      });
+
+      // Inyectar via srcdoc para aislar estilos del email del panel.
+      $iframe.srcdoc = html;
+
+      // Ajustar altura cuando termine de cargar el contenido del iframe.
+      $iframe.addEventListener(
+        "load",
+        () => {
+          try {
+            const doc = $iframe.contentDocument;
+            if (doc) {
+              const h = doc.documentElement.scrollHeight;
+              $iframe.style.height = `${Math.max(600, h + 40)}px`;
+            }
+          } catch {
+            // Ignorar problemas cross-origin (no aplican con srcdoc).
+          }
+        },
+        { once: true },
+      );
+
+      $estado.textContent = `Última actualización: ${new Date().toLocaleTimeString("es-AR")}`;
+    }
+
+    $modo.addEventListener("change", () => aplicarModo($modo.value));
+    $btnActualizar.addEventListener("click", () => cargar());
+
+    aplicarModo($modo.value);
+    cargar();
+  </script>
+</AdminLayout>

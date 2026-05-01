@@ -39,6 +39,30 @@ import EditorBlog from "../../../components/EditorBlog.astro";
     </div>
   </header>
 
+  {/* Acciones de prueba: visibles siempre que la campaña no esté terminada */}
+  <div
+    id="acciones-prueba"
+    class="mb-6 flex items-center gap-3 flex-wrap"
+  >
+    <button
+      type="button"
+      id="btn-vista-previa"
+      class="text-[11px] uppercase tracking-widest text-parchment-200 hover:text-gold-300 transition px-3 py-1.5 border border-gold-400/25 rounded-sm flex items-center gap-2"
+    >
+      <span aria-hidden="true">👁</span> Vista previa
+    </button>
+    <button
+      type="button"
+      id="btn-enviar-prueba"
+      class="text-[11px] uppercase tracking-widest text-parchment-200 hover:text-gold-300 transition px-3 py-1.5 border border-gold-400/25 rounded-sm flex items-center gap-2"
+    >
+      <span aria-hidden="true">✉</span> Enviar prueba
+    </button>
+    <span class="text-[10px] text-parchment-500 italic">
+      La prueba va a un email puntual sin tocar la lista de suscriptores.
+    </span>
+  </div>
+
   {/* Banner de progreso (visible solo si la campaña está encolada o en envio) */}
   <section
     id="bloque-progreso"
@@ -325,6 +349,7 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       reanudarCampana,
       cancelarCampana,
       eliminarCampana,
+      enviarPruebaCampana,
       listarPostsPublicadosParaSeleccion,
       progresoCampana,
       estimacionRestante,
@@ -373,6 +398,10 @@ import EditorBlog from "../../../components/EditorBlog.astro";
     const $listaPostsDisponibles = document.getElementById("lista-posts-disponibles") as HTMLElement;
     const $buscadorPosts = document.getElementById("buscador-posts") as HTMLInputElement;
     const $modalContador = document.getElementById("modal-contador") as HTMLElement;
+
+    // Acciones de prueba
+    const $btnVistaPrevia = document.getElementById("btn-vista-previa") as HTMLButtonElement;
+    const $btnEnviarPrueba = document.getElementById("btn-enviar-prueba") as HTMLButtonElement;
 
     type Estado = {
       campana: CampanaConPosts | null;
@@ -1060,6 +1089,140 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       estado.busquedaPosts = $buscadorPosts.value;
       pintarPostsDisponibles();
     });
+
+    // -----------------------------------------------------------------------
+    // Vista previa: guarda y abre el preview en otra pestaña
+    // -----------------------------------------------------------------------
+    $btnVistaPrevia.addEventListener("click", async () => {
+      if (!estado.campana) return;
+      ocultarMensaje();
+      // Abrir la pestaña ANTES de cualquier await: si abrimos después,
+      // los navegadores lo bloquean por no estar dentro del gesto del usuario.
+      const ventana = window.open("about:blank", "_blank");
+
+      if (estado.sucio) {
+        showLoader("Guardando cambios para la vista previa…");
+        try {
+          const ok = await persistirCambios();
+          if (!ok) {
+            ventana?.close();
+            return;
+          }
+        } finally {
+          hideLoader();
+        }
+      }
+
+      const url = `/area-reservada/newsletter/preview?id=${estado.campana.id}`;
+      if (ventana) {
+        ventana.location.href = url;
+      } else {
+        // Si el navegador bloqueó la pestaña, redirigimos en la misma.
+        window.location.href = url;
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // Enviar prueba: pide email y dispara la edge function
+    // -----------------------------------------------------------------------
+    $btnEnviarPrueba.addEventListener("click", async () => {
+      if (!estado.campana) return;
+      ocultarMensaje();
+      const email = await pedirEmailPrueba();
+      if (!email) return;
+
+      // Si hay cambios sin guardar, los persistimos primero para que la
+      // prueba refleje exactamente lo que va a salir.
+      if (estado.sucio) {
+        showLoader("Guardando cambios…");
+        try {
+          const ok = await persistirCambios();
+          if (!ok) return;
+        } finally {
+          hideLoader();
+        }
+      }
+
+      showLoader(`Enviando prueba a ${email}…`);
+      try {
+        const r = await enviarPruebaCampana(estado.campana.id, email);
+        if (!r.ok) {
+          mostrarMensaje(
+            `No se pudo enviar la prueba: ${r.error}${r.detalle ? " — " + JSON.stringify(r.detalle) : ""}`,
+            "error",
+          );
+          return;
+        }
+        mostrarMensaje(
+          `Prueba enviada a ${r.enviado_a}. Revisá la bandeja (puede tardar 1-2 minutos en llegar).`,
+          "ok",
+        );
+      } finally {
+        hideLoader();
+      }
+    });
+
+    /**
+     * Modal específico para pedir el email de prueba. Default a la casilla
+     * principal del proyecto.
+     */
+    function pedirEmailPrueba(): Promise<string | null> {
+      const defaultEmail = "tradicionmisticayhermetica@gmail.com";
+      return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.className =
+          "fixed inset-0 z-[1250] flex items-center justify-center bg-night-950/80 backdrop-blur-sm p-4";
+        overlay.innerHTML = `
+          <div class="card-altar p-6 max-w-md w-full space-y-4">
+            <p class="font-display text-lg text-parchment-50">Enviar prueba</p>
+            <p class="text-sm text-parchment-300 font-serif">
+              Mandamos una copia del email a una sola dirección, sin tocar
+              la lista de suscriptores. El asunto va a aparecer prefijado con <code class="text-gold-300">[PRUEBA]</code>.
+            </p>
+            <label for="email-prueba-input" class="block text-[11px] uppercase tracking-widest text-parchment-400">
+              Email destino
+            </label>
+            <input
+              id="email-prueba-input"
+              type="email"
+              value="${defaultEmail}"
+              class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-3 py-2 text-sm font-mono rounded-sm"
+            />
+            <div class="flex items-center justify-end gap-2 pt-2">
+              <button type="button" data-act="cancel" class="btn-ghost text-xs">Cancelar</button>
+              <button type="button" data-act="ok" class="btn-gold text-xs">Enviar</button>
+            </div>
+          </div>`;
+        document.body.appendChild(overlay);
+        const input = overlay.querySelector<HTMLInputElement>("#email-prueba-input")!;
+        input.focus();
+        input.select();
+
+        const cerrar = (valor: string | null) => {
+          overlay.remove();
+          resolve(valor);
+        };
+        const aceptar = () => {
+          const v = input.value.trim();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+            input.classList.add("border-wine-400/60");
+            input.focus();
+            return;
+          }
+          cerrar(v);
+        };
+
+        overlay.querySelector('[data-act="ok"]')?.addEventListener("click", aceptar);
+        overlay.querySelector('[data-act="cancel"]')?.addEventListener("click", () => cerrar(null));
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) cerrar(null);
+        });
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") aceptar();
+          if (e.key === "Escape") cerrar(null);
+        });
+      });
+    }
 
     // Aviso al cerrar pestaña con cambios sin guardar
     window.addEventListener("beforeunload", (e) => {

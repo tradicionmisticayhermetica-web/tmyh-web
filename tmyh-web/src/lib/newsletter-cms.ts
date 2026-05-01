@@ -362,6 +362,54 @@ export async function cancelarCampana(id: string): Promise<ResultadoSimple> {
 }
 
 // =============================================================================
+// Envío de prueba (edge function `enviar-newsletter-prueba`)
+// =============================================================================
+
+export interface ResultadoEnvioPrueba {
+  ok: boolean;
+  resend_id?: string;
+  enviado_a?: string;
+  error?: string;
+  detalle?: unknown;
+}
+
+/**
+ * Manda una copia de la campaña a una dirección puntual sin tocar las filas
+ * de envío masivo. Útil para validar el render antes de encolar.
+ */
+export async function enviarPruebaCampana(
+  campanaId: string,
+  emailDestino: string,
+  nombreDestino?: string,
+): Promise<ResultadoEnvioPrueba> {
+  const { data, error } = await supabase.functions.invoke(
+    "enviar-newsletter-prueba",
+    {
+      body: {
+        campana_id: campanaId,
+        email_destino: emailDestino,
+        nombre_destino: nombreDestino ?? null,
+      },
+    },
+  );
+
+  if (error) {
+    console.error("[newsletter.enviarPruebaCampana] invoke", error);
+    return { ok: false, error: error.message };
+  }
+
+  if (!data?.ok) {
+    return {
+      ok: false,
+      error: data?.error ?? "error_desconocido",
+      detalle: data?.detalle,
+    };
+  }
+
+  return { ok: true, resend_id: data.resend_id, enviado_a: data.enviado_a };
+}
+
+// =============================================================================
 // Vista de envíos (detalle de campaña)
 // =============================================================================
 
