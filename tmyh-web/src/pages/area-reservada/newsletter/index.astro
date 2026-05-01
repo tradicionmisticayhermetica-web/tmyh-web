@@ -1,0 +1,241 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Newsletter" active="newsletter">
+  <header class="mb-8 flex items-end justify-between gap-4 flex-wrap">
+    <div>
+      <p class="title-eyebrow">Backoffice</p>
+      <h1 class="font-display text-3xl text-parchment-50 mt-3">Newsletter</h1>
+      <p class="text-parchment-300 mt-2 font-serif italic">
+        Boletines preparados, en cola y enviados.
+      </p>
+    </div>
+    <div class="flex items-center gap-3 shrink-0 flex-wrap">
+      <a href="/area-reservada/newsletter/nueva" class="btn-gold">
+        + Nueva campaña
+      </a>
+    </div>
+  </header>
+
+  {/* KPI rápido de suscriptores activos */}
+  <section
+    class="card-altar p-5 mb-6 flex items-center justify-between gap-4 flex-wrap"
+  >
+    <div>
+      <p class="text-[10px] uppercase tracking-widest text-parchment-400">
+        Lista actual
+      </p>
+      <p class="font-display text-xl text-parchment-50 mt-1">
+        <span id="kpi-suscriptores">—</span>
+        <span class="text-sm text-parchment-300">suscriptores activos</span>
+      </p>
+    </div>
+    <div class="text-xs text-parchment-400 max-w-md text-right">
+      Solo se les envía a contactos con <code class="text-gold-300">newsletter_optin = true</code>.
+      Si rebotan o se quejan, salen automáticamente.
+    </div>
+  </section>
+
+  {/* Filtros */}
+  <div class="flex items-center gap-2 mb-6 flex-wrap">
+    <button class="filtro-btn is-active" data-filtro="todos">Todas</button>
+    <button class="filtro-btn" data-filtro="borrador">Borradores</button>
+    <button class="filtro-btn" data-filtro="lista">En cola</button>
+    <button class="filtro-btn" data-filtro="enviando">Enviando</button>
+    <button class="filtro-btn" data-filtro="enviada">Enviadas</button>
+    <button class="filtro-btn" data-filtro="pausada">Pausadas</button>
+    <div class="flex-1"></div>
+    <input
+      id="buscador"
+      type="search"
+      placeholder="Buscar por asunto…"
+      class="bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-3 py-1.5 text-xs font-sans transition rounded-sm w-full sm:w-72"
+    />
+    <span
+      id="contador"
+      class="text-[10px] uppercase tracking-widest text-parchment-400 px-2 py-1 border border-gold-400/20 rounded-sm bg-night-950/50"
+      >—</span
+    >
+  </div>
+
+  <section id="lista-campanas" class="card-altar divide-y divide-gold-400/10">
+    <div class="py-12 text-center text-parchment-400 text-sm font-serif italic">
+      Cargando campañas…
+    </div>
+  </section>
+
+  <style>
+    .filtro-btn {
+      font-family: var(--font-sans);
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-parchment-300);
+      padding: 0.5rem 1rem;
+      border: 1px solid rgb(230 196 100 / 0.15);
+      border-radius: 2px;
+      background: rgb(11 10 18 / 0.5);
+      transition: all 180ms ease;
+      cursor: pointer;
+    }
+    .filtro-btn:hover {
+      color: var(--color-gold-300);
+      border-color: rgb(212 175 55 / 0.4);
+    }
+    .filtro-btn.is-active {
+      color: var(--color-night-950);
+      background: linear-gradient(180deg, var(--color-gold-300), var(--color-gold-500));
+      border-color: var(--color-gold-600);
+    }
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: rgb(230 196 100 / 0.08);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-gold-500), var(--color-gold-300));
+      transition: width 240ms ease;
+    }
+  </style>
+
+  <script>
+    import {
+      listarCampanas,
+      progresoCampana,
+      estimacionRestante,
+      ETIQUETA_ESTADO_CAMPANA,
+      COLOR_ESTADO_CAMPANA,
+      type Campana,
+    } from "../../../lib/newsletter-cms";
+    import { formatearFecha } from "../../../lib/admin";
+    import { supabase } from "../../../lib/supabase";
+
+    const lista = document.getElementById("lista-campanas");
+    const buscador = document.getElementById("buscador") as HTMLInputElement | null;
+    const contador = document.getElementById("contador");
+    const kpiSusc = document.getElementById("kpi-suscriptores");
+
+    let cache: Campana[] = [];
+    let filtroActual = "todos";
+    let busquedaActual = "";
+
+    function escapeHtml(s: string): string {
+      return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function pintar(campanas: Campana[]) {
+      if (!lista) return;
+      if (contador)
+        contador.textContent = `${campanas.length} ${campanas.length === 1 ? "campaña" : "campañas"}`;
+
+      if (campanas.length === 0) {
+        lista.innerHTML = `
+          <div class="py-16 text-center">
+            <div class="text-2xl text-gold-400 mb-3 opacity-50">✦</div>
+            <p class="text-parchment-300 font-serif italic">No hay campañas en esta vista.</p>
+            <a href="/area-reservada/newsletter/nueva" class="btn-gold mt-6 inline-flex">+ Nueva campaña</a>
+          </div>`;
+        return;
+      }
+
+      lista.innerHTML = campanas
+        .map((c) => {
+          const colorClases = COLOR_ESTADO_CAMPANA[c.estado] ?? "text-parchment-400";
+          const etiqueta = ETIQUETA_ESTADO_CAMPANA[c.estado] ?? c.estado;
+          const progreso = progresoCampana(c);
+          const restante = estimacionRestante(c);
+          const fecha = c.enviada_en ?? c.encolada_en ?? c.actualizada_en;
+          const muestraProgreso = ["lista", "enviando", "pausada", "enviada"].includes(c.estado);
+
+          return `
+        <a href="/area-reservada/newsletter/editar?id=${c.id}"
+           class="block px-6 py-5 hover:bg-gold-400/5 transition">
+          <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 flex-wrap mb-1">
+                <span class="font-display text-parchment-50 text-base">${escapeHtml(c.asunto)}</span>
+                <span class="text-[9px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm ${colorClases}">${etiqueta}</span>
+              </div>
+              <div class="text-xs text-parchment-500 font-mono">
+                ${c.total_destinatarios} destinatarios · ${c.enviados} enviados · ${c.fallidos + c.rebotados} con error
+              </div>
+              ${
+                muestraProgreso
+                  ? `
+                <div class="mt-3 max-w-lg">
+                  <div class="progress-bar">
+                    <div class="progress-bar-fill" style="width:${progreso}%"></div>
+                  </div>
+                  <div class="text-[10px] mt-1 text-parchment-400 uppercase tracking-widest">
+                    ${progreso}% · ${restante !== "—" ? "queda " + restante : ""}
+                  </div>
+                </div>`
+                  : ""
+              }
+            </div>
+            <div class="text-[11px] text-parchment-400 uppercase tracking-widest whitespace-nowrap text-right shrink-0">
+              ${escapeHtml(formatearFecha(fecha))}
+            </div>
+          </div>
+        </a>`;
+        })
+        .join("");
+    }
+
+    function aplicarFiltroYBusqueda() {
+      const base =
+        filtroActual === "todos"
+          ? cache
+          : cache.filter((c) => c.estado === filtroActual);
+      const q = busquedaActual.trim().toLowerCase();
+      if (!q) return pintar(base);
+      pintar(base.filter((c) => c.asunto.toLowerCase().includes(q)));
+    }
+
+    async function cargarKpiSuscriptores() {
+      const { count, error } = await supabase
+        .from("contactos")
+        .select("id", { count: "exact", head: true })
+        .eq("newsletter_optin", true);
+      if (error) {
+        if (kpiSusc) kpiSusc.textContent = "—";
+        return;
+      }
+      if (kpiSusc) kpiSusc.textContent = String(count ?? 0);
+    }
+
+    async function cargar() {
+      if (lista) {
+        lista.innerHTML = `<div class="py-12 text-center text-parchment-400 text-sm font-serif italic">Cargando…</div>`;
+      }
+      cache = await listarCampanas(200);
+      aplicarFiltroYBusqueda();
+    }
+
+    document.querySelectorAll<HTMLButtonElement>(".filtro-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filtro-btn").forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        filtroActual = btn.dataset.filtro ?? "todos";
+        aplicarFiltroYBusqueda();
+      });
+    });
+
+    buscador?.addEventListener("input", () => {
+      busquedaActual = buscador.value;
+      aplicarFiltroYBusqueda();
+    });
+
+    cargarKpiSuscriptores();
+    cargar();
+  </script>
+</AdminLayout>

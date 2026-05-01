@@ -1,0 +1,1073 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import EditorBlog from "../../../components/EditorBlog.astro";
+---
+
+<AdminLayout title="Editar campaña" active="newsletter">
+  <a
+    href="/area-reservada/newsletter"
+    class="text-xs uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition inline-flex items-center gap-2 mb-6"
+  >
+    ← Volver al listado
+  </a>
+
+  {/* Header de la campaña: estado actual + acciones */}
+  <header class="mb-6 flex items-center justify-between gap-4 flex-wrap">
+    <div>
+      <p class="title-eyebrow">Campaña</p>
+      <div class="flex items-center gap-3 mt-2 flex-wrap">
+        <h1
+          id="campana-asunto-titular"
+          class="font-display text-2xl text-parchment-50"
+        >
+          —
+        </h1>
+        <span
+          id="campana-estado-badge"
+          class="text-[9px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm text-parchment-400 border-parchment-400/30"
+        >
+          —
+        </span>
+      </div>
+      <p
+        id="campana-meta"
+        class="text-xs text-parchment-500 font-mono mt-1"
+      ></p>
+    </div>
+    <div class="flex items-center gap-2 shrink-0 flex-wrap" id="acciones-superiores">
+      <!-- Se rellena por JS según el estado -->
+    </div>
+  </header>
+
+  {/* Banner de progreso (visible solo si la campaña está encolada o en envio) */}
+  <section
+    id="bloque-progreso"
+    class="card-altar p-5 mb-6 hidden"
+  >
+    <div class="flex items-end justify-between gap-4 flex-wrap mb-3">
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-parchment-400">
+          Progreso
+        </p>
+        <p class="font-display text-lg text-parchment-50 mt-1">
+          <span id="prog-enviados">0</span> /
+          <span id="prog-total">0</span>
+          <span class="text-sm text-parchment-300">enviados</span>
+        </p>
+      </div>
+      <div class="text-right">
+        <p class="text-[10px] uppercase tracking-widest text-parchment-400">
+          Restante (estimado)
+        </p>
+        <p
+          id="prog-restante"
+          class="font-display text-base text-gold-300 mt-1"
+        >
+          —
+        </p>
+      </div>
+    </div>
+    <div
+      class="w-full h-1.5 bg-gold-400/10 rounded-sm overflow-hidden"
+    >
+      <div
+        id="prog-fill"
+        class="h-full bg-gradient-to-r from-gold-500 to-gold-300 transition-all duration-300"
+        style="width: 0%;"
+      ></div>
+    </div>
+    <div
+      class="text-[10px] mt-2 text-parchment-400 uppercase tracking-widest flex items-center justify-between"
+    >
+      <span id="prog-detalle"></span>
+      <a
+        id="prog-link-detalle"
+        href="#"
+        class="text-gold-300 hover:text-gold-200 transition normal-case tracking-normal text-xs"
+        >Ver listado de envíos →</a
+      >
+    </div>
+  </section>
+
+  {/* Mensajes de estado / errores */}
+  <div
+    id="mensaje"
+    class="hidden mb-6 px-4 py-3 rounded-sm text-sm font-sans"
+    aria-live="polite"
+  ></div>
+
+  {/* Formulario principal */}
+  <form id="form-campana" class="space-y-6" novalidate>
+    {/* Asunto */}
+    <div>
+      <label
+        for="asunto"
+        class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2"
+      >
+        Asunto del email <span class="text-wine-400">*</span>
+      </label>
+      <input
+        id="asunto"
+        name="asunto"
+        type="text"
+        required
+        maxlength="180"
+        placeholder="Reflexión de la semana — Tradición Mística"
+        class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-50 px-4 py-3 font-display text-xl transition rounded-sm"
+      />
+      <p class="text-[10px] mt-1 text-parchment-500">
+        Es lo primero que ven en su bandeja. Mantenelo claro y corto.
+      </p>
+    </div>
+
+    {/* Intro del cuerpo (Tiptap) */}
+    <div>
+      <label
+        class="block text-[11px] uppercase tracking-widest text-parchment-400 mb-2"
+      >
+        Introducción del boletín
+      </label>
+      <p class="text-xs text-parchment-500 mb-3">
+        Texto rico que va al inicio del email. Podés sumar imágenes, links y
+        formato como en el blog. Después se concatena con los posts seleccionados.
+      </p>
+      <div class="border border-gold-400/15 rounded-sm overflow-hidden">
+        <EditorBlog placeholder="Saludo, contexto, una reflexión breve…" />
+      </div>
+    </div>
+
+    {/* Selección de posts del blog */}
+    <div>
+      <div class="flex items-center justify-between gap-3 mb-2 flex-wrap">
+        <label
+          class="block text-[11px] uppercase tracking-widest text-parchment-400"
+        >
+          Artículos del blog incluidos
+        </label>
+        <button
+          type="button"
+          id="btn-agregar-posts"
+          class="text-[11px] uppercase tracking-widest text-gold-300 hover:text-gold-200 transition px-3 py-1.5 border border-gold-400/25 rounded-sm"
+        >
+          + Elegir artículos
+        </button>
+      </div>
+      <p class="text-xs text-parchment-500 mb-3">
+        El email incluirá cada artículo elegido como una tarjeta con título,
+        extracto y link. Arrastrá para reordenar.
+      </p>
+
+      <div
+        id="posts-seleccionados"
+        class="card-altar divide-y divide-gold-400/10 min-h-[80px]"
+      >
+        <div
+          class="py-8 text-center text-parchment-500 text-sm font-serif italic"
+          id="posts-vacio"
+        >
+          Sin artículos por ahora. Tocá <em>Elegir artículos</em> para sumar uno.
+        </div>
+      </div>
+    </div>
+  </form>
+
+  {/* Acciones inferiores */}
+  <div
+    class="mt-8 flex items-center justify-between gap-3 flex-wrap pt-6 border-t border-gold-400/10"
+    id="acciones-inferiores"
+  >
+    <!-- Se rellena por JS según el estado -->
+  </div>
+
+  {/* Modal: selector de artículos */}
+  <div
+    id="modal-posts"
+    class="hidden fixed inset-0 z-[1200] items-center justify-center bg-night-950/80 backdrop-blur-sm p-4"
+  >
+    <div class="card-altar p-0 max-w-3xl w-full max-h-[85vh] flex flex-col">
+      <div
+        class="px-6 py-4 border-b border-gold-400/15 flex items-center justify-between gap-3"
+      >
+        <div>
+          <p class="font-display text-lg text-parchment-50">Elegir artículos</p>
+          <p class="text-xs text-parchment-400 mt-1">
+            Marcá los que quieras incluir. El orden lo cambiás después arrastrando.
+          </p>
+        </div>
+        <button
+          type="button"
+          id="btn-cerrar-modal-posts"
+          class="text-parchment-300 hover:text-gold-300 text-xl leading-none px-2"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </div>
+
+      <div class="px-6 py-3 border-b border-gold-400/10">
+        <input
+          id="buscador-posts"
+          type="search"
+          placeholder="Buscar por título o slug…"
+          class="w-full bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-3 py-2 text-sm font-sans rounded-sm"
+        />
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-2 py-2" id="lista-posts-disponibles">
+        <div
+          class="py-12 text-center text-parchment-400 text-sm font-serif italic"
+        >
+          Cargando artículos…
+        </div>
+      </div>
+
+      <div
+        class="px-6 py-4 border-t border-gold-400/15 flex items-center justify-between gap-3 flex-wrap"
+      >
+        <span id="modal-contador" class="text-[10px] uppercase tracking-widest text-parchment-400">0 seleccionados</span>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            id="btn-cancelar-modal-posts"
+            class="btn-ghost text-xs"
+          >
+            Cancelar
+          </button>
+          <button type="button" id="btn-aplicar-posts" class="btn-gold text-xs">
+            Aplicar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style is:global>
+    /* Card de post seleccionado (con drag) */
+    .post-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 0.85rem 1rem;
+      cursor: grab;
+      user-select: none;
+    }
+    .post-card:active {
+      cursor: grabbing;
+    }
+    .post-card.is-dragging {
+      opacity: 0.5;
+    }
+    .post-card.is-drop-target {
+      background: rgb(230 196 100 / 0.06);
+      box-shadow: inset 0 2px 0 var(--color-gold-400);
+    }
+    .post-card-handle {
+      color: var(--color-gold-400);
+      font-size: 1rem;
+      opacity: 0.6;
+      padding-top: 0.15rem;
+    }
+    .post-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .post-card-quitar {
+      font-family: var(--font-sans);
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-wine-300);
+      background: transparent;
+      border: 1px solid rgb(217 122 108 / 0.3);
+      padding: 0.35rem 0.75rem;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 160ms ease;
+    }
+    .post-card-quitar:hover {
+      color: var(--color-wine-200);
+      border-color: rgb(217 122 108 / 0.55);
+      background: rgb(217 122 108 / 0.08);
+    }
+
+    /* Items del modal de selección */
+    .post-pickable {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      padding: 0.7rem 0.85rem;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background-color 140ms ease;
+    }
+    .post-pickable:hover {
+      background: rgb(230 196 100 / 0.04);
+    }
+    .post-pickable.is-checked {
+      background: rgb(230 196 100 / 0.06);
+    }
+    .post-pickable input[type="checkbox"] {
+      margin-top: 0.25rem;
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--color-gold-400);
+      cursor: pointer;
+    }
+  </style>
+
+  <script>
+    import {
+      obtenerCampana,
+      guardarCampana,
+      setPostsDeCampana,
+      encolarCampana,
+      pausarCampana,
+      reanudarCampana,
+      cancelarCampana,
+      eliminarCampana,
+      listarPostsPublicadosParaSeleccion,
+      progresoCampana,
+      estimacionRestante,
+      ETIQUETA_ESTADO_CAMPANA,
+      COLOR_ESTADO_CAMPANA,
+      type CampanaConPosts,
+      type EstadoCampana,
+      type PostParaSeleccion,
+    } from "../../../lib/newsletter-cms";
+    import { formatearFecha } from "../../../lib/admin";
+
+    // -----------------------------------------------------------------------
+    // Helpers DOM
+    // -----------------------------------------------------------------------
+    const params = new URLSearchParams(window.location.search);
+    const campanaId = params.get("id");
+
+    if (!campanaId) {
+      window.location.replace("/area-reservada/newsletter");
+    }
+
+    const $asunto = document.getElementById("asunto") as HTMLInputElement;
+    const $titular = document.getElementById("campana-asunto-titular") as HTMLElement;
+    const $badge = document.getElementById("campana-estado-badge") as HTMLElement;
+    const $meta = document.getElementById("campana-meta") as HTMLElement;
+    const $accionesArriba = document.getElementById("acciones-superiores") as HTMLElement;
+    const $accionesAbajo = document.getElementById("acciones-inferiores") as HTMLElement;
+    const $bloqueProgreso = document.getElementById("bloque-progreso") as HTMLElement;
+    const $progEnviados = document.getElementById("prog-enviados") as HTMLElement;
+    const $progTotal = document.getElementById("prog-total") as HTMLElement;
+    const $progRestante = document.getElementById("prog-restante") as HTMLElement;
+    const $progFill = document.getElementById("prog-fill") as HTMLElement;
+    const $progDetalle = document.getElementById("prog-detalle") as HTMLElement;
+    const $progLinkDetalle = document.getElementById("prog-link-detalle") as HTMLAnchorElement;
+    const $postsSeleccionados = document.getElementById("posts-seleccionados") as HTMLElement;
+    const $postsVacio = document.getElementById("posts-vacio") as HTMLElement;
+    const $mensaje = document.getElementById("mensaje") as HTMLElement;
+    const editorRoot = document.getElementById("editor-blog-root") as HTMLElement;
+
+    // Modal de selección
+    const $modalPosts = document.getElementById("modal-posts") as HTMLElement;
+    const $btnAgregarPosts = document.getElementById("btn-agregar-posts") as HTMLButtonElement;
+    const $btnCerrarModalPosts = document.getElementById("btn-cerrar-modal-posts") as HTMLButtonElement;
+    const $btnCancelarModalPosts = document.getElementById("btn-cancelar-modal-posts") as HTMLButtonElement;
+    const $btnAplicarPosts = document.getElementById("btn-aplicar-posts") as HTMLButtonElement;
+    const $listaPostsDisponibles = document.getElementById("lista-posts-disponibles") as HTMLElement;
+    const $buscadorPosts = document.getElementById("buscador-posts") as HTMLInputElement;
+    const $modalContador = document.getElementById("modal-contador") as HTMLElement;
+
+    type Estado = {
+      campana: CampanaConPosts | null;
+      postsActuales: { id: string; titulo: string; slug: string; extracto: string | null; publicado_en: string | null }[];
+      postsDisponibles: PostParaSeleccion[];
+      seleccionPendiente: Set<string>;
+      busquedaPosts: string;
+      // Buffer del editor:
+      bufferIntroJson: unknown | null;
+      bufferIntroHtml: string | null;
+      // Si ya hubo cambios sin guardar:
+      sucio: boolean;
+    };
+
+    const estado: Estado = {
+      campana: null,
+      postsActuales: [],
+      postsDisponibles: [],
+      seleccionPendiente: new Set(),
+      busquedaPosts: "",
+      bufferIntroJson: null,
+      bufferIntroHtml: null,
+      sucio: false,
+    };
+
+    function escapeHtml(s: string): string {
+      return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function showLoader(msg: string) {
+      const w = window as any;
+      w.__tmyhLoader?.show?.(msg);
+    }
+    function hideLoader() {
+      const w = window as any;
+      w.__tmyhLoader?.hide?.();
+    }
+
+    function mostrarMensaje(texto: string, tipo: "ok" | "error" | "info") {
+      $mensaje.textContent = texto;
+      $mensaje.className = "mb-6 px-4 py-3 rounded-sm text-sm font-sans border";
+      if (tipo === "ok") {
+        $mensaje.classList.add(
+          "border-emerald-400/30",
+          "bg-emerald-400/5",
+          "text-emerald-200",
+        );
+      } else if (tipo === "error") {
+        $mensaje.classList.add(
+          "border-wine-400/40",
+          "bg-wine-400/5",
+          "text-wine-200",
+        );
+      } else {
+        $mensaje.classList.add(
+          "border-gold-400/30",
+          "bg-gold-400/5",
+          "text-gold-200",
+        );
+      }
+      $mensaje.classList.remove("hidden");
+    }
+
+    function ocultarMensaje() {
+      $mensaje.classList.add("hidden");
+    }
+
+    function esEditable(c: { estado: EstadoCampana }): boolean {
+      return c.estado === "borrador" || c.estado === "pausada";
+    }
+
+    // -----------------------------------------------------------------------
+    // Render del header (asunto + badge + meta + acciones)
+    // -----------------------------------------------------------------------
+    function pintarHeader(c: CampanaConPosts) {
+      $titular.textContent = c.asunto || "(sin asunto)";
+
+      const colorClases =
+        COLOR_ESTADO_CAMPANA[c.estado] ?? "text-parchment-400 border-parchment-400/30";
+      $badge.textContent = ETIQUETA_ESTADO_CAMPANA[c.estado] ?? c.estado;
+      $badge.className =
+        "text-[9px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm " +
+        colorClases;
+
+      const partes: string[] = [];
+      partes.push(`Creada ${formatearFecha(c.creada_en)}`);
+      if (c.encolada_en) partes.push(`Encolada ${formatearFecha(c.encolada_en)}`);
+      if (c.enviada_en) partes.push(`Terminada ${formatearFecha(c.enviada_en)}`);
+      $meta.textContent = partes.join(" · ");
+
+      pintarAccionesSuperiores(c);
+      pintarAccionesInferiores(c);
+      pintarBloqueProgreso(c);
+
+      const editable = esEditable(c);
+      $asunto.disabled = !editable;
+      $btnAgregarPosts.disabled = !editable;
+      $btnAgregarPosts.classList.toggle("opacity-40", !editable);
+      $btnAgregarPosts.classList.toggle("pointer-events-none", !editable);
+    }
+
+    function pintarAccionesSuperiores(c: CampanaConPosts) {
+      // Por ahora solo "Ver envíos" cuando ya hay envíos.
+      const tieneEnvios =
+        c.estado === "lista" ||
+        c.estado === "enviando" ||
+        c.estado === "enviada" ||
+        c.estado === "pausada";
+      $accionesArriba.innerHTML = tieneEnvios
+        ? `<a href="/area-reservada/newsletter/envios?id=${c.id}"
+              class="text-[11px] uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition px-3 py-1.5 border border-gold-400/20 rounded-sm">
+              Ver envíos
+            </a>`
+        : "";
+    }
+
+    function pintarAccionesInferiores(c: CampanaConPosts) {
+      // El bloque de acciones cambia según el estado.
+      let html = "";
+
+      if (esEditable(c)) {
+        html += `
+          <button type="button" id="btn-guardar"
+                  class="btn-ghost text-xs">Guardar borrador</button>`;
+        html += `
+          <div class="flex items-center gap-2 ml-auto">
+            <button type="button" id="btn-eliminar"
+                    class="text-[11px] uppercase tracking-widest text-wine-300 hover:text-wine-200 transition px-3 py-1.5 border border-wine-400/30 rounded-sm">
+              Eliminar
+            </button>
+            <button type="button" id="btn-encolar" class="btn-gold text-xs">
+              ${c.estado === "pausada" ? "Reanudar envíos" : "Encolar y enviar"}
+            </button>
+          </div>`;
+      } else if (c.estado === "lista" || c.estado === "enviando") {
+        html += `
+          <p class="text-xs text-parchment-400 italic font-serif">
+            La campaña está en cola. Se irán enviando lotes según el límite de Resend.
+          </p>
+          <div class="flex items-center gap-2 ml-auto">
+            <button type="button" id="btn-pausar"
+                    class="text-[11px] uppercase tracking-widest text-amber-300 hover:text-amber-200 transition px-3 py-1.5 border border-amber-400/30 rounded-sm">
+              Pausar
+            </button>
+            <button type="button" id="btn-cancelar"
+                    class="text-[11px] uppercase tracking-widest text-wine-300 hover:text-wine-200 transition px-3 py-1.5 border border-wine-400/30 rounded-sm">
+              Cancelar campaña
+            </button>
+          </div>`;
+      } else if (c.estado === "enviada") {
+        html += `
+          <p class="text-xs text-parchment-400 italic font-serif">
+            Campaña terminada. Los datos quedan como histórico.
+          </p>`;
+      } else if (c.estado === "cancelada") {
+        html += `
+          <p class="text-xs text-parchment-400 italic font-serif">
+            Campaña cancelada. No se enviarán más correos.
+          </p>
+          <button type="button" id="btn-eliminar" class="ml-auto text-[11px] uppercase tracking-widest text-wine-300 hover:text-wine-200 transition px-3 py-1.5 border border-wine-400/30 rounded-sm">
+            Eliminar definitivamente
+          </button>`;
+      } else {
+        // fallida
+        html += `
+          <p class="text-xs text-wine-300 italic font-serif">
+            Campaña en estado fallido. Cancelala y volvé a empezar si es necesario.
+          </p>
+          <button type="button" id="btn-cancelar" class="ml-auto text-[11px] uppercase tracking-widest text-wine-300 hover:text-wine-200 transition px-3 py-1.5 border border-wine-400/30 rounded-sm">
+            Cancelar
+          </button>`;
+      }
+
+      $accionesAbajo.innerHTML = html;
+
+      // Re-bind handlers
+      document.getElementById("btn-guardar")?.addEventListener("click", onGuardar);
+      document.getElementById("btn-encolar")?.addEventListener("click", onEncolar);
+      document.getElementById("btn-pausar")?.addEventListener("click", onPausar);
+      document.getElementById("btn-cancelar")?.addEventListener("click", onCancelar);
+      document.getElementById("btn-eliminar")?.addEventListener("click", onEliminar);
+    }
+
+    function pintarBloqueProgreso(c: CampanaConPosts) {
+      const debeMostrar = ["lista", "enviando", "pausada", "enviada"].includes(c.estado);
+      if (!debeMostrar) {
+        $bloqueProgreso.classList.add("hidden");
+        return;
+      }
+      $bloqueProgreso.classList.remove("hidden");
+      $progEnviados.textContent = String(c.enviados);
+      $progTotal.textContent = String(c.total_destinatarios);
+      $progRestante.textContent = estimacionRestante(c);
+      const pct = progresoCampana(c);
+      $progFill.style.width = `${pct}%`;
+      $progDetalle.textContent = `${pct}% · ${c.fallidos} fallidos · ${c.rebotados} rebotados · ${c.abiertos} abiertos`;
+      $progLinkDetalle.href = `/area-reservada/newsletter/envios?id=${c.id}`;
+    }
+
+    // -----------------------------------------------------------------------
+    // Render de posts seleccionados (con drag para reordenar)
+    // -----------------------------------------------------------------------
+    function pintarPostsSeleccionados() {
+      const editable = !!estado.campana && esEditable(estado.campana);
+
+      if (estado.postsActuales.length === 0) {
+        $postsSeleccionados.innerHTML = "";
+        $postsSeleccionados.appendChild($postsVacio);
+        $postsVacio.classList.remove("hidden");
+        return;
+      }
+      $postsVacio.classList.add("hidden");
+
+      $postsSeleccionados.innerHTML = estado.postsActuales
+        .map(
+          (p, i) => `
+        <div class="post-card" draggable="${editable ? "true" : "false"}" data-id="${p.id}" data-index="${i}">
+          <div class="post-card-handle" aria-hidden="true">⋮⋮</div>
+          <div class="post-card-info">
+            <div class="font-display text-parchment-50 text-sm">${escapeHtml(p.titulo)}</div>
+            <div class="text-xs text-parchment-500 font-mono mt-0.5">/blog/${escapeHtml(p.slug)}</div>
+            ${p.extracto ? `<p class="text-xs text-parchment-300 mt-1.5 font-serif italic line-clamp-2">${escapeHtml(p.extracto)}</p>` : ""}
+          </div>
+          ${editable ? `<button type="button" class="post-card-quitar" data-quitar="${p.id}">Quitar</button>` : ""}
+        </div>`,
+        )
+        .join("");
+
+      // Bind quitar
+      $postsSeleccionados.querySelectorAll<HTMLButtonElement>("[data-quitar]")
+        .forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = btn.dataset.quitar!;
+            estado.postsActuales = estado.postsActuales.filter((p) => p.id !== id);
+            estado.sucio = true;
+            pintarPostsSeleccionados();
+          });
+        });
+
+      if (editable) bindDragAndDrop();
+    }
+
+    function bindDragAndDrop() {
+      let dragIndex: number | null = null;
+
+      const cards = $postsSeleccionados.querySelectorAll<HTMLElement>(".post-card");
+      cards.forEach((card) => {
+        card.addEventListener("dragstart", (e) => {
+          dragIndex = Number(card.dataset.index);
+          card.classList.add("is-dragging");
+          (e.dataTransfer as DataTransfer | null)?.setData("text/plain", String(dragIndex));
+        });
+        card.addEventListener("dragend", () => {
+          dragIndex = null;
+          card.classList.remove("is-dragging");
+          $postsSeleccionados
+            .querySelectorAll(".is-drop-target")
+            .forEach((c) => c.classList.remove("is-drop-target"));
+        });
+        card.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          card.classList.add("is-drop-target");
+        });
+        card.addEventListener("dragleave", () => {
+          card.classList.remove("is-drop-target");
+        });
+        card.addEventListener("drop", (e) => {
+          e.preventDefault();
+          card.classList.remove("is-drop-target");
+          const targetIndex = Number(card.dataset.index);
+          if (dragIndex === null || dragIndex === targetIndex) return;
+          const [removido] = estado.postsActuales.splice(dragIndex, 1);
+          estado.postsActuales.splice(targetIndex, 0, removido);
+          estado.sucio = true;
+          pintarPostsSeleccionados();
+        });
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // Modal de selección de posts
+    // -----------------------------------------------------------------------
+    function abrirModalPosts() {
+      estado.seleccionPendiente = new Set(estado.postsActuales.map((p) => p.id));
+      estado.busquedaPosts = "";
+      $buscadorPosts.value = "";
+      $modalPosts.classList.remove("hidden");
+      $modalPosts.classList.add("flex");
+      cargarPostsDisponibles();
+    }
+
+    function cerrarModalPosts() {
+      $modalPosts.classList.add("hidden");
+      $modalPosts.classList.remove("flex");
+    }
+
+    async function cargarPostsDisponibles() {
+      $listaPostsDisponibles.innerHTML = `
+        <div class="py-12 text-center text-parchment-400 text-sm font-serif italic">Cargando…</div>`;
+      estado.postsDisponibles = await listarPostsPublicadosParaSeleccion(200);
+      pintarPostsDisponibles();
+    }
+
+    function pintarPostsDisponibles() {
+      const q = estado.busquedaPosts.trim().toLowerCase();
+      const filtrados = q
+        ? estado.postsDisponibles.filter((p) =>
+            (p.titulo + " " + p.slug + " " + (p.extracto ?? "")).toLowerCase().includes(q),
+          )
+        : estado.postsDisponibles;
+
+      if (filtrados.length === 0) {
+        $listaPostsDisponibles.innerHTML = `
+          <div class="py-12 text-center text-parchment-400 text-sm font-serif italic">
+            No hay artículos publicados ${q ? "para esa búsqueda" : ""}.
+          </div>`;
+        actualizarContadorModal();
+        return;
+      }
+
+      $listaPostsDisponibles.innerHTML = filtrados
+        .map((p) => {
+          const checked = estado.seleccionPendiente.has(p.id);
+          return `
+          <label class="post-pickable ${checked ? "is-checked" : ""}" data-id="${p.id}">
+            <input type="checkbox" ${checked ? "checked" : ""} data-id="${p.id}" />
+            <div class="flex-1 min-w-0">
+              <div class="font-display text-parchment-50 text-sm">${escapeHtml(p.titulo)}</div>
+              <div class="text-[11px] text-parchment-500 font-mono mt-0.5">/blog/${escapeHtml(p.slug)}</div>
+              ${p.extracto ? `<p class="text-xs text-parchment-300 mt-1 font-serif italic line-clamp-2">${escapeHtml(p.extracto)}</p>` : ""}
+              ${p.publicado_en ? `<p class="text-[10px] text-parchment-500 mt-1 uppercase tracking-widest">${escapeHtml(formatearFecha(p.publicado_en))}</p>` : ""}
+            </div>
+          </label>`;
+        })
+        .join("");
+
+      $listaPostsDisponibles
+        .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+        .forEach((cb) => {
+          cb.addEventListener("change", () => {
+            const id = cb.dataset.id!;
+            if (cb.checked) estado.seleccionPendiente.add(id);
+            else estado.seleccionPendiente.delete(id);
+            cb.closest(".post-pickable")?.classList.toggle("is-checked", cb.checked);
+            actualizarContadorModal();
+          });
+        });
+
+      actualizarContadorModal();
+    }
+
+    function actualizarContadorModal() {
+      const n = estado.seleccionPendiente.size;
+      $modalContador.textContent = `${n} ${n === 1 ? "seleccionado" : "seleccionados"}`;
+    }
+
+    function aplicarSeleccionPosts() {
+      // Mantener orden actual para los que ya estaban; los nuevos van al final.
+      const idsActuales = estado.postsActuales.map((p) => p.id);
+      const nuevos = Array.from(estado.seleccionPendiente).filter(
+        (id) => !idsActuales.includes(id),
+      );
+      const filtrados = estado.postsActuales.filter((p) =>
+        estado.seleccionPendiente.has(p.id),
+      );
+
+      const lookup = new Map(
+        estado.postsDisponibles.map((p) => [p.id, p] as const),
+      );
+      const agregados = nuevos
+        .map((id) => lookup.get(id))
+        .filter((p): p is PostParaSeleccion => Boolean(p))
+        .map((p) => ({
+          id: p.id,
+          titulo: p.titulo,
+          slug: p.slug,
+          extracto: p.extracto,
+          publicado_en: p.publicado_en,
+        }));
+
+      estado.postsActuales = [...filtrados, ...agregados];
+      estado.sucio = true;
+      pintarPostsSeleccionados();
+      cerrarModalPosts();
+    }
+
+    // -----------------------------------------------------------------------
+    // Carga inicial
+    // -----------------------------------------------------------------------
+    async function cargar() {
+      showLoader("Cargando campaña…");
+      try {
+        const c = await obtenerCampana(campanaId!);
+        if (!c) {
+          mostrarMensaje("La campaña no existe o ya fue eliminada.", "error");
+          return;
+        }
+
+        estado.campana = c;
+        estado.bufferIntroJson = c.intro_json ?? null;
+        estado.bufferIntroHtml = c.intro_html ?? null;
+        estado.postsActuales = c.posts.map((p) => ({
+          id: p.post_id,
+          titulo: p.titulo ?? "(sin título)",
+          slug: p.slug ?? "",
+          extracto: p.extracto ?? null,
+          publicado_en: p.publicado_en ?? null,
+        }));
+
+        $asunto.value = c.asunto ?? "";
+
+        // Cargar contenido en el editor cuando esté listo. EditorBlog inicializa
+        // de forma sincrónica al parsear el HTML; le inyectamos el contenido
+        // a través del evento custom que ya soporta.
+        if (editorRoot) {
+          editorRoot.dispatchEvent(
+            new CustomEvent("editor:setContent", {
+              detail: {
+                json: estado.bufferIntroJson,
+                html: estado.bufferIntroHtml,
+              },
+            }),
+          );
+        }
+
+        pintarHeader(c);
+        pintarPostsSeleccionados();
+
+        // Si vino de "?nueva=1", focus al asunto.
+        if (params.get("nueva") === "1") {
+          $asunto.focus();
+          $asunto.select();
+        }
+
+        // Si la campaña está activa, refrescar contadores cada 20s.
+        if (["lista", "enviando"].includes(c.estado)) {
+          setInterval(refrescarContadores, 20000);
+        }
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function refrescarContadores() {
+      if (!estado.campana) return;
+      const c = await obtenerCampana(estado.campana.id);
+      if (!c) return;
+      estado.campana = c;
+      pintarHeader(c);
+    }
+
+    // -----------------------------------------------------------------------
+    // Acciones
+    // -----------------------------------------------------------------------
+    editorRoot?.addEventListener("editor:change", (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      estado.bufferIntroJson = detail?.json ?? null;
+      estado.bufferIntroHtml = detail?.html ?? null;
+      estado.sucio = true;
+    });
+
+    $asunto.addEventListener("input", () => {
+      estado.sucio = true;
+    });
+
+    async function persistirCambios(): Promise<boolean> {
+      if (!estado.campana) return false;
+      const r = await guardarCampana({
+        id: estado.campana.id,
+        asunto: $asunto.value.trim() || "(sin asunto)",
+        intro_json: estado.bufferIntroJson,
+        intro_html: estado.bufferIntroHtml,
+      });
+      if (!r.ok) {
+        mostrarMensaje(`No se pudo guardar: ${r.error}`, "error");
+        return false;
+      }
+      const r2 = await setPostsDeCampana(
+        estado.campana.id,
+        estado.postsActuales.map((p) => p.id),
+      );
+      if (!r2.ok) {
+        mostrarMensaje(`No se pudieron guardar los artículos: ${r2.error}`, "error");
+        return false;
+      }
+      estado.sucio = false;
+      return true;
+    }
+
+    async function onGuardar() {
+      ocultarMensaje();
+      showLoader("Guardando…");
+      try {
+        const ok = await persistirCambios();
+        if (!ok) return;
+        mostrarMensaje("Borrador guardado.", "ok");
+        // Refrescar header (puede haber cambiado el asunto)
+        const c = await obtenerCampana(estado.campana!.id);
+        if (c) {
+          estado.campana = c;
+          pintarHeader(c);
+        }
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function onEncolar() {
+      if (!estado.campana) return;
+      ocultarMensaje();
+
+      const continuar = await confirmar({
+        titulo: "¿Encolar y enviar?",
+        cuerpo: `Se va a generar un envío para cada suscriptor activo. La campaña pasa a la cola y los correos se irán mandando según el límite diario de Resend (~100/día). No se puede deshacer fácilmente, pero podés pausar o cancelar después.`,
+        confirmar: "Encolar",
+        cancelar: "Mejor no",
+      });
+      if (!continuar) return;
+
+      showLoader("Guardando cambios…");
+      try {
+        if (estado.sucio) {
+          const ok = await persistirCambios();
+          if (!ok) return;
+        }
+      } finally {
+        hideLoader();
+      }
+
+      showLoader("Encolando campaña…");
+      try {
+        const r = await encolarCampana(estado.campana.id);
+        if (!r.ok) {
+          mostrarMensaje(`No se pudo encolar: ${r.error}`, "error");
+          return;
+        }
+        mostrarMensaje(
+          "Campaña encolada. Los envíos comenzarán en la próxima corrida del worker.",
+          "ok",
+        );
+        const c = await obtenerCampana(estado.campana.id);
+        if (c) {
+          estado.campana = c;
+          pintarHeader(c);
+        }
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function onPausar() {
+      if (!estado.campana) return;
+      ocultarMensaje();
+      showLoader("Pausando…");
+      try {
+        const r = await pausarCampana(estado.campana.id);
+        if (!r.ok) {
+          mostrarMensaje(`No se pudo pausar: ${r.error}`, "error");
+          return;
+        }
+        const c = await obtenerCampana(estado.campana.id);
+        if (c) {
+          estado.campana = c;
+          pintarHeader(c);
+        }
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function onCancelar() {
+      if (!estado.campana) return;
+      ocultarMensaje();
+      const continuar = await confirmar({
+        titulo: "¿Cancelar la campaña?",
+        cuerpo:
+          "Los envíos pendientes no se mandarán. Esta acción es definitiva. Los envíos ya enviados quedan como histórico.",
+        confirmar: "Sí, cancelar",
+        cancelar: "Mejor no",
+        peligroso: true,
+      });
+      if (!continuar) return;
+      showLoader("Cancelando…");
+      try {
+        const r = await cancelarCampana(estado.campana.id);
+        if (!r.ok) {
+          mostrarMensaje(`No se pudo cancelar: ${r.error}`, "error");
+          return;
+        }
+        const c = await obtenerCampana(estado.campana.id);
+        if (c) {
+          estado.campana = c;
+          pintarHeader(c);
+        }
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function onEliminar() {
+      if (!estado.campana) return;
+      ocultarMensaje();
+      const continuar = await confirmar({
+        titulo: "¿Eliminar definitivamente?",
+        cuerpo:
+          "Se borra la campaña y todo su histórico de envíos. No se puede recuperar.",
+        confirmar: "Eliminar",
+        cancelar: "No",
+        peligroso: true,
+      });
+      if (!continuar) return;
+      showLoader("Eliminando…");
+      try {
+        const r = await eliminarCampana(estado.campana.id);
+        if (!r.ok) {
+          mostrarMensaje(`No se pudo eliminar: ${r.error}`, "error");
+          return;
+        }
+        window.location.replace("/area-reservada/newsletter");
+      } finally {
+        hideLoader();
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Modal de confirmación reutilizable (look del sitio)
+    // -----------------------------------------------------------------------
+    interface OpcionesConfirmar {
+      titulo: string;
+      cuerpo: string;
+      confirmar: string;
+      cancelar: string;
+      peligroso?: boolean;
+    }
+
+    function confirmar(opts: OpcionesConfirmar): Promise<boolean> {
+      return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.className =
+          "fixed inset-0 z-[1250] flex items-center justify-center bg-night-950/80 backdrop-blur-sm p-4";
+        overlay.innerHTML = `
+          <div class="card-altar p-6 max-w-md w-full space-y-4">
+            <p class="font-display text-lg text-parchment-50">${escapeHtml(opts.titulo)}</p>
+            <p class="text-sm text-parchment-300 font-serif">${escapeHtml(opts.cuerpo)}</p>
+            <div class="flex items-center justify-end gap-2 pt-2">
+              <button type="button" data-act="cancel"
+                      class="btn-ghost text-xs">${escapeHtml(opts.cancelar)}</button>
+              <button type="button" data-act="ok"
+                      class="${opts.peligroso ? "text-[11px] uppercase tracking-widest bg-wine-500 hover:bg-wine-400 text-parchment-50 px-4 py-2 rounded-sm transition" : "btn-gold text-xs"}">
+                ${escapeHtml(opts.confirmar)}
+              </button>
+            </div>
+          </div>`;
+        document.body.appendChild(overlay);
+        const cerrar = (ok: boolean) => {
+          overlay.remove();
+          resolve(ok);
+        };
+        overlay.querySelector('[data-act="ok"]')?.addEventListener("click", () => cerrar(true));
+        overlay
+          .querySelector('[data-act="cancel"]')
+          ?.addEventListener("click", () => cerrar(false));
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) cerrar(false);
+        });
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // Bind modal
+    // -----------------------------------------------------------------------
+    $btnAgregarPosts.addEventListener("click", abrirModalPosts);
+    $btnCerrarModalPosts.addEventListener("click", cerrarModalPosts);
+    $btnCancelarModalPosts.addEventListener("click", cerrarModalPosts);
+    $btnAplicarPosts.addEventListener("click", aplicarSeleccionPosts);
+    $modalPosts.addEventListener("click", (e) => {
+      if (e.target === $modalPosts) cerrarModalPosts();
+    });
+    $buscadorPosts.addEventListener("input", () => {
+      estado.busquedaPosts = $buscadorPosts.value;
+      pintarPostsDisponibles();
+    });
+
+    // Aviso al cerrar pestaña con cambios sin guardar
+    window.addEventListener("beforeunload", (e) => {
+      if (!estado.sucio) return;
+      e.preventDefault();
+      e.returnValue = "";
+    });
+
+    cargar();
+  </script>
+</AdminLayout>

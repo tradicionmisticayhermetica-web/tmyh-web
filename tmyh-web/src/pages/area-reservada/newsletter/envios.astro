@@ -1,0 +1,236 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Envíos de campaña" active="newsletter">
+  <a
+    href="#"
+    id="link-volver"
+    class="text-xs uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition inline-flex items-center gap-2 mb-6"
+  >
+    ← Volver a la campaña
+  </a>
+
+  <header class="mb-6">
+    <p class="title-eyebrow">Envíos</p>
+    <h1
+      id="titulo-campana"
+      class="font-display text-2xl text-parchment-50 mt-3"
+    >
+      —
+    </h1>
+    <p
+      id="resumen-meta"
+      class="text-xs text-parchment-500 font-mono mt-2"
+    ></p>
+  </header>
+
+  {/* Filtros + buscador */}
+  <div class="flex items-center gap-2 mb-6 flex-wrap">
+    <button class="filtro-btn is-active" data-filtro="todos">Todos</button>
+    <button class="filtro-btn" data-filtro="pendiente">Pendientes</button>
+    <button class="filtro-btn" data-filtro="enviado">Enviados</button>
+    <button class="filtro-btn" data-filtro="fallido">Fallidos</button>
+    <button class="filtro-btn" data-filtro="rebotado_definitivo">Rebotados</button>
+    <button class="filtro-btn" data-filtro="cancelado">Cancelados</button>
+    <div class="flex-1"></div>
+    <input
+      id="buscador"
+      type="search"
+      placeholder="Buscar por email o nombre…"
+      class="bg-night-950/60 border border-gold-400/15 focus:border-gold-400/60 outline-none text-parchment-100 px-3 py-1.5 text-xs font-sans transition rounded-sm w-full sm:w-72"
+    />
+    <span
+      id="contador"
+      class="text-[10px] uppercase tracking-widest text-parchment-400 px-2 py-1 border border-gold-400/20 rounded-sm bg-night-950/50"
+      >—</span
+    >
+  </div>
+
+  <section id="lista-envios" class="card-altar divide-y divide-gold-400/10">
+    <div class="py-12 text-center text-parchment-400 text-sm font-serif italic">
+      Cargando envíos…
+    </div>
+  </section>
+
+  <style>
+    .filtro-btn {
+      font-family: var(--font-sans);
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-parchment-300);
+      padding: 0.5rem 1rem;
+      border: 1px solid rgb(230 196 100 / 0.15);
+      border-radius: 2px;
+      background: rgb(11 10 18 / 0.5);
+      transition: all 180ms ease;
+      cursor: pointer;
+    }
+    .filtro-btn:hover {
+      color: var(--color-gold-300);
+      border-color: rgb(212 175 55 / 0.4);
+    }
+    .filtro-btn.is-active {
+      color: var(--color-night-950);
+      background: linear-gradient(180deg, var(--color-gold-300), var(--color-gold-500));
+      border-color: var(--color-gold-600);
+    }
+  </style>
+
+  <script>
+    import {
+      obtenerCampana,
+      listarEnviosDeCampana,
+      ETIQUETA_ESTADO_CAMPANA,
+      type EstadoEnvio,
+      type EnvioCampana,
+      type CampanaConPosts,
+    } from "../../../lib/newsletter-cms";
+    import { formatearFecha } from "../../../lib/admin";
+
+    const params = new URLSearchParams(window.location.search);
+    const campanaId = params.get("id");
+
+    if (!campanaId) {
+      window.location.replace("/area-reservada/newsletter");
+    }
+
+    const $titulo = document.getElementById("titulo-campana") as HTMLElement;
+    const $meta = document.getElementById("resumen-meta") as HTMLElement;
+    const $linkVolver = document.getElementById("link-volver") as HTMLAnchorElement;
+    const $lista = document.getElementById("lista-envios") as HTMLElement;
+    const $contador = document.getElementById("contador") as HTMLElement;
+    const $buscador = document.getElementById("buscador") as HTMLInputElement;
+
+    let filtroActual: EstadoEnvio | "todos" = "todos";
+    let busquedaActual = "";
+
+    const ETIQUETA_ESTADO_ENVIO: Record<EstadoEnvio, string> = {
+      pendiente: "Pendiente",
+      enviando: "Enviando",
+      enviado: "Enviado",
+      fallido: "Fallido",
+      rebotado_definitivo: "Rebote",
+      cancelado: "Cancelado",
+    };
+
+    const COLOR_ESTADO_ENVIO: Record<EstadoEnvio, string> = {
+      pendiente: "text-parchment-400 border-parchment-400/30",
+      enviando: "text-gold-200 border-gold-400/60 bg-gold-400/10",
+      enviado: "text-emerald-300 border-emerald-400/40 bg-emerald-400/5",
+      fallido: "text-wine-300 border-wine-400/40 bg-wine-400/5",
+      rebotado_definitivo: "text-wine-200 border-wine-400/60 bg-wine-400/10",
+      cancelado: "text-parchment-600 border-parchment-600/20 opacity-60",
+    };
+
+    function escapeHtml(s: string): string {
+      return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function pintarHeader(c: CampanaConPosts) {
+      $titulo.textContent = c.asunto;
+      $linkVolver.href = `/area-reservada/newsletter/editar?id=${c.id}`;
+      $meta.textContent = [
+        `Estado: ${ETIQUETA_ESTADO_CAMPANA[c.estado]}`,
+        `${c.total_destinatarios} destinatarios`,
+        `${c.enviados} enviados`,
+        `${c.fallidos} fallidos`,
+        `${c.rebotados} rebotados`,
+        `${c.abiertos} abiertos`,
+      ].join(" · ");
+    }
+
+    function pintarLista(filas: EnvioCampana[]) {
+      if (filas.length === 0) {
+        $lista.innerHTML = `
+          <div class="py-12 text-center text-parchment-400 text-sm font-serif italic">
+            No hay envíos en esta vista.
+          </div>`;
+        return;
+      }
+
+      $lista.innerHTML = filas
+        .map((e) => {
+          const colorClases = COLOR_ESTADO_ENVIO[e.estado];
+          const etiqueta = ETIQUETA_ESTADO_ENVIO[e.estado];
+          const fechaUltima =
+            e.enviado_en ?? e.rebotado_en ?? e.creado_en;
+
+          return `
+        <div class="px-6 py-4">
+          <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 flex-wrap mb-1">
+                <span class="font-mono text-sm text-parchment-100">${escapeHtml(e.email_snapshot)}</span>
+                <span class="text-[9px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm ${colorClases}">${etiqueta}</span>
+                ${e.abierto_en ? `<span class="text-[9px] uppercase tracking-widest text-emerald-300 px-1.5 py-0.5 border border-emerald-400/40 rounded-sm">Abierto</span>` : ""}
+              </div>
+              ${e.nombre_snapshot ? `<div class="text-xs text-parchment-300 font-serif">${escapeHtml(e.nombre_snapshot)}</div>` : ""}
+              ${
+                e.error_mensaje
+                  ? `<div class="text-xs text-wine-300 mt-1 font-mono break-all">
+                       ${e.error_codigo ? escapeHtml(e.error_codigo) + " · " : ""}${escapeHtml(e.error_mensaje)}
+                     </div>`
+                  : ""
+              }
+            </div>
+            <div class="text-[11px] text-parchment-400 uppercase tracking-widest whitespace-nowrap text-right shrink-0">
+              ${escapeHtml(formatearFecha(fechaUltima))}
+              ${e.intentos > 1 ? `<div class="text-[9px] text-parchment-500 mt-0.5 normal-case">${e.intentos} intentos</div>` : ""}
+            </div>
+          </div>
+        </div>`;
+        })
+        .join("");
+    }
+
+    async function cargar() {
+      if (!campanaId) return;
+
+      $lista.innerHTML = `<div class="py-12 text-center text-parchment-400 text-sm font-serif italic">Cargando…</div>`;
+
+      const c = await obtenerCampana(campanaId);
+      if (!c) {
+        $titulo.textContent = "Campaña no encontrada";
+        $lista.innerHTML = "";
+        return;
+      }
+      pintarHeader(c);
+
+      const { filas, total } = await listarEnviosDeCampana(campanaId, {
+        estado: filtroActual === "todos" ? undefined : filtroActual,
+        busqueda: busquedaActual,
+        limite: 500,
+      });
+
+      $contador.textContent = `${total} ${total === 1 ? "envío" : "envíos"}`;
+      pintarLista(filas);
+    }
+
+    document.querySelectorAll<HTMLButtonElement>(".filtro-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document
+          .querySelectorAll(".filtro-btn")
+          .forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        filtroActual = (btn.dataset.filtro as any) ?? "todos";
+        cargar();
+      });
+    });
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    $buscador.addEventListener("input", () => {
+      busquedaActual = $buscador.value;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(cargar, 250);
+    });
+
+    cargar();
+  </script>
+</AdminLayout>

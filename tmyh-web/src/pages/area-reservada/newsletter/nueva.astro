@@ -1,0 +1,48 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Nueva campaña" active="newsletter">
+  <div class="max-w-md mx-auto py-12 text-center">
+    <div class="text-3xl text-gold-400 mb-4">✦</div>
+    <h1 class="font-display text-2xl text-parchment-50 mb-3">Nueva campaña</h1>
+    <p class="text-parchment-300 font-serif italic mb-8">
+      Estamos preparando un boletín en blanco…
+    </p>
+    <div id="estado" class="text-xs text-parchment-400 mb-6">
+      Creando borrador en Supabase…
+    </div>
+    <a
+      href="/area-reservada/newsletter"
+      class="text-[11px] uppercase tracking-widest text-parchment-300 hover:text-gold-300 transition"
+    >
+      ← Volver al listado
+    </a>
+  </div>
+
+  <script>
+    import { guardarCampana } from "../../../lib/newsletter-cms";
+
+    const estado = document.getElementById("estado") as HTMLElement | null;
+
+    async function crear() {
+      const r = await guardarCampana({
+        asunto: "Nuevo boletín",
+        intro_html: null,
+        intro_json: null,
+      });
+
+      if (!r.ok || !r.id) {
+        if (estado) {
+          estado.textContent = `No se pudo crear la campaña: ${r.error ?? "error desconocido"}`;
+          estado.classList.add("text-wine-300");
+        }
+        return;
+      }
+
+      window.location.replace(`/area-reservada/newsletter/editar?id=${r.id}&nueva=1`);
+    }
+
+    crear();
+  </script>
+</AdminLayout>
