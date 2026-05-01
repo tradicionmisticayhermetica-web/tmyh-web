@@ -37,5 +37,23 @@ export default defineConfig({
     },
   },
 
-  integrations: [sitemap()],
+  integrations: [
+    sitemap({
+      // Solo incluimos URLs realmente públicas y que aporten a SEO.
+      // Excluimos:
+      //   - /area-reservada/* (panel admin, ya tienen noindex)
+      //   - /login, /recuperar-password, /restablecer-password (privadas)
+      //   - /newsletter/* (links únicos por usuario, no indexables)
+      //   - /blog/post/ sin slug (la página de detalle se sirve via query)
+      filter: (page) => {
+        if (page.includes("/area-reservada/")) return false;
+        if (page.includes("/login/")) return false;
+        if (page.includes("/recuperar-password/")) return false;
+        if (page.includes("/restablecer-password/")) return false;
+        if (page.includes("/newsletter/")) return false;
+        if (page.match(/\/blog\/post\/?$/)) return false;
+        return true;
+      },
+    }),
+  ],
 });

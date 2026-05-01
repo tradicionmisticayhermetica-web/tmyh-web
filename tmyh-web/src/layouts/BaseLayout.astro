@@ -25,6 +25,42 @@ const siteUrl = Astro.site ?? new URL("https://www.tradicionmisticayhermetica.co
 const canonical = new URL(Astro.url.pathname, siteUrl).toString();
 const ogImageAbsolute = new URL(ogImage, siteUrl).toString();
 const fullTitle = `${title} · Tradición Mística y Hermética`;
+
+// JSON-LD de Organization + WebSite. Se inyecta en todas las páginas para
+// que Google entienda quién es la marca, su logo y su URL principal.
+// El JSON-LD específico de cada artículo (BlogPosting) se inyecta en
+// runtime desde blog/post.astro al cargar el contenido.
+const orgJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Tradición Mística y Hermética",
+  alternateName: "TMyH — Centro de estudios tradicionales",
+  url: siteUrl.toString(),
+  logo: new URL("/favicon.svg", siteUrl).toString(),
+  description:
+    "Escuela de simbología, espagiria y tradición hermética dirigida por Emanuel Mari.",
+  founder: {
+    "@type": "Person",
+    name: "Emanuel Mari",
+  },
+  sameAs: [
+    "https://www.instagram.com/tradicionmisticayhermetica/",
+  ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    email: "contacto@tradicionmisticayhermetica.com",
+    availableLanguage: ["Spanish"],
+  },
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Tradición Mística y Hermética",
+  url: siteUrl.toString(),
+  inLanguage: "es-AR",
+};
 ---
 
 <!doctype html>
@@ -71,6 +107,19 @@ const fullTitle = `${title} · Tradición Mística y Hermética`;
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap"
     />
+
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify(orgJsonLd)}
+    />
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify(websiteJsonLd)}
+    />
+
+    {/* Slot opcional para metadatos extra por página
+        (ej. JSON-LD `Course` desde /cursos/[slug]). */}
+    <slot name="head" />
   </head>
 
   <body class="min-h-screen flex flex-col">

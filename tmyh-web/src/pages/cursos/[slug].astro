@@ -69,9 +69,49 @@ const paypalUrl = construirPaypalUrl(
   curso.inscripcion?.paypalUser,
   curso.precio?.internacionalUSD,
 );
+
+// JSON-LD `Course` para enriquecer la presentación del curso en Google
+// Search. Solo lo emitimos para cursos en estados públicos relevantes
+// (no históricos ni cerrados, donde la oferta no está activa).
+const cursoJsonLd =
+  curso.estado === "activo" || curso.estado === "proximo"
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        name: curso.titulo,
+        description: curso.descripcionCorta,
+        provider: {
+          "@type": "Organization",
+          name: "Tradición Mística y Hermética",
+          url: "https://www.tradicionmisticayhermetica.com",
+        },
+        inLanguage: "es-AR",
+        educationalLevel: curso.nivel,
+        ...(curso.imagen
+          ? {
+              image: /^https?:\/\//i.test(curso.imagen)
+                ? curso.imagen
+                : `https://www.tradicionmisticayhermetica.com${curso.imagen}`,
+            }
+          : {}),
+        hasCourseInstance: {
+          "@type": "CourseInstance",
+          courseMode: curso.modalidad,
+          ...(curso.inicio ? { startDate: curso.inicio } : {}),
+          ...(curso.duracion ? { duration: curso.duracion } : {}),
+        },
+      }
+    : null;
 ---
 
 <BaseLayout title={curso.titulo} description={curso.descripcionCorta}>
+  {cursoJsonLd && (
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify(cursoJsonLd)}
+      slot="head"
+    />
+  )}
   {/* ====================================================
         HERO del curso
       ==================================================== */}

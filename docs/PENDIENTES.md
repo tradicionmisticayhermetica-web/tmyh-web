@@ -37,11 +37,14 @@ El despegue fuerte suele venir del **contenido útil y estable** en el tiempo, m
 
 - [ ] **Search Console** (si no está): dar de alta la propiedad `tradicionmisticayhermetica.com`, enviar sitemap, revisar cobertura y URLs con errores.
 - [ ] **Inventario**: listar URLs del WordPress que aún reciban clics o estén indexadas (export “Páginas con tráfico” o lista manual priorizada).
-- [ ] **Redirects 301** en hosting: mapear rutas viejas → nuevas; probar 2–3 URLs críticas en navegador.
-- [ ] **Meta por página estática**: repasar `title` y `description` en home, cursos, tradición, contacto, blog índice.
+- [x] **Redirects 301** en hosting: archivo `public/.htaccess` con plantilla de reglas (HTTPS, posts WP año/mes/día → `/blog/post?slug=...`, categorías/tags → `/blog`, feeds, etc.). Falta completar mapeos específicos cuando esté el inventario.
+- [x] **Meta por página estática**: `title` y `description` repasados en home, cursos, tradición, contacto, blog índice, 404 (este último estaba con encoding corrupto, se reescribió).
 - [x] **Post del blog (detalle)**: al cargar el artículo en el navegador se actualizan `title`, `meta description` (extracto o primer texto del cuerpo), **Open Graph**, **Twitter Cards**, **`link rel=canonical`** y **JSON-LD** `BlogPosting` (sin cambiar el diseño de la página). Nota: los meta “finos” existen tras ejecutar JS; la mayoría de bots modernos lo procesan.
-- [ ] **Revisión rápida**: `h1` único por página, listado del blog con textos de enlace claros, `alt` en imágenes del contenido Tiptap cuando falte.
-- [ ] **Opcional**: JSON-LD `BlogPosting` en posts publicados.
+- [x] **Revisión rápida**: `h1` único por página verificado, `alt` presentes en imágenes principales (home, tradición, cursos, posts).
+- [x] **JSON-LD global**: `Organization` + `WebSite` inyectados en `BaseLayout` (aparecen en todas las páginas públicas).
+- [x] **JSON-LD `Course`**: emitido en `/cursos/[slug]` para cursos en estado `activo` o `proximo`.
+- [x] **Sitemap filtrado**: solo URLs públicas reales (excluye `/area-reservada/*`, `/login`, `/recuperar-password`, `/restablecer-password`, `/newsletter/*` y `/blog/post/` sin slug).
+- [x] **`robots.txt` reforzado**: `Disallow` explícitos para áreas privadas y links únicos por usuario.
 - [ ] **Seguimiento**: tras 2–4 semanas, revisar Search Console (impresiones, clics, nuevas páginas indexadas) y ajustar títulos/extractos donde haga falta.
 
 ---
