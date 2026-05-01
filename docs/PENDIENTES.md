@@ -6,9 +6,9 @@ Infraestructura: `docs/arquitectura.md`.
 
 ## Orden de trabajo (visión general)
 
-1. **SEO** — técnico + migración de URLs + metadatos compartibles; base para que Google entienda el sitio y no se pierda el tráfico viejo.
-2. **Cursos (backoffice)** — autogestión de fichas de curso al estilo del blog, alineado a las páginas públicas actuales (Heka / Simbología).
-3. **Newsletter** — dejar para el final: panel en área reservada, cola de envíos, métricas y análisis simples.
+1. ~~**SEO**~~ — código completo, quedan tareas manuales (inventario de URLs viejas + seguimiento Search Console).
+2. ~~**Cursos (backoffice)**~~ — terminado, autogestión completa con papelera, estados, deploy automático.
+3. **Newsletter** — *en curso (mayo 2026)*. Bloque 1 (BD) listo. Quedan 5 bloques más (UI, worker Resend, cron, webhook eventos, analíticas).
 4. **LMS / video / pagos** — fases grandes más adelante (ver abajo).
 
 ---
@@ -65,39 +65,26 @@ El despegue fuerte suele venir del **contenido útil y estable** en el tiempo, m
 
 ---
 
-## 2. Newsletter (después de SEO)
+## 2. Newsletter (en curso)
 
 Objetivo: **autonomía** de Emanuel para armar envíos sin depender de terceros, con visibilidad de estado y analíticas suficientes para decidir.
 
-### Core (envío y datos)
+**Decisiones cerradas (1/may):**
+- Plan Resend: **Free** (~100 mails/día). El worker está pensado para repartir cualquier campaña en varios días si supera el límite.
+- Remitente único: `contacto@tradicionmisticayhermetica.com`.
+- Cuerpo del newsletter: introducción rica en TipTap (igual que blog) + selección de **posts existentes del blog** (1+) que se insertan en el email con el mismo look & feel del sitio.
+- Reintentos: **0** automáticos. Si un envío falla, queda visible con su `error_codigo` / `error_mensaje` para que el admin decida.
+- Auto-baja: si Resend reporta `bounced` o `complained`, el contacto pasa solo a `newsletter_optin = false` (trigger en BD).
 
-- [ ] Migración SQL: **campañas**, **destinatarios por campaña** (estado: pendiente / enviado / fallido / baja), **eventos** (entregado, apertura si aplica), timestamps.
-- [ ] Pantalla **Newsletter** en `/area-reservada` (sacar **PRONTO** del menú): editor de cuerpo (HTML o Markdown→HTML), asunto, vista previa, segmento (p. ej. sólo suscriptores activos en `contactos`).
-- [ ] **Cola y lotes**: envío vía Resend por lotes (encaje con límite diario Free ~100/día o Pro); job que procese N mails por corrida.
-- [ ] **Vista de campaña en curso o histórica**:
-  - listado **a quién se envió** vs **quién sigue en pending**;
-  - **progreso** (X de Y enviados);
-  - **estimación de tiempo** restante si el envío está throttled (derivado de tamaño de cola, tamaño de lote y ventana permitida — mostrar texto tipo “~2 días a ritmo actual” con disclaimer).
-- [ ] Flujo de **baja con token** ya alineado a `contactos` + página pública usable (revisar punta a punta).
-- [ ] **Plantilla** de email acorde al sitio (cabecera, pie, link al blog, link preferencias/baja).
+### Bloques de implementación
 
-### Métricas y analíticas (panel)
-
-- [ ] **Open rate** (y, si Resend lo expone sin fricción, clicks o tasas de rebote): definir fuente de verdad — webhooks Resend + tabla `newsletter_eventos` o análisis nativo de Resend con link desde el panel.
-- [ ] **Gráficos simples** en el admin: **torta** (p. ej. enviados / pendientes / fallidos / bajas en campaña) y **barras** (campo a campo o comparar últimas N campañas).
-- [ ] **Tendencia en el tiempo**: serie (aperturas, envíos por día o por campaña) + **regresión lineal** opcional como línea de tendencia (implementación liviana en TS: mínimos cuadrados sobre la serie visible; sin ML pesado).
-
-### Stack sugerido (rápido, compatible con lo actual)
-
-| Pieza | Propuesta |
-|-------|-----------|
-| Datos | **Supabase / Postgres** (tablas de campaña, envíos, eventos; RLS admin). |
-| Envío | **Resend** API por lotes; **Edge Functions** + cron (`pg_cron` o invocación programada) para drenar cola. |
-| Webhooks | Endpoint (Edge Function) para `delivered` / `opened` / `bounced` según documentación Resend → actualizar filas y rate. |
-| Gráficos | **Chart.js** o **uPlot** desde vanilla TS (encaja con Astro sin montar React solo por esto); alternativa **Apache ECharts** si hace falta más tipos de chart. |
-| Regresión | Función pura TS (pendiente ↔ tiempo o aperturas ↔ índice de campaña); sin dependencias pesadas. |
-
-**Decisión previa al diseño fino:** Resend **Free** (~100 correos/día) vs **Pro** (~20 USD/mes) — condiciona tamaño de lote, necesidad de cola multi-día y si conviene delegar parte del reporting a Resend.
+- [x] **Bloque 1 — BD** (`017_newsletter_campanas.sql`): tablas `newsletter_campanas`, `newsletter_campana_posts` (junction con orden), `newsletter_envios` (1 fila por campaña × suscriptor) + RLS admin + RPCs (`encolar`, `pausar`, `reanudar`, `cancelar`, `proximo_lote`, `marcar_enviado`, `marcar_fallido`) + trigger de auto-baja en bounce/complaint.
+- [ ] **Bloque 2 — UI admin** `/area-reservada/newsletter`: listado de campañas con estado y progreso, editor (asunto + intro TipTap + multi-select de posts publicados con orden + imagen opcional), botones Encolar / Pausar / Reanudar / Cancelar.
+- [ ] **Bloque 3 — Edge Function `procesar-newsletter-cola`**: llama `newsletter_proximo_lote(N)`, arma el HTML de cada email (intro + posts seleccionados con plantilla del sitio), lo manda con Resend, reporta con `marcar_enviado` / `marcar_fallido`. Incluye rate-limit interno para no pasar de N mails/día.
+- [ ] **Bloque 4 — Cron**: `pg_cron` (o trigger programado) que invoca la edge function cada hora.
+- [ ] **Bloque 5 — Webhook Resend** (`resend-eventos`): endpoint que recibe `email.delivered`, `email.opened`, `email.bounced`, `email.complained` y actualiza el envío correspondiente vía `resend_id`. El bounce/complaint registra evento → trigger ya existente desuscribe automáticamente.
+- [ ] **Bloque 6 — Analíticas**: torta (enviados/pendientes/fallidos/rebotados/bajas), barras (comparativa últimas N campañas), tendencia con regresión lineal (TS puro, sin librería pesada).
+- [ ] **Plantilla email** consistente con el sitio (header gold + serif + footer con link a `/newsletter/preferencias?token=…`). Se arma en el Bloque 3.
 
 ---
 
