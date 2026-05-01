@@ -18,22 +18,60 @@ import Ornament from "../../components/Ornament.astro";
 
       <Ornament symbol="✦" />
 
-      <div id="card" class="card-altar p-8 md:p-10 text-center">
+      {/* Estado normal: viene con token válido */}
+      <div
+        id="card-token"
+        class="card-altar p-8 md:p-10 text-center hidden"
+      >
         <p class="text-lg font-serif text-parchment-100 mb-2" id="titulo">
-          Validando el link...
+          Validando el link…
         </p>
         <p class="text-sm text-parchment-300 mb-8" id="email-display"></p>
 
         <div id="acciones" class="flex flex-col gap-3 hidden">
-          <button id="btn-toggle" type="button" class="btn-gold w-full justify-center"></button>
-          <a href="/" class="btn-ghost w-full justify-center">Volver al inicio</a>
+          <button
+            id="btn-toggle"
+            type="button"
+            class="btn-gold w-full justify-center"></button>
+          <a href="/" class="btn-ghost w-full justify-center"
+            >Volver al inicio</a
+          >
         </div>
 
         <p id="msg" class="text-sm mt-6" aria-live="polite"></p>
       </div>
 
-      <div class="text-center mt-10 text-xs text-parchment-400">
-        Cambios inmediatos. Quedan registrados para trazabilidad.
+      {/* Estado sin token: mensaje amigable con opciones */}
+      <div
+        id="card-sin-token"
+        class="card-altar p-8 md:p-10 text-center hidden"
+      >
+        <p class="text-lg font-serif text-parchment-100 mb-3">
+          Este link no incluye un código de identificación.
+        </p>
+        <p class="text-sm text-parchment-300 mb-8 leading-relaxed">
+          Suele venir desde un correo de prueba o un link incompleto.
+          Para gestionar tu suscripción real, abrí el link tal como llegó
+          al email del newsletter.
+        </p>
+        <div class="flex flex-col gap-3">
+          <a href="/contacto" class="btn-gold w-full justify-center">
+            Suscribirme al newsletter
+          </a>
+          <a href="/" class="btn-ghost w-full justify-center">Volver al inicio</a>
+        </div>
+        <p class="text-xs text-parchment-500 mt-8 italic">
+          ¿Tenés algún problema con tu suscripción? Escribinos a
+          <a
+            href="mailto:contacto@tradicionmisticayhermetica.com"
+            class="text-gold-300 hover:text-gold-200">contacto@tradicionmisticayhermetica.com</a
+          >.
+        </p>
+      </div>
+
+      <div class="text-center mt-10 text-xs text-parchment-400 italic">
+        Tu decisión se aplica al instante. Podés volver a suscribirte cuando
+        quieras desde esta misma página.
       </div>
     </div>
   </section>
@@ -49,6 +87,10 @@ import Ornament from "../../components/Ornament.astro";
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token")?.trim();
 
+  const $cardToken = document.getElementById("card-token") as HTMLDivElement;
+  const $cardSinToken = document.getElementById(
+    "card-sin-token",
+  ) as HTMLDivElement;
   const $titulo = document.getElementById("titulo") as HTMLParagraphElement;
   const $email = document.getElementById("email-display") as HTMLParagraphElement;
   const $acciones = document.getElementById("acciones") as HTMLDivElement;
@@ -58,7 +100,8 @@ import Ornament from "../../components/Ornament.astro";
   function ofuscarEmail(email: string): string {
     const [user, dom] = email.split("@");
     if (!user || !dom) return email;
-    const u = user.length > 2 ? user[0] + "***" + user.slice(-1) : user[0] + "***";
+    const u =
+      user.length > 2 ? user[0] + "***" + user.slice(-1) : user[0] + "***";
     return `${u}@${dom}`;
   }
 
@@ -84,14 +127,26 @@ import Ornament from "../../components/Ornament.astro";
 
   async function init() {
     if (!token) {
-      $titulo.textContent = "El link no incluye un token válido.";
+      $cardSinToken.classList.remove("hidden");
       return;
     }
 
+    $cardToken.classList.remove("hidden");
+
     const estado = await obtenerEstadoNewsletter(token);
     if (!estado.ok) {
-      $titulo.textContent = "El link no es válido o expiró.";
+      $titulo.textContent = "Este link ya no es válido.";
       $email.textContent = "";
+      // Mensaje en lugar del botón:
+      const aviso = document.createElement("p");
+      aviso.className = "text-sm text-parchment-300 mt-4 leading-relaxed";
+      aviso.innerHTML = `
+        Probablemente el link expiró o fue regenerado. Para gestionar tu
+        suscripción, escribinos a
+        <a href="mailto:contacto@tradicionmisticayhermetica.com"
+           class="text-gold-300 hover:text-gold-200">contacto@tradicionmisticayhermetica.com</a>.
+      `;
+      $titulo.parentElement?.appendChild(aviso);
       return;
     }
     pintar(estado);
@@ -119,6 +174,7 @@ import Ornament from "../../components/Ornament.astro";
       // Releer estado para actualizar el boton
       const nuevo = await obtenerEstadoNewsletter(token);
       if (nuevo.ok) pintar(nuevo);
+      $btn.disabled = false;
     } else {
       setMsg("No pudimos procesar. Probá de nuevo en unos minutos.", "error");
       $btn.disabled = false;

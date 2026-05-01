@@ -369,6 +369,8 @@ export interface ResultadoEnvioPrueba {
   ok: boolean;
   resend_id?: string;
   enviado_a?: string;
+  /** True si el email destino existe en `contactos` (el link de baja es funcional). */
+  contacto_existente?: boolean;
   error?: string;
   detalle?: unknown;
 }
@@ -406,7 +408,12 @@ export async function enviarPruebaCampana(
     };
   }
 
-  return { ok: true, resend_id: data.resend_id, enviado_a: data.enviado_a };
+  return {
+    ok: true,
+    resend_id: data.resend_id,
+    enviado_a: data.enviado_a,
+    contacto_existente: data.contacto_existente,
+  };
 }
 
 // =============================================================================

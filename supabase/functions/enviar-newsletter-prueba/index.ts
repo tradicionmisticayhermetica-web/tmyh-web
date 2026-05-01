@@ -174,7 +174,28 @@ Deno.serve(async (req: Request) => {
     .filter((p) => !!p.slug);
 
   // ---------------------------------------------------------------------------
-  // 4) Render del HTML
+  // 4) Buscar el contacto destino para usar su token real de unsubscribe
+  //    (si existe). Así el botón "Darme de baja" del email funciona en serio
+  //    y el admin puede testear el flujo completo desde su Gmail.
+  //    Si el email destino no es contacto, el link va a la página informativa.
+  // ---------------------------------------------------------------------------
+  let tokenUnsub: string | null = null;
+  let nombreContactoReal: string | null = null;
+
+  const { data: contacto } = await supabaseAdmin
+    .from("contactos")
+    .select("nombre, apellido, newsletter_token_unsubscribe")
+    .eq("email", emailDestino)
+    .maybeSingle();
+
+  if (contacto) {
+    tokenUnsub = contacto.newsletter_token_unsubscribe ?? null;
+    nombreContactoReal =
+      [contacto.nombre, contacto.apellido].filter(Boolean).join(" ").trim() || null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 5) Render del HTML
   // ---------------------------------------------------------------------------
   const opcionesRender = {
     asunto: campana.asunto,
@@ -182,8 +203,8 @@ Deno.serve(async (req: Request) => {
     imagenDestacada: campana.imagen_destacada,
     posts,
     baseSitio: SITE_URL,
-    tokenUnsubscribe: null,
-    nombreDestinatario: nombreDestino,
+    tokenUnsubscribe: tokenUnsub,
+    nombreDestinatario: nombreDestino ?? nombreContactoReal,
     esPreview: false,
   };
 
@@ -191,7 +212,7 @@ Deno.serve(async (req: Request) => {
   const texto = renderEmailTexto(opcionesRender);
 
   // ---------------------------------------------------------------------------
-  // 5) Enviar a Resend
+  // 6) Enviar a Resend
   // ---------------------------------------------------------------------------
   const asuntoFinal = `[PRUEBA] ${campana.asunto}`;
 
@@ -228,5 +249,7 @@ Deno.serve(async (req: Request) => {
     ok: true,
     resend_id: (data as any).id,
     enviado_a: emailDestino,
+    // Indica si el link de baja del email apunta a un contacto real:
+    contacto_existente: tokenUnsub !== null,
   });
 });

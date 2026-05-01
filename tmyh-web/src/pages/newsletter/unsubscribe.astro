@@ -43,15 +43,19 @@ import Ornament from "../../components/Ornament.astro";
           Listo. Te dimos de baja del newsletter.
         </p>
         <p class="text-sm text-parchment-300 mb-6" id="email-baja"></p>
-        <p class="text-sm text-parchment-200 mb-6">
-          Si fue un error, podés volver a suscribirte desde la página de
-          preferencias.
+        <p class="text-sm text-parchment-200 mb-6 leading-relaxed">
+          Si te arrepentís o fue un error, podés volver a suscribirte
+          ahora mismo con un click.
         </p>
-        <a
-          href="#"
-          id="link-prefs"
-          class="btn-ghost w-full justify-center"
-        >Ir a preferencias</a>
+        <div class="flex flex-col gap-3">
+          <a
+            href="#"
+            id="link-prefs"
+            class="btn-gold w-full justify-center"
+          >Volver a suscribirme</a>
+          <a href="/" class="btn-ghost w-full justify-center"
+            >Volver al inicio</a>
+        </div>
       </div>
 
       <div
@@ -73,8 +77,8 @@ import Ornament from "../../components/Ornament.astro";
         <a href="/" class="btn-ghost w-full justify-center">Volver al inicio</a>
       </div>
 
-      <div class="text-center mt-10 text-xs text-parchment-400">
-        Respetamos tu decisión. La baja es inmediata y queda registrada.
+      <div class="text-center mt-10 text-xs text-parchment-400 italic">
+        Respetamos tu decisión. Si más adelante querés volver, te esperamos.
       </div>
     </div>
   </section>
@@ -84,6 +88,7 @@ import Ornament from "../../components/Ornament.astro";
   import {
     obtenerEstadoNewsletter,
     desuscribirNewsletter,
+    resuscribirNewsletter,
   } from "../../lib/supabase";
 
   const params = new URLSearchParams(window.location.search);
@@ -149,11 +154,37 @@ import Ornament from "../../components/Ornament.astro";
       const resp = await desuscribirNewsletter(token);
       if (resp.ok) {
         $emailBaja.textContent = ofuscarEmail(resp.email ?? "");
-        $linkPrefs.href = `/newsletter/preferencias?token=${encodeURIComponent(token)}`;
+        // El botón "Volver a suscribirme" ahora resuscribe en el acto.
+        $linkPrefs.removeAttribute("href");
+        $linkPrefs.dataset.accion = "resuscribir";
         mostrar("exito");
       } else {
         $textoError.textContent = "No pudimos procesar la baja. Probá de nuevo en unos minutos.";
         mostrar("error");
+      }
+    });
+
+    // Click en "Volver a suscribirme" desde la pantalla de éxito:
+    // hace la re-suscripción con el mismo token y muestra confirmación.
+    $linkPrefs.addEventListener("click", async (e) => {
+      if ($linkPrefs.dataset.accion !== "resuscribir") return;
+      e.preventDefault();
+      $linkPrefs.textContent = "Reactivando…";
+      const r = await resuscribirNewsletter(token);
+      if (r.ok) {
+        $linkPrefs.textContent = "¡Listo! Estás suscripto otra vez.";
+        $linkPrefs.classList.remove("btn-gold");
+        $linkPrefs.classList.add(
+          "text-emerald-300",
+          "border-emerald-400/40",
+          "border",
+          "px-4",
+          "py-2.5",
+          "rounded-sm",
+          "pointer-events-none",
+        );
+      } else {
+        $linkPrefs.textContent = "No pudimos reactivar. Probá más tarde.";
       }
     });
   }

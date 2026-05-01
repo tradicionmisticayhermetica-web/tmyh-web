@@ -1153,8 +1153,11 @@ import EditorBlog from "../../../components/EditorBlog.astro";
           );
           return;
         }
+        const aviso = r.contacto_existente
+          ? "El link de baja del email es funcional: si lo tocás, ese contacto se desuscribe en serio."
+          : "El email destino no es un contacto, así que el link de baja muestra una página informativa.";
         mostrarMensaje(
-          `Prueba enviada a ${r.enviado_a}. Revisá la bandeja (puede tardar 1-2 minutos en llegar).`,
+          `Prueba enviada a ${r.enviado_a}. Revisá la bandeja (puede tardar 1-2 minutos). ${aviso}`,
           "ok",
         );
       } finally {
