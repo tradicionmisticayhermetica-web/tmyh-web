@@ -376,6 +376,48 @@ export interface ResultadoEnvioPrueba {
 }
 
 /**
+ * Cuota diaria informativa que mostramos en la UI al encolar / al dar feedback.
+ *
+ * IMPORTANTE: este número es solo para mostrar al usuario una estimación de
+ * cuánto va a tardar la campaña. La cuota REAL la aplica la edge function
+ * `procesar-newsletter-cola` vía la env var `NEWSLETTER_DAILY_LIMIT` (default
+ * 95 por ahora porque estamos con el plan Free de Resend = 100 mails/día).
+ *
+ * Si en el futuro pasamos al plan paid de Resend (o cualquier proveedor con
+ * más cupo), hay que tocar TRES lugares:
+ *
+ *   1) Edge Functions → Secrets de Supabase: cambiar
+ *      `NEWSLETTER_DAILY_LIMIT` (y opcionalmente `NEWSLETTER_BATCH_SIZE`).
+ *   2) Acá abajo, esta constante, para que el modal de encolar refleje la
+ *      nueva estimación correcta.
+ *   3) Migración 018 / cron job en Supabase: el schedule actual está pensado
+ *      para 95/día (cron `5 0,12-23 * * *` = 13 ticks/día en horario humano
+ *      ARG, batch=12 → 156 mails/día capados a 95). Si cambiás la cuota,
+ *      revisá el schedule:
+ *        - Plan Resend Free actual: 100/día → cron horario humano OK.
+ *        - Plan paid 50k/mes (~1666/día): cron cada 10 min en horario humano,
+ *          batch=20 → 78 ticks * 20 = 1560/día.
+ */
+export const NEWSLETTER_LIMITE_DIARIO_INFO = 95;
+
+/**
+ * Cuenta cuántos contactos tienen `newsletter_optin = true`. Lo usamos para
+ * mostrar al admin cuántos destinatarios va a tener una campaña antes de
+ * encolarla.
+ */
+export async function contarSuscriptoresActivos(): Promise<number> {
+  const { count, error } = await supabase
+    .from("contactos")
+    .select("id", { count: "exact", head: true })
+    .eq("newsletter_optin", true);
+  if (error) {
+    console.error("[newsletter.contarSuscriptoresActivos]", error);
+    return 0;
+  }
+  return count ?? 0;
+}
+
+/**
  * Dispara una corrida del worker `procesar-newsletter-cola` para arrancar
  * el envío sin esperar al próximo tick del cron.
  */

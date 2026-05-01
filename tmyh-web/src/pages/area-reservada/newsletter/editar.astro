@@ -351,6 +351,8 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       eliminarCampana,
       enviarPruebaCampana,
       correrWorkerNewsletter,
+      contarSuscriptoresActivos,
+      NEWSLETTER_LIMITE_DIARIO_INFO,
       listarPostsPublicadosParaSeleccion,
       progresoCampana,
       estimacionRestante,
@@ -924,9 +926,31 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       if (!estado.campana) return;
       ocultarMensaje();
 
+      showLoader("Calculando destinatarios…");
+      let totalSuscriptores = 0;
+      try {
+        totalSuscriptores = await contarSuscriptoresActivos();
+      } finally {
+        hideLoader();
+      }
+
+      const cuotaDiaria = NEWSLETTER_LIMITE_DIARIO_INFO;
+      const diasEstimados = totalSuscriptores > 0
+        ? Math.max(1, Math.ceil(totalSuscriptores / cuotaDiaria))
+        : 0;
+
+      const cuerpo = totalSuscriptores === 0
+        ? `No hay suscriptores activos en este momento (nadie con newsletter_optin = true). La campaña quedará encolada pero no va a salir hasta que haya suscriptores.`
+        : `Vas a encolar la campaña a <strong>${totalSuscriptores}</strong> suscriptores activos.
+
+Con la cuota actual del plan Free de Resend (${cuotaDiaria} mails/día), la campaña se irá enviando a lo largo de aproximadamente <strong>${diasEstimados} día${diasEstimados === 1 ? "" : "s"}</strong>, en horario humano (09 a 21 hs Argentina). Cada destinatario recibe el mail una sola vez.
+
+Podés <strong>pausar</strong> o <strong>cancelar</strong> en cualquier momento desde esta misma pantalla.`;
+
       const continuar = await confirmar({
         titulo: "¿Encolar y enviar?",
-        cuerpo: `Se va a generar un envío para cada suscriptor activo. La campaña pasa a la cola y los correos se irán mandando según el límite diario de Resend (~100/día). No se puede deshacer fácilmente, pero podés pausar o cancelar después.`,
+        cuerpo,
+        cuerpoComoHtml: true,
         confirmar: "Encolar",
         cancelar: "Mejor no",
       });
@@ -1088,6 +1112,10 @@ import EditorBlog from "../../../components/EditorBlog.astro";
       confirmar: string;
       cancelar: string;
       peligroso?: boolean;
+      // Si es true, el `cuerpo` se inserta como HTML sin escapar. Solo
+      // usar con strings que armamos nosotros en código (nunca con input
+      // de usuario), por XSS.
+      cuerpoComoHtml?: boolean;
     }
 
     function confirmar(opts: OpcionesConfirmar): Promise<boolean> {
@@ -1095,10 +1123,13 @@ import EditorBlog from "../../../components/EditorBlog.astro";
         const overlay = document.createElement("div");
         overlay.className =
           "fixed inset-0 z-[1250] flex items-center justify-center bg-night-950/80 backdrop-blur-sm p-4";
+        const cuerpoHtml = opts.cuerpoComoHtml
+          ? opts.cuerpo.replace(/\n/g, "<br>")
+          : escapeHtml(opts.cuerpo).replace(/\n/g, "<br>");
         overlay.innerHTML = `
           <div class="card-altar p-6 max-w-md w-full space-y-4">
             <p class="font-display text-lg text-parchment-50">${escapeHtml(opts.titulo)}</p>
-            <p class="text-sm text-parchment-300 font-serif">${escapeHtml(opts.cuerpo)}</p>
+            <p class="text-sm text-parchment-300 font-serif leading-relaxed">${cuerpoHtml}</p>
             <div class="flex items-center justify-end gap-2 pt-2">
               <button type="button" data-act="cancel"
                       class="btn-ghost text-xs">${escapeHtml(opts.cancelar)}</button>

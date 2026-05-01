@@ -76,12 +76,29 @@ Objetivo: **autonomía** de Emanuel para armar envíos sin depender de terceros,
 - Reintentos: **0** automáticos. Si un envío falla, queda visible con su `error_codigo` / `error_mensaje` para que el admin decida.
 - Auto-baja: si Resend reporta `bounced` o `complained`, el contacto pasa solo a `newsletter_optin = false` (trigger en BD).
 
+**Configuración de capacidad — plan Free actual** (mayo 2026):
+
+| Parámetro | Valor actual | Dónde se cambia |
+|-----------|--------------|-----------------|
+| Cuota diaria | **95 mails/día** (margen sobre 100 del Free) | Edge Functions → Secrets → `NEWSLETTER_DAILY_LIMIT` |
+| Batch por corrida | **12 mails/tick** | Edge Functions → Secrets → `NEWSLETTER_BATCH_SIZE` |
+| Schedule del cron | **`5 0,12-23 * * *`** (13 ticks/día, en horario humano ARG 09–21) | `cron.alter_job(..., schedule := '...')` en SQL Editor |
+| Estimación UI (modal de encolar) | **95** | `tmyh-web/src/lib/newsletter-cms.ts` → `NEWSLETTER_LIMITE_DIARIO_INFO` |
+
+**Si en el futuro pasamos al plan Resend paid** (ej: Pro con 50.000 mails/mes ≈ 1666/día), hay que cambiar **los 4 lugares** de la tabla. Sugerencia para ese plan:
+- `NEWSLETTER_DAILY_LIMIT = 1500` (margen sobre 1666).
+- `NEWSLETTER_BATCH_SIZE = 25` (más alto porque hay más cuota).
+- Schedule cron `*/10 12-23,0 * * *` (cada 10 min en horario humano ARG = 78 ticks/día × 25 = 1950 cap a 1500).
+- `NEWSLETTER_LIMITE_DIARIO_INFO = 1500` para que el modal muestre la estimación correcta.
+
+Con esos valores, una campaña de 1265 destinatarios (la base actual) se manda en **1 día** en lugar de 14.
+
 ### Bloques de implementación
 
 - [x] **Bloque 1 — BD** (`017_newsletter_campanas.sql`): tablas `newsletter_campanas`, `newsletter_campana_posts` (junction con orden), `newsletter_envios` (1 fila por campaña × suscriptor) + RLS admin + RPCs (`encolar`, `pausar`, `reanudar`, `cancelar`, `proximo_lote`, `marcar_enviado`, `marcar_fallido`) + trigger de auto-baja en bounce/complaint.
 - [x] **Bloque 2 — UI admin** `/area-reservada/newsletter`: listado con KPI de suscriptores activos, filtros por estado y buscador (`index.astro`); editor con asunto + intro TipTap (reusa `EditorBlog.astro`) + multi-select de posts publicados con drag para reordenar (`editar.astro`); vista de envíos con filtros y errores legibles (`envios.astro`); **vista previa** del email en iframe con modo desktop/mobile (`preview.astro`); **envío de prueba** a un email puntual sin tocar la lista (botón en el editor + edge function `enviar-newsletter-prueba`); botones Encolar / Pausar / Reanudar / Cancelar / Eliminar según estado, con modal de confirmación. Render del email reutilizable (`lib/newsletter-render.ts` + `supabase/functions/_shared/newsletter-render.ts`). Item "Newsletter" habilitado en el sidebar.
 - [x] **Bloque 3 — Edge Function `procesar-newsletter-cola`**: pide lotes a `newsletter_proximo_lote(N)`, valida `newsletter_optin` actual antes de mandar (defensa contra desuscripciones entre encolada y envío), arma el HTML con el render compartido, lo dispara con Resend (con headers `List-Unsubscribe` 1-click para mejor entregabilidad en Gmail/Outlook) y reporta resultados con `marcar_enviado` / `marcar_fallido`. Cuota diaria configurable por env (`NEWSLETTER_DAILY_LIMIT=95` default) y batch por corrida (`NEWSLETTER_BATCH_SIZE=12` default). Detecta bounces duros vs errores transitorios para que el trigger de auto-baja solo se dispare cuando corresponde. Acepta service_role (cron) y JWT admin (botón "Procesar lote ahora" en el editor).
-- [x] **Bloque 4 — Cron** (`018_newsletter_cron.sql`): job `newsletter-procesar-cola` en `pg_cron` programado al minuto 5 de cada hora; invoca la edge function vía `pg_net.http_post` con el `service_role`. Incluye helpers SQL `newsletter_envios_hoy()` (cuota diaria en zona Argentina) y `newsletter_rescatar_envios_trabados(p_minutos)` (defensa contra workers caídos a media corrida). Requiere setear `app.settings.tmyh_functions_url` y `app.settings.tmyh_service_role` antes de aplicar (instrucciones en el header del archivo).
+- [x] **Bloque 4 — Cron** (`018_newsletter_cron.sql` + `019_es_admin_service_role.sql`): job `newsletter-procesar-cola` en `pg_cron` programado en horario humano ARG (cron `5 0,12-23 * * *`, 13 ticks/día); invoca la edge function vía `pg_net.http_post` con el `service_role` JWT inline en el comando. Incluye helpers SQL `newsletter_envios_hoy()` (cuota diaria en zona Argentina) y `newsletter_rescatar_envios_trabados(p_minutos)` (defensa contra workers caídos). La 019 parchea `public.es_admin()` para que reconozca `auth.role() = 'service_role'`, así las RPCs admin aceptan llamadas del worker. La URL del proyecto y el `service_role` JWT del header del archivo 018 se reemplazan inline antes de aplicar (no se commitean al repo). Verificado end-to-end con `pg_net.http_post` manual — devuelve `{ok:true, skipped:'sin_pendientes'}` cuando no hay campañas encoladas.
 - [ ] **Bloque 5 — Webhook Resend** (`resend-eventos`): endpoint que recibe `email.delivered`, `email.opened`, `email.bounced`, `email.complained` y actualiza el envío correspondiente vía `resend_id`. El bounce/complaint registra evento → trigger ya existente desuscribe automáticamente.
 - [ ] **Bloque 6 — Analíticas**: torta (enviados/pendientes/fallidos/rebotados/bajas), barras (comparativa últimas N campañas), tendencia con regresión lineal (TS puro, sin librería pesada).
 - [ ] **Plantilla email** consistente con el sitio (header gold + serif + footer con link a `/newsletter/preferencias?token=…`). Se arma en el Bloque 3.
