@@ -148,6 +148,8 @@ function transformarIntroHtml(html: string): string {
 /**
  * Renderiza una "card" de post para el email, con el mismo look del sitio
  * (fondo oscuro, oro como acento, separador con ornamento).
+ *
+ * Las imágenes son fluid (width:100%) para adaptarse al cliente mobile.
  */
 function renderPostCard(post: PostParaEmail, baseSitio: string): string {
   const url = `${baseSitio.replace(/\/$/, "")}/blog/post?slug=${encodeURIComponent(post.slug)}`;
@@ -157,14 +159,14 @@ function renderPostCard(post: PostParaEmail, baseSitio: string): string {
 
   const imagenHtml = post.imagen_destacada
     ? `<a href="${url}" style="text-decoration:none;display:block;">
-        <img src="${escapeHtml(post.imagen_destacada)}" alt="${titulo}" width="540"
-             style="width:100%;max-width:540px;height:auto;display:block;border:0;border-radius:2px;margin-bottom:16px;" />
+        <img src="${escapeHtml(post.imagen_destacada)}" alt="${titulo}"
+             style="width:100%;max-width:100%;height:auto;display:block;border:0;border-radius:2px;margin-bottom:16px;" />
       </a>`
     : "";
 
   return `
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-           style="margin:0 0 36px 0;">
+           style="width:100%;margin:0 0 36px 0;">
       <tr>
         <td>
           ${imagenHtml}
@@ -173,7 +175,7 @@ function renderPostCard(post: PostParaEmail, baseSitio: string): string {
               ? `<div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8b7e5d;margin-bottom:8px;">${escapeHtml(fecha)}</div>`
               : ""
           }
-          <h2 style="font-family:Georgia,serif;font-size:24px;color:#f5ecd7;margin:0 0 12px 0;line-height:1.25;font-weight:500;">
+          <h2 style="font-family:Georgia,serif;font-size:22px;color:#f5ecd7;margin:0 0 12px 0;line-height:1.25;font-weight:500;">
             <a href="${url}" style="color:#f5ecd7;text-decoration:none;">${titulo}</a>
           </h2>
           ${
@@ -227,8 +229,8 @@ export function renderEmailHtml(opts: OpcionesRenderEmail): string {
   const imagenCabeceraHtml = opts.imagenDestacada
     ? `<tr>
         <td>
-          <img src="${escapeHtml(opts.imagenDestacada)}" alt="" width="600"
-               style="display:block;width:100%;max-width:600px;height:auto;border:0;" />
+          <img src="${escapeHtml(opts.imagenDestacada)}" alt=""
+               style="display:block;width:100%;max-width:100%;height:auto;border:0;" />
         </td>
       </tr>`
     : "";
@@ -253,17 +255,18 @@ ${bannerPreview}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
        style="background:#07060d;">
   <tr>
-    <td align="center" style="padding:32px 12px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600"
-             style="width:600px;max-width:600px;background:#0b0a12;border:1px solid rgba(230,196,100,0.14);">
+    <td align="center" style="padding:24px 8px;">
+      <!-- Tabla "card" del email: 100% fluid, tope visual en 600px en desktop. -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+             style="width:100%;max-width:600px;margin:0 auto;background:#0b0a12;border:1px solid rgba(230,196,100,0.14);">
 
         ${imagenCabeceraHtml}
 
         <!-- Cabecera -->
         <tr>
-          <td style="padding:32px 32px 12px 32px;text-align:center;border-bottom:1px solid rgba(230,196,100,0.12);">
+          <td style="padding:28px 24px 12px 24px;text-align:center;border-bottom:1px solid rgba(230,196,100,0.12);">
             <div style="font-size:24px;color:#d4af37;line-height:1;margin-bottom:10px;">☉</div>
-            <div style="font-family:Georgia,serif;font-size:11px;letter-spacing:5px;color:#f5ecd7;text-transform:uppercase;font-weight:500;">
+            <div style="font-family:Georgia,serif;font-size:11px;letter-spacing:4px;color:#f5ecd7;text-transform:uppercase;font-weight:500;">
               Tradición Mística y Hermética
             </div>
           </td>
@@ -271,8 +274,8 @@ ${bannerPreview}
 
         <!-- Asunto como titular -->
         <tr>
-          <td style="padding:36px 32px 8px 32px;">
-            <h1 style="font-family:Georgia,serif;font-size:28px;color:#f5ecd7;margin:0 0 8px 0;line-height:1.25;font-weight:500;letter-spacing:0.3px;">
+          <td style="padding:32px 24px 8px 24px;">
+            <h1 style="font-family:Georgia,serif;font-size:26px;color:#f5ecd7;margin:0 0 8px 0;line-height:1.25;font-weight:500;letter-spacing:0.3px;word-wrap:break-word;">
               ${asunto}
             </h1>
           </td>
@@ -282,7 +285,7 @@ ${bannerPreview}
           tieneIntro
             ? `<!-- Introducción rica (Tiptap) -->
         <tr>
-          <td style="padding:8px 32px 20px 32px;">
+          <td style="padding:8px 24px 20px 24px;word-wrap:break-word;">
             ${saludo}
             ${introHtml}
           </td>
@@ -293,7 +296,7 @@ ${bannerPreview}
         ${
           tienePosts && tieneIntro
             ? `<tr>
-                <td style="padding:0 32px;">
+                <td style="padding:0 24px;">
                   <div style="text-align:center;color:#d4af37;opacity:0.6;font-size:18px;margin:8px 0 24px 0;">☉</div>
                 </td>
               </tr>`
@@ -304,7 +307,7 @@ ${bannerPreview}
           tienePosts
             ? `<!-- Posts seleccionados -->
         <tr>
-          <td style="padding:8px 32px 16px 32px;">
+          <td style="padding:8px 24px 16px 24px;">
             ${cardsPosts}
           </td>
         </tr>`
@@ -313,14 +316,14 @@ ${bannerPreview}
 
         <!-- Footer -->
         <tr>
-          <td style="padding:24px 32px 32px 32px;border-top:1px solid rgba(230,196,100,0.12);text-align:center;">
-            <div style="font-family:Georgia,serif;font-size:13px;font-style:italic;color:#b8a984;margin-bottom:14px;">
+          <td style="padding:24px 24px 28px 24px;border-top:1px solid rgba(230,196,100,0.12);text-align:center;">
+            <div style="font-family:Georgia,serif;font-size:13px;font-style:italic;color:#b8a984;margin-bottom:14px;line-height:1.5;">
               Recibís este boletín porque te suscribiste en
               <a href="${linkSitio}" style="color:#e6c464;text-decoration:none;">tradicionmisticayhermetica.com</a>.
             </div>
-            <div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:1.5px;color:#8b7e5d;text-transform:uppercase;">
+            <div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:1.5px;color:#8b7e5d;text-transform:uppercase;line-height:1.8;">
               <a href="${linkBaja}" style="color:#8b7e5d;text-decoration:underline;">Darme de baja del newsletter</a>
-              &nbsp;·&nbsp;
+              <span style="color:#5a5142;">&nbsp;·&nbsp;</span>
               <a href="${linkSitio}" style="color:#8b7e5d;text-decoration:underline;">Ir al sitio</a>
             </div>
             <div style="font-family:Helvetica,Arial,sans-serif;font-size:10px;letter-spacing:1px;color:#5a5142;margin-top:18px;">

@@ -43,19 +43,17 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
     </div>
   </header>
 
-  <div class="card-altar p-0 overflow-hidden">
-    <div
-      id="iframe-wrap"
-      class="bg-night-950 transition-all duration-200"
-      style="padding: 0;"
-    >
-      <iframe
-        id="iframe-preview"
-        title="Vista previa del email"
-        class="block w-full bg-night-950"
-        style="height: 800px; border: 0; margin: 0 auto;"
-      ></iframe>
-    </div>
+  <div
+    id="iframe-wrap"
+    class="bg-night-950 rounded-sm overflow-hidden border border-gold-400/15 transition-all duration-200 mx-auto"
+    style="padding: 16px;"
+  >
+    <iframe
+      id="iframe-preview"
+      title="Vista previa del email"
+      class="block bg-night-950 mx-auto"
+      style="width: 100%; height: 800px; border: 0; border-radius: 2px;"
+    ></iframe>
   </div>
 
   <p
@@ -94,9 +92,27 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
     function aplicarModo(modo: string) {
       if (modo === "mobile") {
+        // Marco "tipo móvil": ancho fijo 360px, contenedor también limitado
+        // y centrado, fondo levemente más claro para diferenciar del dispositivo.
+        $iframeWrap.style.maxWidth = "400px";
+        $iframeWrap.style.background = "#000";
         $iframe.style.maxWidth = "360px";
       } else {
+        // Desktop: ocupa todo el ancho disponible (hasta 600px que es el
+        // max-width de la tabla del email, el resto queda sin usar).
+        $iframeWrap.style.maxWidth = "100%";
+        $iframeWrap.style.background = "var(--color-night-950, #07060d)";
         $iframe.style.maxWidth = "100%";
+      }
+      // Forzar reload del iframe para que el contenido recalcule el layout
+      // con el viewport nuevo (sino las imágenes width:100% no se reajustan).
+      const html = $iframe.srcdoc;
+      if (html) {
+        $iframe.srcdoc = "";
+        // microtask: volver a poner el contenido
+        queueMicrotask(() => {
+          $iframe.srcdoc = html;
+        });
       }
     }
 
@@ -133,25 +149,43 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       // Inyectar via srcdoc para aislar estilos del email del panel.
       $iframe.srcdoc = html;
 
-      // Ajustar altura cuando termine de cargar el contenido del iframe.
-      $iframe.addEventListener(
-        "load",
-        () => {
-          try {
-            const doc = $iframe.contentDocument;
-            if (doc) {
-              const h = doc.documentElement.scrollHeight;
-              $iframe.style.height = `${Math.max(600, h + 40)}px`;
-            }
-          } catch {
-            // Ignorar problemas cross-origin (no aplican con srcdoc).
-          }
-        },
-        { once: true },
-      );
-
       $estado.textContent = `Última actualización: ${new Date().toLocaleTimeString("es-AR")}`;
     }
+
+    // El listener "load" se dispara CADA vez que cambia srcdoc (incluido el
+    // reload por cambio de modo desktop/mobile). Recalculamos la altura en
+    // función del scrollHeight real del email renderizado.
+    $iframe.addEventListener("load", () => {
+      try {
+        const doc = $iframe.contentDocument;
+        if (!doc) return;
+        // Pequeño delay para que las imágenes hayan calculado sus dimensiones.
+        const recalcular = () => {
+          const h = doc.documentElement.scrollHeight;
+          $iframe.style.height = `${Math.max(600, h + 40)}px`;
+        };
+        recalcular();
+        // Recalcular una vez más cuando carguen las imágenes externas.
+        const imgs = Array.from(doc.images ?? []);
+        let pendientes = imgs.filter((img) => !img.complete).length;
+        if (pendientes > 0) {
+          imgs.forEach((img) => {
+            if (!img.complete) {
+              img.addEventListener("load", () => {
+                pendientes -= 1;
+                if (pendientes <= 0) recalcular();
+              });
+              img.addEventListener("error", () => {
+                pendientes -= 1;
+                if (pendientes <= 0) recalcular();
+              });
+            }
+          });
+        }
+      } catch {
+        // Ignorar problemas cross-origin (no aplican con srcdoc).
+      }
+    });
 
     $modo.addEventListener("change", () => aplicarModo($modo.value));
     $btnActualizar.addEventListener("click", () => cargar());
