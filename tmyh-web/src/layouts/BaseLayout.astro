@@ -3,6 +3,7 @@ import "../styles/global.css";
 import Navbar from "../components/Navbar.astro";
 import Footer from "../components/Footer.astro";
 import Lightbox from "../components/Lightbox.astro";
+import LoaderGlobal from "../components/LoaderGlobal.astro";
 
 interface Props {
   title: string;
@@ -79,5 +80,6 @@ const fullTitle = `${title} · Tradición Mística y Hermética`;
     </main>
     <Footer />
     <Lightbox />
+    <LoaderGlobal />
   </body>
 </html>

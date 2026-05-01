@@ -195,7 +195,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
               return;
             }
             const dep = await withTimeout(
-              dispararDeployCursos(`restaurar:${slug}`),
+              dispararDeployCursos(slug, "restaurar"),
               12000,
               "deploy_restaurar",
             );
@@ -227,7 +227,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
               return;
             }
             const dep = await withTimeout(
-              dispararDeployCursos(`eliminar:${slug}`),
+              dispararDeployCursos(slug, "eliminar"),
               12000,
               "deploy_eliminar",
             );

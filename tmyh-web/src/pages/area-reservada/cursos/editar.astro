@@ -705,7 +705,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         const visAntes = estadoAntes ? ESTADOS_PUBLICOS.has(estadoAntes) : false;
         const visAhora = ESTADOS_PUBLICOS.has(estadoActual);
         if (visAntes || visAhora) {
-          const dep = await dispararDeployCursos(`guardar:${r.slug}`);
+          const dep = await dispararDeployCursos(r.slug, "guardar");
           if (!dep.ok) {
             setStatus(
               `Curso guardado, pero falló el deploy automático (${dep.error}).`,
@@ -737,7 +737,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
         const r = await guardar(estadoElegido);
         if (!r) return;
         setStatus(`Curso publicado (${estadoElegido}). Disparando deploy del sitio…`, "info");
-        const dep = await dispararDeployCursos(r.slug ?? "curso");
+        const dep = await dispararDeployCursos(r.slug ?? "curso", "publicar");
         if (!dep.ok) {
           setStatus(
             `Curso publicado. No pude disparar el deploy automático (${dep.error}), pero el guardado quedó correcto.`,
@@ -792,7 +792,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
           return;
         }
         const dep = await withTimeout(
-          dispararDeployCursos(`papelera:${slug}`),
+          dispararDeployCursos(slug, "papelera"),
           12000,
           "deploy_papelera",
         );
@@ -832,7 +832,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
           return;
         }
         const dep = await withTimeout(
-          dispararDeployCursos(`eliminar:${slug}`),
+          dispararDeployCursos(slug, "eliminar"),
           12000,
           "deploy_eliminar",
         );

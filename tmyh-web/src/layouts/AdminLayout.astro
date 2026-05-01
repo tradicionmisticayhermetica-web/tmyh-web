@@ -17,6 +17,7 @@
  *   </AdminLayout>
  */
 import "../styles/global.css";
+import LoaderGlobal from "../components/LoaderGlobal.astro";
 
 interface Props {
   title: string;
@@ -195,24 +196,7 @@ const hrefSitioPublico = baseUrl ? `${baseUrl}/` : "/";
       </main>
     </div>
 
-    <div
-      id="admin-action-loader"
-      class="hidden fixed inset-0 z-[1300] items-center justify-center bg-night-950/78 backdrop-blur-[2px]"
-      role="status"
-      aria-live="polite"
-      aria-label="Procesando"
-    >
-      <div class="card-altar px-8 py-7 text-center min-w-[280px]">
-        <div class="loader-triad" aria-hidden="true">
-          <span class="loader-sym m">☿</span>
-          <span class="loader-sym a">🜍</span>
-          <span class="loader-sym s">🜔</span>
-        </div>
-        <p id="admin-action-loader-text" class="mt-5 text-xs tracking-widest uppercase text-parchment-200">
-          Procesando…
-        </p>
-      </div>
-    </div>
+    <LoaderGlobal />
 
     <style is:global>
       .admin-nav-link {
@@ -251,57 +235,6 @@ const hrefSitioPublico = baseUrl ? `${baseUrl}/` : "/";
         opacity: 0.4;
         pointer-events: none;
       }
-      .loader-triad {
-        position: relative;
-        width: 4.6rem;
-        height: 4.6rem;
-        margin: 0 auto;
-        animation: loader-rotate 1.1s ease-in-out infinite;
-      }
-      .loader-sym {
-        position: absolute;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 2rem;
-        height: 2rem;
-        font-size: 1.5rem;
-        color: var(--color-gold-300);
-        text-shadow: 0 0 14px rgb(230 196 100 / 0.35);
-        opacity: 0.55;
-      }
-      .loader-sym.m {
-        top: 0;
-        left: 0;
-        animation: loader-ball-1 1.1s ease-in-out infinite;
-      }
-      .loader-sym.a {
-        top: 0;
-        left: 2.3rem;
-        animation: loader-ball-2 1.1s ease-in-out infinite;
-      }
-      .loader-sym.s {
-        top: 2.3rem;
-        left: 1.15rem;
-        animation: loader-ball-3 1.1s ease-in-out infinite;
-      }
-      @keyframes loader-rotate {
-        0% { transform: rotate(0deg) scale(0.86); }
-        50% { transform: rotate(360deg) scale(1.12); }
-        100% { transform: rotate(720deg) scale(0.86); }
-      }
-      @keyframes loader-ball-1 {
-        0%, 100% { transform: translate(0, 0); opacity: 1; }
-        50% { transform: translate(1.15rem, 1.15rem); opacity: 0.55; }
-      }
-      @keyframes loader-ball-2 {
-        0%, 100% { transform: translate(0, 0); opacity: 0.75; }
-        50% { transform: translate(-1.15rem, 1.15rem); opacity: 1; }
-      }
-      @keyframes loader-ball-3 {
-        0%, 100% { transform: translate(0, 0); opacity: 0.65; }
-        50% { transform: translate(0, -1.15rem); opacity: 1; }
-      }
     </style>
 
     <script define:vars={{ active }}>
@@ -316,33 +249,9 @@ const hrefSitioPublico = baseUrl ? `${baseUrl}/` : "/";
     <script>
       import { requerirAdmin, cerrarSesion } from "../lib/auth";
 
-      // Setup del loader global ANTES de cualquier await,
-      // para evitar race conditions con scripts de páginas hijas
-      // que puedan llamar __tmyhLoader.show/hide en paralelo.
-      const loaderWrap = document.getElementById("admin-action-loader");
-      const loaderText = document.getElementById("admin-action-loader-text");
-      let loaderWatchdog: ReturnType<typeof setTimeout> | null = null;
-      const __tmyhLoader = {
-        show(message = "Procesando…") {
-          if (loaderText) loaderText.textContent = message;
-          loaderWrap?.classList.remove("hidden");
-          loaderWrap?.classList.add("flex");
-          if (loaderWatchdog) clearTimeout(loaderWatchdog);
-          loaderWatchdog = setTimeout(() => {
-            __tmyhLoader.hide();
-            console.warn("[loader] watchdog activado: 15s sin hide()");
-          }, 15000);
-        },
-        hide() {
-          if (loaderWatchdog) {
-            clearTimeout(loaderWatchdog);
-            loaderWatchdog = null;
-          }
-          loaderWrap?.classList.add("hidden");
-          loaderWrap?.classList.remove("flex");
-        },
-      };
-      (window as any).__tmyhLoader = __tmyhLoader;
+      // El loader global (window.__tmyhLoader) lo configura el componente
+      // <LoaderGlobal /> y queda disponible apenas se parsea el HTML, antes
+      // de que este script termine el await de auth.
 
       const loading = document.getElementById("admin-loading");
       const shell = document.getElementById("admin-shell");

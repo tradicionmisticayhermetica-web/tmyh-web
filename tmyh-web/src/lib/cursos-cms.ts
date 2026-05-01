@@ -93,17 +93,21 @@ function estadoBdASitio(estado: EstadoCursoCms): Curso["estado"] | null {
 function cursoDesdeRow(row: CursoRow): Curso | null {
   const estado = estadoBdASitio(row.estado);
   if (!estado) return null;
-  const descripcionLarga = (row.descripcion_larga ?? []).filter(Boolean);
+  // Nunca mostrar el curso si está marcado como eliminado en la BD,
+  // aún si el `estado` quedó en un valor público por desincronización.
+  if (row.eliminado_en) return null;
+  const descripcionLarga = (row.descripcion_larga ?? [])
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter(Boolean);
   const temas = normalizarTemas(row.temas);
   return {
     slug: row.slug,
     titulo: row.titulo,
     subtitulo: row.subtitulo ?? undefined,
     descripcionCorta: row.descripcion_corta,
-    descripcionLarga:
-      descripcionLarga.length > 0
-        ? descripcionLarga
-        : ["Descripción en construcción."],
+    // Si la descripción larga está vacía, devolvemos un array vacío y dejamos
+    // que el render decida (nada de placeholders feos en producción).
+    descripcionLarga,
     clases: Math.max(1, row.clases || 1),
     modalidad: row.modalidad,
     nivel: row.nivel,
@@ -200,7 +204,7 @@ function slugifySimple(s: string): string {
     .replace(/\s+/g, "-");
 }
 
-function editableDesdeCurso(curso: Curso): CursoEditable {
+function editableDesdeCurso(curso: Curso, orden: number = 100): CursoEditable {
   return {
     slug: curso.slug,
     titulo: curso.titulo,
@@ -221,7 +225,7 @@ function editableDesdeCurso(curso: Curso): CursoEditable {
     imagen: curso.imagen,
     imagenAlt: curso.imagenAlt,
     programaPdf: curso.programaPdf,
-    orden: 100,
+    orden,
     eliminadoEn: null,
   };
 }
@@ -294,7 +298,9 @@ export async function listarCursosAdminConFallback(): Promise<CursoEditable[]> {
   }
 
   const porSlug = new Map<string, CursoEditable>();
-  for (const c of cursosBase) porSlug.set(c.slug, editableDesdeCurso(c));
+  // Respetar el orden manual del array `cursosBase` cuando el curso no
+  // tiene fila en la BD (i.e. solo viene del estático).
+  cursosBase.forEach((c, i) => porSlug.set(c.slug, editableDesdeCurso(c, i + 1)));
 
   if (!error && data) {
     for (const row of data as CursoRow[]) {
@@ -353,8 +359,9 @@ export async function obtenerCursoEditable(
   if (data && !error) return editableDesdeRow(data as CursoRow);
   if (error) console.error("[cursos-cms.obtenerCursoEditable]", error);
 
-  const base = cursosBase.find((c) => c.slug === slugTrim);
-  return base ? editableDesdeCurso(base) : null;
+  const idx = cursosBase.findIndex((c) => c.slug === slugTrim);
+  if (idx < 0) return null;
+  return editableDesdeCurso(cursosBase[idx], idx + 1);
 }
 
 export async function guardarCursoEditable(
@@ -513,16 +520,29 @@ export async function purgarCursosPapelera(): Promise<number> {
   return typeof data === "number" ? data : 0;
 }
 
+/**
+ * Dispara el workflow de despliegue del sitio cuando hay cambios en cursos.
+ *
+ * IMPORTANTE: la edge function `trigger-build` solo dispara el deploy si
+ * `record.estado` está en la lista de estados públicos. Pero acá necesitamos
+ * forzar el deploy también cuando un curso PASA de público a no-público
+ * (ej. mover a papelera, eliminar). Para eso usamos `estado: "activo"` como
+ * "sello" del evento del CMS, dado que el flag real ya quedó persistido en
+ * la BD por la operación previa. Es un workaround consciente y documentado;
+ * el slug y el motivo van como datos reales para que el log de GitHub
+ * Actions sea legible.
+ */
 export async function dispararDeployCursos(
-  razon: string,
+  slug: string,
+  motivo: string = "actualizacion",
 ): Promise<{ ok: boolean; error?: string }> {
+  const slugLimpio = slug.trim() || "curso";
   const payload = {
     table: "cursos",
     type: "UPDATE",
     record: {
       estado: "activo",
-      slug: razon,
-      id: `curso-${Date.now()}`,
+      slug: `${motivo}:${slugLimpio}`,
     },
   };
   const { error } = await supabase.functions.invoke("trigger-build", {
