@@ -74,32 +74,17 @@ jobs:
             REASON="${{ github.event.inputs.reason || 'push a main' }}"
             git commit -m "deploy: ${REASON} ($(date -u '+%Y-%m-%d %H:%M UTC'))"
             git push origin production
-            echo "✅ Deploy completado."
+            echo "Deploy completado."
             echo "deployed=true" >> $GITHUB_OUTPUT
           fi
 
-      # Importante:
-      # - Esto NO reemplaza el cron de Ferozo (queda como respaldo cada 10 min).
-      # - Solo fuerza sincronización inmediata cuando hubo cambios reales en production.
-      - name: Cargar clave SSH para Ferozo
+      # Notificación inmediata a Ferozo via webhook configurado en GitHub
+      # (Settings -> Webhooks). Cuando hacemos push a production, GitHub mismo
+      # llama al webhook https://ferozo.host/deploy/git/<token> y Ferozo hace
+      # pull al instante. Acá solo dejamos un confirm log.
+      - name: Confirmar pull en Ferozo
         if: steps.push_production.outputs.deployed == 'true'
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.FEROZO_SSH_KEY }}
-
-      - name: Forzar pull inmediato en Ferozo
-        if: steps.push_production.outputs.deployed == 'true'
-        env:
-          FEROZO_HOST: ${{ secrets.FEROZO_HOST }}
-          FEROZO_USER: ${{ secrets.FEROZO_USER }}
-          FEROZO_PORT: ${{ secrets.FEROZO_PORT }}
-          FEROZO_DEPLOY_PATH: ${{ secrets.FEROZO_DEPLOY_PATH }}
         run: |
-          if [ -z "$FEROZO_HOST" ] || [ -z "$FEROZO_USER" ] || [ -z "$FEROZO_DEPLOY_PATH" ]; then
-            echo "Faltan secrets de Ferozo: FEROZO_HOST, FEROZO_USER, FEROZO_DEPLOY_PATH"
-            exit 1
-          fi
-
-          PORT="${FEROZO_PORT:-22}"
-          ssh -p "$PORT" -o StrictHostKeyChecking=no "$FEROZO_USER@$FEROZO_HOST" \
-            "cd '$FEROZO_DEPLOY_PATH' && git fetch origin production && git checkout production && git pull --ff-only origin production"
+          echo "Push a production realizado."
+          echo "El webhook configurado en GitHub debería disparar el pull en Ferozo automáticamente."
+          echo "Si tarda, revisar: Settings -> Webhooks -> Recent Deliveries en GitHub."
