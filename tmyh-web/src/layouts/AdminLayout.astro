@@ -316,6 +316,34 @@ const hrefSitioPublico = baseUrl ? `${baseUrl}/` : "/";
     <script>
       import { requerirAdmin, cerrarSesion } from "../lib/auth";
 
+      // Setup del loader global ANTES de cualquier await,
+      // para evitar race conditions con scripts de páginas hijas
+      // que puedan llamar __tmyhLoader.show/hide en paralelo.
+      const loaderWrap = document.getElementById("admin-action-loader");
+      const loaderText = document.getElementById("admin-action-loader-text");
+      let loaderWatchdog: ReturnType<typeof setTimeout> | null = null;
+      const __tmyhLoader = {
+        show(message = "Procesando…") {
+          if (loaderText) loaderText.textContent = message;
+          loaderWrap?.classList.remove("hidden");
+          loaderWrap?.classList.add("flex");
+          if (loaderWatchdog) clearTimeout(loaderWatchdog);
+          loaderWatchdog = setTimeout(() => {
+            __tmyhLoader.hide();
+            console.warn("[loader] watchdog activado: 15s sin hide()");
+          }, 15000);
+        },
+        hide() {
+          if (loaderWatchdog) {
+            clearTimeout(loaderWatchdog);
+            loaderWatchdog = null;
+          }
+          loaderWrap?.classList.add("hidden");
+          loaderWrap?.classList.remove("flex");
+        },
+      };
+      (window as any).__tmyhLoader = __tmyhLoader;
+
       const loading = document.getElementById("admin-loading");
       const shell = document.getElementById("admin-shell");
 
@@ -347,20 +375,6 @@ const hrefSitioPublico = baseUrl ? `${baseUrl}/` : "/";
           .getElementById("btn-cerrar-sesion-mobile")
           ?.addEventListener("click", handleCerrar);
       }
-
-      const loaderWrap = document.getElementById("admin-action-loader");
-      const loaderText = document.getElementById("admin-action-loader-text");
-      (window as any).__tmyhLoader = {
-        show(message = "Procesando…") {
-          if (loaderText) loaderText.textContent = message;
-          loaderWrap?.classList.remove("hidden");
-          loaderWrap?.classList.add("flex");
-        },
-        hide() {
-          loaderWrap?.classList.add("hidden");
-          loaderWrap?.classList.remove("flex");
-        },
-      };
     </script>
   </body>
 </html>

@@ -44,8 +44,6 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 
     const lista = document.getElementById("lista-papelera");
     const status = document.getElementById("status");
-    let loaderFallback: HTMLDivElement | null = null;
-    let loaderWatchdog: ReturnType<typeof setTimeout> | null = null;
 
     function setStatus(msg: string, tipo: "ok" | "error" | "info") {
       if (!status) return;
@@ -54,58 +52,12 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
       status.classList.add(tipo === "ok" ? "text-gold-300" : tipo === "error" ? "text-wine-500" : "text-parchment-300");
     }
 
-    function ensureLoaderFallback() {
-      if (loaderFallback) return loaderFallback;
-      const wrap = document.createElement("div");
-      wrap.className = "hidden fixed inset-0 z-[1400] items-center justify-center bg-night-950/78 backdrop-blur-[2px]";
-      wrap.innerHTML = `
-        <div class="card-altar px-8 py-7 text-center min-w-[300px]">
-          <div class="loader-triad" aria-hidden="true">
-            <span class="loader-sym m">☿</span>
-            <span class="loader-sym a">🜍</span>
-            <span class="loader-sym s">🜔</span>
-          </div>
-          <p class="loader-msg mt-5 text-xs tracking-widest uppercase text-parchment-200">Procesando…</p>
-        </div>`;
-      document.body.appendChild(wrap);
-      loaderFallback = wrap;
-      return wrap;
-    }
-
     function showLoader(msg = "Procesando…") {
-      if (loaderWatchdog) clearTimeout(loaderWatchdog);
-      loaderWatchdog = setTimeout(() => {
-        hideLoader();
-        setStatus(
-          "La operación tardó demasiado. Verificá conexión/Supabase y reintentá.",
-          "error",
-        );
-      }, 15000);
-      const uiLoader = (window as any).__tmyhLoader;
-      if (uiLoader?.show) {
-        uiLoader.show(msg);
-        return;
-      }
-      const wrap = ensureLoaderFallback();
-      const msgEl = wrap.querySelector(".loader-msg");
-      if (msgEl) msgEl.textContent = msg;
-      wrap.classList.remove("hidden");
-      wrap.classList.add("flex");
+      (window as any).__tmyhLoader?.show?.(msg);
     }
 
     function hideLoader() {
-      if (loaderWatchdog) {
-        clearTimeout(loaderWatchdog);
-        loaderWatchdog = null;
-      }
-      const uiLoader = (window as any).__tmyhLoader;
-      if (uiLoader?.hide) {
-        uiLoader.hide();
-        return;
-      }
-      if (!loaderFallback) return;
-      loaderFallback.classList.add("hidden");
-      loaderFallback.classList.remove("flex");
+      (window as any).__tmyhLoader?.hide?.();
     }
 
     async function withTimeout<T>(
