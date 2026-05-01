@@ -1,0 +1,175 @@
+---
+/**
+ * NewsletterFooterCTA: caja de suscripcion al newsletter visible en el pie
+ * de todas las paginas publicas. Pide solo el email y llama a la RPC
+ * `newsletter_suscribir_email`.
+ *
+ * UX:
+ *   - Estado inicial: input + boton "Suscribirme".
+ *   - Mientras envia: boton deshabilitado con texto "Enviando..."
+ *   - Si OK: reemplaza el form por un mensaje de bienvenida.
+ *   - Si error de validacion / rate limit: muestra mensaje debajo, mantiene
+ *     el form para que el usuario pueda corregir.
+ *
+ * Tono: alineado con el resto del sitio (sereno, no comercial). Frecuencia
+ * explicita (mensual) y promesa de qué van a recibir.
+ */
+---
+
+<section
+  class="border-y border-[rgb(230_196_100_/_0.12)] bg-[color:var(--color-night-900)]/40"
+  aria-labelledby="newsletter-footer-titulo"
+>
+  <div class="container-prose py-12 md:py-14">
+    <div class="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+      <div>
+        <span class="title-eyebrow">Carta hermética</span>
+        <h2
+          id="newsletter-footer-titulo"
+          class="font-display text-2xl md:text-3xl text-parchment-50 mt-3 mb-3"
+        >
+          Una invocación mensual del archivo
+        </h2>
+        <p class="text-sm md:text-base font-serif text-parchment-300 leading-relaxed">
+          Una vez al mes, un envío sereno: un símbolo, una reflexión, una
+          lectura recomendada. Sin promociones agresivas. Te podés dar de
+          baja con un click cuando quieras.
+        </p>
+      </div>
+
+      <form
+        id="newsletter-footer-form"
+        class="flex flex-col gap-3"
+        novalidate
+      >
+        <label
+          for="newsletter-footer-email"
+          class="text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)]"
+        >
+          Tu email
+        </label>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input
+            id="newsletter-footer-email"
+            name="email"
+            type="email"
+            required
+            autocomplete="email"
+            placeholder="tu@correo.com"
+            class="flex-1 bg-[color:var(--color-night-800)] border border-[rgb(230_196_100_/_0.15)] rounded-sm px-4 py-3 text-parchment-100 focus:border-[color:var(--color-gold-400)] focus:outline-none transition"
+          />
+          <button
+            type="submit"
+            id="newsletter-footer-submit"
+            class="btn-gold whitespace-nowrap justify-center"
+          >
+            Suscribirme
+          </button>
+        </div>
+        <p
+          id="newsletter-footer-status"
+          class="text-xs font-serif min-h-[1rem]"
+          aria-live="polite"
+        ></p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Submit del formulario de newsletter del footer.
+  // Llama a la RPC `newsletter_suscribir_email` via el cliente browser.
+  import { suscribirNewsletterEmail } from "../lib/supabase";
+
+  const form = document.getElementById(
+    "newsletter-footer-form",
+  ) as HTMLFormElement | null;
+  const input = document.getElementById(
+    "newsletter-footer-email",
+  ) as HTMLInputElement | null;
+  const btn = document.getElementById(
+    "newsletter-footer-submit",
+  ) as HTMLButtonElement | null;
+  const status = document.getElementById(
+    "newsletter-footer-status",
+  ) as HTMLParagraphElement | null;
+
+  /** Mensajes humanos por codigo de error de la RPC. */
+  const MENSAJES_ERROR: Record<string, string> = {
+    email_vacio: "Por favor escribí tu email.",
+    email_invalido: "El email no parece válido. Revisá el formato.",
+    limite_email:
+      "Ya recibimos tu email recientemente. Si no te llegó nada, revisá la carpeta de spam o escribinos a contacto@tradicionmisticayhermetica.com.",
+    limite_ip:
+      "Demasiadas solicitudes desde esta conexión. Probá en un rato.",
+    config:
+      "El formulario aún no está configurado. Escribinos a contacto@tradicionmisticayhermetica.com.",
+    red: "No pudimos completar la suscripción. Probá de nuevo en un momento.",
+  };
+
+  function setStatus(texto: string, tipo: "ok" | "error" | "info") {
+    if (!status) return;
+    status.textContent = texto;
+    status.style.color =
+      tipo === "ok"
+        ? "#a7d39c" // verde tenue
+        : tipo === "error"
+          ? "#d97a6c" // terracota suave
+          : "#b8a984"; // pergamino atenuado
+  }
+
+  /**
+   * Reemplaza el form completo por un mensaje de bienvenida cuando la
+   * suscripcion fue exitosa. Asi el usuario ve un cierre claro y no se
+   * confunde pensando que tiene que hacer algo más.
+   */
+  function mostrarBienvenida(yaEstaba: boolean) {
+    if (!form) return;
+    const padre = form.parentElement;
+    if (!padre) return;
+    const mensaje = yaEstaba
+      ? "Ya estabas suscripto. Vas a recibir la próxima carta hermética como siempre."
+      : "Listo. Vas a recibir la próxima carta hermética en tu bandeja. Bienvenida/o.";
+    form.replaceWith(
+      Object.assign(document.createElement("div"), {
+        className:
+          "rounded-sm border border-emerald-400/30 bg-emerald-400/5 px-5 py-4 text-sm font-serif text-emerald-200 leading-relaxed",
+        textContent: mensaje,
+      }),
+    );
+  }
+
+  if (form && input && btn) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = input.value.trim();
+      if (!email) {
+        setStatus(MENSAJES_ERROR.email_vacio, "error");
+        return;
+      }
+      // Validacion rapida cliente-side; la RPC valida igual en servidor.
+      if (!email.includes("@") || !email.includes(".")) {
+        setStatus(MENSAJES_ERROR.email_invalido, "error");
+        return;
+      }
+
+      btn.disabled = true;
+      const textoOriginal = btn.textContent ?? "Suscribirme";
+      btn.textContent = "Enviando…";
+      setStatus("Enviando…", "info");
+
+      const resp = await suscribirNewsletterEmail(email, "web:footer");
+
+      if (resp.ok) {
+        mostrarBienvenida(!!resp.ya_estaba_suscripto);
+      } else {
+        setStatus(
+          MENSAJES_ERROR[resp.error ?? "red"] ?? MENSAJES_ERROR.red,
+          "error",
+        );
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+      }
+    });
+  }
+</script>

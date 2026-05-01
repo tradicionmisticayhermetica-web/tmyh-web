@@ -189,3 +189,46 @@ export async function resuscribirNewsletter(
     return { ok: false, error: "red" };
   }
 }
+
+/**
+ * Suscribe un email simple al newsletter desde una caja publica (footer,
+ * lead magnet, etc). No requiere los datos del formulario de contacto
+ * completo: solo el email. La RPC `newsletter_suscribir_email` se encarga
+ * de crear el contacto si no existe o reactivarlo si estaba dado de baja.
+ *
+ * Devuelve:
+ *   - `{ok:true, ya_estaba_suscripto:false}` → caso feliz, primera vez o reactivacion.
+ *   - `{ok:true, ya_estaba_suscripto:true}` → el email ya estaba suscripto (idempotente).
+ *   - `{ok:false, error:'email_invalido' | 'limite_email' | 'limite_ip' | ...}` → error de validacion o rate limit.
+ */
+export interface ResultadoSuscripcionPublica {
+  ok: boolean;
+  ya_estaba_suscripto?: boolean;
+  email?: string;
+  error?: string;
+}
+
+export async function suscribirNewsletterEmail(
+  email: string,
+  origen: string = "web:footer",
+): Promise<ResultadoSuscripcionPublica> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return { ok: false, error: "config" };
+  }
+  try {
+    const { data, error } = await supabase.rpc("newsletter_suscribir_email", {
+      p_email: email,
+      p_user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      p_ip_hash: null, // El servidor no recibe IP del browser; queda como null.
+      p_origen: origen,
+    });
+    if (error) {
+      console.error("[suscribirNewsletterEmail] RPC error", error);
+      return { ok: false, error: "red" };
+    }
+    return data as ResultadoSuscripcionPublica;
+  } catch (err) {
+    console.error("[suscribirNewsletterEmail] excepcion", err);
+    return { ok: false, error: "red" };
+  }
+}
