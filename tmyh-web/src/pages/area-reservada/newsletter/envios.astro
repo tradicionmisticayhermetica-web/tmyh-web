@@ -160,7 +160,32 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
           const colorClases = COLOR_ESTADO_ENVIO[e.estado];
           const etiqueta = ETIQUETA_ESTADO_ENVIO[e.estado];
           const fechaUltima =
-            e.enviado_en ?? e.rebotado_en ?? e.creado_en;
+            e.queja_en ??
+            e.rebotado_en ??
+            e.abierto_en ??
+            e.entregado_en ??
+            e.enviado_en ??
+            e.creado_en;
+
+          // Badges adicionales informativos según los eventos de Resend.
+          const badgesExtra: string[] = [];
+          if (e.queja_en) {
+            badgesExtra.push(
+              `<span title="El destinatario marcó el mail como spam." class="text-[9px] uppercase tracking-widest text-wine-300 px-1.5 py-0.5 border border-wine-400/40 rounded-sm">Spam</span>`,
+            );
+          }
+          if (e.entregado_en && !e.rebotado_en) {
+            badgesExtra.push(
+              `<span title="Resend confirmó la entrega al servidor del destinatario." class="text-[9px] uppercase tracking-widest text-sky-300 px-1.5 py-0.5 border border-sky-400/40 rounded-sm">Entregado</span>`,
+            );
+          }
+          if (e.abierto_en) {
+            const aperturasTxt =
+              e.aperturas && e.aperturas > 1 ? ` ×${e.aperturas}` : "";
+            badgesExtra.push(
+              `<span title="${e.aperturas ?? 1} apertura(s) registrada(s) por Resend." class="text-[9px] uppercase tracking-widest text-emerald-300 px-1.5 py-0.5 border border-emerald-400/40 rounded-sm">Abierto${aperturasTxt}</span>`,
+            );
+          }
 
           return `
         <div class="px-6 py-4">
@@ -169,7 +194,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
               <div class="flex items-center gap-3 flex-wrap mb-1">
                 <span class="font-mono text-sm text-parchment-100">${escapeHtml(e.email_snapshot)}</span>
                 <span class="text-[9px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm ${colorClases}">${etiqueta}</span>
-                ${e.abierto_en ? `<span class="text-[9px] uppercase tracking-widest text-emerald-300 px-1.5 py-0.5 border border-emerald-400/40 rounded-sm">Abierto</span>` : ""}
+                ${badgesExtra.join("")}
               </div>
               ${e.nombre_snapshot ? `<div class="text-xs text-parchment-300 font-serif">${escapeHtml(e.nombre_snapshot)}</div>` : ""}
               ${

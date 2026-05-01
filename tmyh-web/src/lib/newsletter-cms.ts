@@ -515,8 +515,11 @@ export interface EnvioCampana {
   error_mensaje: string | null;
   creado_en: string;
   enviado_en: string | null;
+  entregado_en: string | null;
   abierto_en: string | null;
   rebotado_en: string | null;
+  queja_en: string | null;
+  aperturas: number;
 }
 
 /**
@@ -538,7 +541,7 @@ export async function listarEnviosDeCampana(
   let q = supabase
     .from("newsletter_envios")
     .select(
-      "id, campana_id, contacto_id, email_snapshot, nombre_snapshot, estado, intentos, resend_id, error_codigo, error_mensaje, creado_en, enviado_en, abierto_en, rebotado_en",
+      "id, campana_id, contacto_id, email_snapshot, nombre_snapshot, estado, intentos, resend_id, error_codigo, error_mensaje, creado_en, enviado_en, entregado_en, abierto_en, rebotado_en, queja_en, aperturas",
       { count: "exact" },
     )
     .eq("campana_id", campanaId)
