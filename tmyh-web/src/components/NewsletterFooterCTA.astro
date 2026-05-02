@@ -23,17 +23,17 @@
   <div class="container-prose py-12 md:py-14">
     <div class="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
       <div>
-        <span class="title-eyebrow">Carta hermética</span>
+        <span class="title-eyebrow">Newsletter</span>
         <h2
           id="newsletter-footer-titulo"
           class="font-display text-2xl md:text-3xl text-parchment-50 mt-3 mb-3"
         >
-          Una invocación mensual del archivo
+          Sumate al newsletter mensual
         </h2>
-        <p class="text-sm md:text-base font-serif text-parchment-300 leading-relaxed">
-          Una vez al mes, un envío sereno: un símbolo, una reflexión, una
-          lectura recomendada. Sin promociones agresivas. Te podés dar de
-          baja con un click cuando quieras.
+        <p class="text-base md:text-lg font-serif text-parchment-200 leading-relaxed">
+          Una vez al mes te llega una reflexión breve, alguna lectura
+          recomendada y, cuando hay, novedades sobre los cursos. Podés
+          darte de baja cuando quieras.
         </p>
       </div>
 
@@ -128,12 +128,12 @@
     const padre = form.parentElement;
     if (!padre) return;
     const mensaje = yaEstaba
-      ? "Ya estabas suscripto. Vas a recibir la próxima carta hermética como siempre."
-      : "Listo. Vas a recibir la próxima carta hermética en tu bandeja. Bienvenida/o.";
+      ? "Ya estabas suscripto. Vas a recibir el próximo envío como siempre."
+      : "¡Listo! Vas a recibir el próximo envío en tu bandeja. Gracias por sumarte.";
     form.replaceWith(
       Object.assign(document.createElement("div"), {
         className:
-          "rounded-sm border border-emerald-400/30 bg-emerald-400/5 px-5 py-4 text-sm font-serif text-emerald-200 leading-relaxed",
+          "rounded-sm border border-emerald-400/30 bg-emerald-400/5 px-5 py-4 text-base font-serif text-emerald-100 leading-relaxed",
         textContent: mensaje,
       }),
     );
