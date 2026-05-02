@@ -173,6 +173,20 @@ Objetivo: mismo **espíritu que el módulo Blog** (listado con cards, filtros po
 - ✅ Cutover a sitio nuevo en raíz.
 - ❌ Hilo completo de email en el panel; IMAP en hosting.
 
+### Stack — versiones fijadas
+
+- **Node**: 22 LTS en CI (`.github/workflows/deploy.yml`). Algunos paquetes
+  del lock requieren `>=22.12.0`. Local: 22 o 24 funcionan; usamos LTS en
+  CI por estabilidad.
+- **Astro 5.18.1** (no 6.x). Astro 6 trae Vite 7 y `@tailwindcss/vite` 4.2.x
+  trae Vite 8 (rolldown-vite preview): el conflicto de versiones internas
+  rompe la build. Subir a Astro 6 cuando Tailwind/plugins se alineen.
+  - Hay una XSS *moderate* en Astro <6.1.6 (`define:vars` con sanitizado
+    incompleto de `</script>`). En este sitio `define:vars` solo se usa en
+    `AdminLayout.astro` con un literal definido por el dev (`active`),
+    nunca con datos de usuario ni de DB → **no aplicable**.
+- **Tailwind 4.2.4** (`tailwindcss` y `@tailwindcss/vite`).
+
 ---
 
 ## Hecho hasta hoy (resumen)

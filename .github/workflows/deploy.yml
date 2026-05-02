@@ -29,7 +29,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Node 22 LTS (soportada hasta abril 2027). Algunas dependencias
+          # del lock requieren >=22.12.0 (ej. @astrojs/markdown), por lo
+          # que Node 20 ya quedo desactualizado. Node 24 (Current) tambien
+          # corre el build local, pero en CI usamos LTS.
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: tmyh-web/package-lock.json
 

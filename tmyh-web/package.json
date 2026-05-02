@@ -14,7 +14,7 @@
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
     "@supabase/supabase-js": "^2.104.1",
-    "@tailwindcss/vite": "^4.1.14",
+    "@tailwindcss/vite": "^4.2.4",
     "@tiptap/core": "^3.22.5",
     "@tiptap/extension-character-count": "^3.22.5",
     "@tiptap/extension-gapcursor": "^3.22.5",
@@ -28,7 +28,7 @@
     "@tiptap/extension-youtube": "^3.22.5",
     "@tiptap/pm": "^3.22.5",
     "@tiptap/starter-kit": "^3.22.5",
-    "astro": "^5.14.1",
-    "tailwindcss": "^4.1.14"
+    "astro": "^5.18.1",
+    "tailwindcss": "^4.2.4"
   }
 }
