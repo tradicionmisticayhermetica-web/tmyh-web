@@ -109,7 +109,7 @@ const inscripcionComun: DatosInscripcion = {
   whatsapp: "5491165008996",
   paypalUser: "masajesonoro",
   cbu: "0720044188000037705222",
-  alias: "TRINEO.AMIGA.DECENA",
+  alias: "TRADICION.HERMETICA",
   banco: "Banco Santander Río (caja de ahorro en pesos)",
   cuit: "20-27565970/4",
 };
