@@ -173,6 +173,22 @@ Objetivo: mismo **espíritu que el módulo Blog** (listado con cards, filtros po
 - ✅ Cutover a sitio nuevo en raíz.
 - ❌ Hilo completo de email en el panel; IMAP en hosting.
 
+### Analytics
+
+- **Google Analytics 4** integrado vía componente `GoogleAnalytics.astro`
+  (incluido tanto en `BaseLayout` como en `AdminLayout` — se trackea el
+  sitio completo, incluyendo admin).
+- ID se inyecta en build vía secret `PUBLIC_GA_ID` en GitHub Actions.
+  Si la variable no está seteada (ej. `npm run dev`), el componente no
+  renderiza nada y GA queda inactivo.
+- `anonymize_ip: true` configurado por defecto.
+- Eventos automáticos de GA4 (Enhanced Measurement, default ON en el
+  stream): page views, scroll depth (90%), outbound clicks, file
+  downloads, video engagement.
+- Banner de cookies **informativo** (no consent gate) al pie de las
+  páginas públicas — componente `CookieBanner.astro`. Se cierra con un
+  click y guarda preferencia en `localStorage`.
+
 ### Stack — versiones fijadas
 
 - **Node**: 22 LTS en CI (`.github/workflows/deploy.yml`). Algunos paquetes

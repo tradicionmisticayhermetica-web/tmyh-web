@@ -1,0 +1,62 @@
+---
+/**
+ * CookieBanner: aviso minimo al pie sobre uso de cookies.
+ *
+ * Se incluye solo en el sitio publico (BaseLayout). El usuario lo cierra
+ * con un click y la decision se guarda en `localStorage` para que no
+ * vuelva a aparecer.
+ *
+ * Nota: este banner es **informativo**, no es un consent gate. GA4 se
+ * carga apenas entra el visitante (modelo legal valido en AR/LATAM).
+ * Si en algun momento necesitamos cumplir GDPR estricto, hay que cambiar
+ * la logica para que GA arranque solo despues del consentimiento.
+ */
+---
+
+<div
+  id="cookie-banner"
+  class="fixed bottom-0 left-0 right-0 z-50 hidden bg-[color:var(--color-night-900)]/95 backdrop-blur-sm border-t border-[rgb(230_196_100_/_0.18)]"
+  role="region"
+  aria-label="Aviso de uso de cookies"
+>
+  <div class="container-prose py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <p class="text-sm text-parchment-200 font-serif leading-relaxed">
+      Este sitio usa cookies para medir tráfico (Google Analytics). No
+      compartimos datos personales con terceros.
+    </p>
+    <button
+      id="cookie-banner-ok"
+      type="button"
+      class="btn-gold whitespace-nowrap text-sm"
+      aria-label="Cerrar aviso de cookies"
+    >
+      Entendido
+    </button>
+  </div>
+</div>
+
+<script is:inline>
+  // Mostrar el banner solo si el usuario nunca lo cerro antes.
+  (function () {
+    var key = "tmyh:cookie-banner-cerrado";
+    var banner = document.getElementById("cookie-banner");
+    if (!banner) return;
+    try {
+      if (localStorage.getItem(key) === "1") return;
+    } catch (_) {
+      // Si localStorage no esta disponible, igual mostramos el banner.
+    }
+    banner.classList.remove("hidden");
+    var btn = document.getElementById("cookie-banner-ok");
+    if (btn) {
+      btn.addEventListener("click", function () {
+        banner.classList.add("hidden");
+        try {
+          localStorage.setItem(key, "1");
+        } catch (_) {
+          // Si falla el storage, al menos lo escondemos durante la sesion.
+        }
+      });
+    }
+  })();
+</script>

@@ -1,0 +1,49 @@
+---
+/**
+ * GoogleAnalytics: integra GA4 (gtag) en el sitio.
+ *
+ * Se incluye en BaseLayout (publico) y AdminLayout (privado) porque
+ * por decision se trackea TODO el sitio para tener metricas reales de
+ * uso. En el panel admin igual hay pocos usuarios (Emanuel + Juan) y
+ * los volcados en filtros internos de GA pueden excluirlos despues.
+ *
+ * Configuracion:
+ *   - El ID de medicion (`G-XXXXXXXXXX`) se inyecta via `PUBLIC_GA_ID`
+ *     en GitHub Actions Secrets (no se commitea). Si la variable no
+ *     esta seteada (ej. en `npm run dev`), el componente no renderiza
+ *     nada y GA queda inactivo. Asi NO contaminamos metricas con
+ *     desarrollo local.
+ *
+ *   - `anonymize_ip: true`: oculta el ultimo octeto de la IP del
+ *     visitante antes de procesarla.
+ *
+ *   - Scroll depth + outbound clicks son automaticos en GA4 cuando
+ *     "Enhanced Measurement" esta ON en el Data Stream (default ON).
+ */
+
+const gaId = import.meta.env.PUBLIC_GA_ID as string | undefined;
+---
+
+{
+  gaId && (
+    <>
+      <script
+        is:inline
+        async
+        src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+      />
+      <script is:inline define:vars={{ gaId }}>
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          window.gtag = gtag;
+          gtag('js', new Date());
+          gtag('config', gaId, {
+            anonymize_ip: true,
+            cookie_flags: 'SameSite=None;Secure'
+          });
+        `}
+      </script>
+    </>
+  )
+}
