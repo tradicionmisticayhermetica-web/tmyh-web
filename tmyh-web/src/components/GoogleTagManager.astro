@@ -1,0 +1,61 @@
+---
+/**
+ * GoogleTagManager: integra GTM en el sitio.
+ *
+ * GTM es un contenedor de tags: desde tagmanager.google.com se configura
+ * que tags se disparan (GA4, Pixel de Facebook, etc.). El sitio solo
+ * carga el contenedor; los tags se gestionan sin tocar codigo.
+ *
+ * Este componente expone dos slots:
+ *   - <GoogleTagManager />          → snippet del <head>
+ *   - <GoogleTagManager body />     → noscript fallback al inicio del <body>
+ *
+ * Configuracion:
+ *   - El ID del contenedor (`GTM-XXXXXXX`) se inyecta via `PUBLIC_GTM_ID`
+ *     en GitHub Actions Secrets (no se commitea). Si la variable no esta
+ *     seteada (ej. `npm run dev`), no se renderiza nada y GTM queda
+ *     inactivo. Asi NO contaminamos metricas con desarrollo local.
+ *
+ *   - El banner de cookies (`CookieBanner.astro`) sigue siendo
+ *     informativo: GTM y los tags se cargan apenas entra el visitante
+ *     (modelo legal valido en AR/LATAM). Si en el futuro hay que
+ *     cumplir GDPR estricto, hay que configurar **Consent Mode** desde
+ *     el dashboard de GTM.
+ */
+
+interface Props {
+  /** Si es true, renderiza el snippet noscript para el inicio del body. */
+  body?: boolean;
+}
+
+const { body = false } = Astro.props;
+const gtmId = import.meta.env.PUBLIC_GTM_ID as string | undefined;
+---
+
+{
+  gtmId && !body && (
+    <script is:inline define:vars={{ gtmId }}>
+      {`
+        (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer', gtmId);
+      `}
+    </script>
+  )
+}
+
+{
+  gtmId && body && (
+    <noscript>
+      <iframe
+        src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
+        height="0"
+        width="0"
+        style="display:none;visibility:hidden"
+        title="Google Tag Manager (noscript fallback)"
+      />
+    </noscript>
+  )
+}

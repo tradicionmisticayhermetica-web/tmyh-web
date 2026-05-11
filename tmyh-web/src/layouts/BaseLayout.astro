@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar.astro";
 import Footer from "../components/Footer.astro";
 import Lightbox from "../components/Lightbox.astro";
 import LoaderGlobal from "../components/LoaderGlobal.astro";
-import GoogleAnalytics from "../components/GoogleAnalytics.astro";
+import GoogleTagManager from "../components/GoogleTagManager.astro";
 import CookieBanner from "../components/CookieBanner.astro";
 
 interface Props {
@@ -124,10 +124,11 @@ const websiteJsonLd = {
         (ej. JSON-LD `Course` desde /cursos/[slug]). */}
     <slot name="head" />
 
-    <GoogleAnalytics />
+    <GoogleTagManager />
   </head>
 
   <body class="min-h-screen flex flex-col">
+    <GoogleTagManager body />
     <Navbar />
     <main class="flex-1">
       <slot />

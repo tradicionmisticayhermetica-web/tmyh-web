@@ -45,10 +45,11 @@ jobs:
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
-          # ID de Google Analytics 4 (formato G-XXXXXXXXXX). Si no esta
-          # seteado, el componente GoogleAnalytics no renderiza nada y
-          # GA queda inactivo.
-          PUBLIC_GA_ID: ${{ secrets.PUBLIC_GA_ID }}
+          # ID del contenedor de Google Tag Manager (formato GTM-XXXXXXX).
+          # Desde el dashboard de GTM se configura que tags se disparan
+          # (GA4, Pixel, etc.). Si no esta seteado, el componente
+          # GoogleTagManager no renderiza nada y GTM queda inactivo.
+          PUBLIC_GTM_ID: ${{ secrets.PUBLIC_GTM_ID }}
           BASE_PATH: /
         run: npm run build
         working-directory: tmyh-web

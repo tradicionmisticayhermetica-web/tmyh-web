@@ -18,7 +18,7 @@
  */
 import "../styles/global.css";
 import LoaderGlobal from "../components/LoaderGlobal.astro";
-import GoogleAnalytics from "../components/GoogleAnalytics.astro";
+import GoogleTagManager from "../components/GoogleTagManager.astro";
 
 interface Props {
   title: string;
@@ -49,10 +49,11 @@ const hrefSitioPublico = baseUrl ? `${baseUrl}/` : "/";
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap"
     />
 
-    <GoogleAnalytics />
+    <GoogleTagManager />
   </head>
 
   <body class="min-h-screen flex flex-col">
+    <GoogleTagManager body />
     {/* Pantalla de carga mientras valida sesion. Reutiliza las clases
         animadas del componente LoaderGlobal para mantener una sola
         identidad visual de "estado de espera" en todo el sitio. */}

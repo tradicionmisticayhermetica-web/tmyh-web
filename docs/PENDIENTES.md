@@ -175,19 +175,26 @@ Objetivo: mismo **espíritu que el módulo Blog** (listado con cards, filtros po
 
 ### Analytics
 
-- **Google Analytics 4** integrado vía componente `GoogleAnalytics.astro`
-  (incluido tanto en `BaseLayout` como en `AdminLayout` — se trackea el
-  sitio completo, incluyendo admin).
-- ID se inyecta en build vía secret `PUBLIC_GA_ID` en GitHub Actions.
-  Si la variable no está seteada (ej. `npm run dev`), el componente no
-  renderiza nada y GA queda inactivo.
-- `anonymize_ip: true` configurado por defecto.
+- **Google Tag Manager (GTM)** integrado vía componente
+  `GoogleTagManager.astro` (head + body noscript). Incluido tanto en
+  `BaseLayout` como en `AdminLayout` — se trackea el sitio completo,
+  incluyendo admin.
+- ID del contenedor se inyecta en build vía secret `PUBLIC_GTM_ID` en
+  GitHub Actions (formato `GTM-XXXXXXX`). Si la variable no está
+  seteada (ej. `npm run dev`), el componente no renderiza nada y GTM
+  queda inactivo.
+- **GTM no trackea por sí solo**: hay que configurar el tag de GA4
+  desde [tagmanager.google.com](https://tagmanager.google.com/) →
+  Tags → New → "Google Analytics: GA4 Configuration" → poner el
+  Measurement ID (`G-XXXXXXXXXX`) que da Analytics. Trigger: "All
+  Pages". Publicar el contenedor.
 - Eventos automáticos de GA4 (Enhanced Measurement, default ON en el
   stream): page views, scroll depth (90%), outbound clicks, file
   downloads, video engagement.
 - Banner de cookies **informativo** (no consent gate) al pie de las
   páginas públicas — componente `CookieBanner.astro`. Se cierra con un
-  click y guarda preferencia en `localStorage`.
+  click y guarda preferencia en `localStorage`. Si en el futuro hay
+  que cumplir GDPR estricto, configurar **Consent Mode** desde GTM.
 
 ### Stack — versiones fijadas
 
