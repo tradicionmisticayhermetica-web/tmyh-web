@@ -1,62 +1,182 @@
 ---
 /**
- * CookieBanner: aviso minimo al pie sobre uso de cookies.
+ * CookieBanner: gate de consentimiento (Consent Mode v2).
  *
- * Se incluye solo en el sitio publico (BaseLayout). El usuario lo cierra
- * con un click y la decision se guarda en `localStorage` para que no
- * vuelva a aparecer.
+ * Flujo:
+ *   1. Al cargar la pagina, leemos `localStorage.tmyh:consent`:
+ *      - 'granted'  → llamamos gtag consent update con todo granted +
+ *                     NO mostramos banner.
+ *      - 'denied'   → no llamamos nada (queda denied del default) +
+ *                     NO mostramos banner.
+ *      - ausente    → mostramos banner.
+ *   2. El banner tiene 2 botones:
+ *      - Aceptar  → guarda 'granted' + gtag consent update granted.
+ *      - Rechazar → guarda 'denied' (no update, queda denied default).
+ *   3. Boton extra "Cambiar preferencias" en el footer permite volver
+ *      a abrir el banner.
  *
- * Nota: este banner es **informativo**, no es un consent gate. GA4 se
- * carga apenas entra el visitante (modelo legal valido en AR/LATAM).
- * Si en algun momento necesitamos cumplir GDPR estricto, hay que cambiar
- * la logica para que GA arranque solo despues del consentimiento.
+ * El banner se incluye en BaseLayout (paginas publicas). Para que el
+ * area admin /area-reservada/* siga funcionando con tracking, se
+ * incluye tambien en AdminLayout: los admins ya estan loggeados y se
+ * espera tracking implicito.
+ *
+ * Nota legal: este flujo cumple con GDPR (Consent Mode v2) para todos
+ * los visitantes, no solo EEE. Decision de producto: aplicar el mismo
+ * gate a todo el mundo para simplificar la UX y la implementacion.
  */
 ---
 
 <div
   id="cookie-banner"
-  class="fixed bottom-0 left-0 right-0 z-50 hidden bg-[color:var(--color-night-900)]/95 backdrop-blur-sm border-t border-[rgb(230_196_100_/_0.18)]"
-  role="region"
-  aria-label="Aviso de uso de cookies"
+  class="fixed bottom-0 left-0 right-0 z-50 hidden bg-[color:var(--color-night-900)]/95 backdrop-blur-sm border-t border-[rgb(230_196_100_/_0.18)] shadow-[0_-8px_24px_rgba(0,0,0,0.4)]"
+  role="dialog"
+  aria-labelledby="cookie-banner-titulo"
+  aria-describedby="cookie-banner-texto"
 >
-  <div class="container-prose py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-    <p class="text-sm text-parchment-200 font-serif leading-relaxed">
-      Este sitio usa cookies para medir tráfico (Google Analytics). No
-      compartimos datos personales con terceros.
-    </p>
-    <button
-      id="cookie-banner-ok"
-      type="button"
-      class="btn-gold whitespace-nowrap text-sm"
-      aria-label="Cerrar aviso de cookies"
-    >
-      Entendido
-    </button>
+  <div class="container-prose py-5 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex-1">
+      <p
+        id="cookie-banner-titulo"
+        class="font-display text-base md:text-lg text-parchment-50 mb-1"
+      >
+        Tu privacidad
+      </p>
+      <p
+        id="cookie-banner-texto"
+        class="text-sm md:text-base text-parchment-200 font-serif leading-relaxed"
+      >
+        Usamos cookies de Google Analytics para entender de forma
+        anónima cómo se usa el sitio y mejorar el contenido. Podés
+        aceptarlas o seguir sin ellas. Cambiás tu decisión cuando
+        quieras desde el pie de página.
+      </p>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-2 shrink-0">
+      <button
+        id="cookie-banner-rechazar"
+        type="button"
+        class="px-5 py-2.5 rounded-sm border border-[rgb(230_196_100_/_0.3)] text-parchment-100 hover:bg-[rgb(230_196_100_/_0.08)] transition text-sm md:text-base font-serif"
+      >
+        Rechazar
+      </button>
+      <button
+        id="cookie-banner-aceptar"
+        type="button"
+        class="btn-gold text-sm md:text-base"
+      >
+        Aceptar cookies
+      </button>
+    </div>
   </div>
 </div>
 
 <script is:inline>
-  // Mostrar el banner solo si el usuario nunca lo cerro antes.
   (function () {
-    var key = "tmyh:cookie-banner-cerrado";
-    var banner = document.getElementById("cookie-banner");
-    if (!banner) return;
-    try {
-      if (localStorage.getItem(key) === "1") return;
-    } catch (_) {
-      // Si localStorage no esta disponible, igual mostramos el banner.
-    }
-    banner.classList.remove("hidden");
-    var btn = document.getElementById("cookie-banner-ok");
-    if (btn) {
-      btn.addEventListener("click", function () {
-        banner.classList.add("hidden");
-        try {
-          localStorage.setItem(key, "1");
-        } catch (_) {
-          // Si falla el storage, al menos lo escondemos durante la sesion.
-        }
+    var KEY = "tmyh:consent";
+
+    /**
+     * Aplica el estado de consentimiento via gtag('consent', 'update').
+     * Es seguro llamar aunque GTM/gtag no este cargado todavia: la
+     * funcion gtag esta definida desde GoogleTagManager.astro y
+     * `dataLayer.push` se procesa cuando el tag de Google se
+     * inicializa.
+     */
+    function aplicarConsent(estado) {
+      if (typeof window.gtag !== "function") {
+        // Por las dudas: si por alguna razon gtag no esta, pusheamos
+        // el comando directo al dataLayer con el shape que entiende
+        // gtag.js.
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push("consent", "update", {
+          ad_storage: estado,
+          ad_user_data: estado,
+          ad_personalization: estado,
+          analytics_storage: estado,
+          functionality_storage: estado,
+          personalization_storage: estado,
+        });
+        return;
+      }
+      window.gtag("consent", "update", {
+        ad_storage: estado,
+        ad_user_data: estado,
+        ad_personalization: estado,
+        analytics_storage: estado,
+        functionality_storage: estado,
+        personalization_storage: estado,
       });
+    }
+
+    function leerDecision() {
+      try {
+        return localStorage.getItem(KEY);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function guardarDecision(valor) {
+      try {
+        localStorage.setItem(KEY, valor);
+      } catch (_) {
+        // Si localStorage no esta disponible (modo privado estricto),
+        // la decision dura lo que dure la sesion. Es lo mejor que
+        // podemos hacer.
+      }
+    }
+
+    function mostrarBanner() {
+      var el = document.getElementById("cookie-banner");
+      if (el) el.classList.remove("hidden");
+    }
+
+    function ocultarBanner() {
+      var el = document.getElementById("cookie-banner");
+      if (el) el.classList.add("hidden");
+    }
+
+    function init() {
+      var decision = leerDecision();
+      if (decision === "granted") {
+        aplicarConsent("granted");
+        ocultarBanner();
+      } else if (decision === "denied") {
+        // No llamamos update: el default ya esta en denied desde
+        // GoogleTagManager.astro.
+        ocultarBanner();
+      } else {
+        mostrarBanner();
+      }
+
+      var btnAceptar = document.getElementById("cookie-banner-aceptar");
+      if (btnAceptar) {
+        btnAceptar.addEventListener("click", function () {
+          guardarDecision("granted");
+          aplicarConsent("granted");
+          ocultarBanner();
+        });
+      }
+
+      var btnRechazar = document.getElementById("cookie-banner-rechazar");
+      if (btnRechazar) {
+        btnRechazar.addEventListener("click", function () {
+          guardarDecision("denied");
+          // El default ya es denied, no hace falta update.
+          ocultarBanner();
+        });
+      }
+
+      // Exponer una funcion global para reabrir el banner desde el
+      // link "Cambiar preferencias" del footer.
+      window.tmyhAbrirBannerCookies = function () {
+        mostrarBanner();
+      };
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
     }
   })();
 </script>

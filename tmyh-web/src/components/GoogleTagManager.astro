@@ -1,26 +1,31 @@
 ---
 /**
- * GoogleTagManager: integra GTM en el sitio.
+ * GoogleTagManager: integra GTM en el sitio con Consent Mode v2.
  *
- * GTM es un contenedor de tags: desde tagmanager.google.com se configura
- * que tags se disparan (GA4, Pixel de Facebook, etc.). El sitio solo
- * carga el contenedor; los tags se gestionan sin tocar codigo.
+ * Flujo del Consent Mode v2:
+ *   1. Antes de cargar GTM, inicializamos dataLayer + funcion gtag.
+ *   2. Llamamos gtag('consent', 'default', {...}) con TODO en 'denied'
+ *      y un `wait_for_update: 500` que le da medio segundo al banner a
+ *      decidir antes de disparar tags. Si en ese rato el usuario ya
+ *      habia aceptado previamente, el script del banner llama
+ *      `gtag('consent', 'update', ...)` con 'granted' y los tags se
+ *      disparan normal.
+ *   3. Recien despues cargamos el snippet de GTM (sin tocar respecto al
+ *      oficial de Google).
  *
- * Este componente expone dos slots:
- *   - <GoogleTagManager />          → snippet del <head>
- *   - <GoogleTagManager body />     → noscript fallback al inicio del <body>
+ * El componente expone dos slots:
+ *   - <GoogleTagManager />          → snippet del <head> (consent + GTM)
+ *   - <GoogleTagManager body />     → noscript fallback al inicio del
+ *                                     <body>
  *
  * Configuracion:
- *   - El ID del contenedor (`GTM-XXXXXXX`) se inyecta via `PUBLIC_GTM_ID`
- *     en GitHub Actions Secrets (no se commitea). Si la variable no esta
- *     seteada (ej. `npm run dev`), no se renderiza nada y GTM queda
- *     inactivo. Asi NO contaminamos metricas con desarrollo local.
+ *   - ID del contenedor via `PUBLIC_GTM_ID` (GitHub Actions Secret).
+ *   - Si la variable no esta seteada (ej. `npm run dev`), no se
+ *     renderiza nada y GTM queda inactivo, asi NO contaminamos
+ *     metricas con desarrollo local.
  *
- *   - El banner de cookies (`CookieBanner.astro`) sigue siendo
- *     informativo: GTM y los tags se cargan apenas entra el visitante
- *     (modelo legal valido en AR/LATAM). Si en el futuro hay que
- *     cumplir GDPR estricto, hay que configurar **Consent Mode** desde
- *     el dashboard de GTM.
+ * Documentacion oficial:
+ *   https://developers.google.com/tag-platform/security/guides/consent
  */
 
 interface Props {
@@ -30,14 +35,29 @@ interface Props {
 
 const { body = false } = Astro.props;
 const gtmId = import.meta.env.PUBLIC_GTM_ID as string | undefined;
+
+/**
+ * Consent default: TODO en `denied` con espera de 500ms.
+ * El banner luego dispara update si corresponde.
+ *
+ * Importante: el comando consent debe ir ANTES del snippet de GTM,
+ * sino los tags se disparan con el comportamiento por defecto de
+ * Google (lo que dependeria de la region IP del visitante y daria
+ * resultados inconsistentes).
+ */
+const consentDefaultJs = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{'ad_storage':'denied','ad_user_data':'denied','ad_personalization':'denied','analytics_storage':'denied','functionality_storage':'denied','personalization_storage':'denied','security_storage':'granted','wait_for_update':500});`;
+
+const gtmSnippetJs = gtmId
+  ? `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`
+  : "";
 ---
 
 {
   gtmId && !body && (
-    <script
-      is:inline
-      set:html={`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`}
-    />
+    <>
+      <script is:inline set:html={consentDefaultJs} />
+      <script is:inline set:html={gtmSnippetJs} />
+    </>
   )
 }
 

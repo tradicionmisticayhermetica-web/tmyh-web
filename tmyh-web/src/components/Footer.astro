@@ -61,5 +61,27 @@ const year = new Date().getFullYear();
     <p class="mt-8 text-center text-xs tracking-wider text-parchment-400">
       © {year} Tradición Mística y Hermética · Todos los derechos reservados.
     </p>
+
+    <p class="mt-3 text-center text-xs text-parchment-500">
+      <button
+        type="button"
+        id="footer-abrir-cookies"
+        class="underline decoration-dotted underline-offset-4 hover:text-parchment-300 transition"
+      >
+        Preferencias de cookies
+      </button>
+    </p>
   </div>
 </footer>
+
+<script is:inline>
+  (function () {
+    var btn = document.getElementById("footer-abrir-cookies");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      if (typeof window.tmyhAbrirBannerCookies === "function") {
+        window.tmyhAbrirBannerCookies();
+      }
+    });
+  })();
+</script>

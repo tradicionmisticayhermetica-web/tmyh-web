@@ -191,10 +191,21 @@ Objetivo: mismo **espíritu que el módulo Blog** (listado con cards, filtros po
 - Eventos automáticos de GA4 (Enhanced Measurement, default ON en el
   stream): page views, scroll depth (90%), outbound clicks, file
   downloads, video engagement.
-- Banner de cookies **informativo** (no consent gate) al pie de las
-  páginas públicas — componente `CookieBanner.astro`. Se cierra con un
-  click y guarda preferencia en `localStorage`. Si en el futuro hay
-  que cumplir GDPR estricto, configurar **Consent Mode** desde GTM.
+- **Banner de cookies como consent gate** (`CookieBanner.astro`) con
+  Consent Mode v2 aplicado a TODOS los visitantes (no solo EEE).
+  Decisión de producto: simplificar UX y compliance unificando el
+  flujo en todo el mundo.
+  - Antes de cargar GTM se inicializa el dataLayer y se llama
+    `gtag('consent','default', {...denied, wait_for_update:500})`,
+    lo que le da medio segundo al banner a decidir.
+  - Banner con 2 botones: **Aceptar** / **Rechazar**.
+  - Decisión persiste en `localStorage.tmyh:consent` (`granted` o
+    `denied`).
+  - Link "Preferencias de cookies" en el footer permite reabrir el
+    banner cuando el usuario quiera cambiar de opinión.
+  - El cookie banner se incluye solo en `BaseLayout` (público); en
+    admin no aparece porque los admins están loggeados y el tracking
+    es esperado.
 
 ### Stack — versiones fijadas
 
