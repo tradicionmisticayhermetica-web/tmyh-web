@@ -207,6 +207,21 @@ Objetivo: mismo **espíritu que el módulo Blog** (listado con cards, filtros po
     admin no aparece porque los admins están loggeados y el tracking
     es esperado.
 
+### Supabase — cambio de Data API (oct 2026)
+
+A partir del **30 de octubre 2026** Supabase deja de otorgar permisos
+automáticos a tablas nuevas del schema `public` para el Data API
+(`supabase-js`, PostgREST, GraphQL). Las tablas existentes **mantienen
+sus permisos**, no hay nada urgente.
+
+- Toda migración futura que cree tablas debe incluir `GRANT` explícito
+  (ver template en `docs/migrations/_template.sql` y guía en
+  `docs/migrations/README.md`).
+- Migraciones existentes (`001`–`021`) NO necesitan retroceder: las
+  tablas que crearon ya tienen sus grants implícitos.
+- Para auditar el estado actual hay una query SQL lista en
+  `docs/migrations/README.md` → sección "Auditoría rápida".
+
 ### Stack — versiones fijadas
 
 - **Node**: 22 LTS en CI (`.github/workflows/deploy.yml`). Algunos paquetes
