@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Sitio de Tradicion Mistica y Hermetica (Emanuel Mari) - Astro + TS + Tailwind",
+  "packageManager": "pnpm@11.1.2",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
@@ -28,7 +29,12 @@
     "@tiptap/extension-youtube": "^3.22.5",
     "@tiptap/pm": "^3.22.5",
     "@tiptap/starter-kit": "^3.22.5",
+    "aos": "^2.3.4",
     "astro": "^5.18.1",
+    "lenis": "^1.3.23",
     "tailwindcss": "^4.2.4"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }

@@ -26,6 +26,12 @@ jobs:
         with:
           ref: main
 
+      # Instalamos pnpm ANTES de setup-node para que la cache de Node
+      # pueda apuntar al store de pnpm (no al de npm). La version exacta
+      # de pnpm la lee del campo "packageManager" del package.json.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -34,11 +40,15 @@ jobs:
           # que Node 20 ya quedo desactualizado. Node 24 (Current) tambien
           # corre el build local, pero en CI usamos LTS.
           node-version: "22"
-          cache: "npm"
-          cache-dependency-path: tmyh-web/package-lock.json
+          cache: "pnpm"
+          cache-dependency-path: tmyh-web/pnpm-lock.yaml
 
+      # `--frozen-lockfile` falla si el lockfile no coincide con package.json,
+      # garantizando reproducibilidad. Equivalente a `npm ci`.
+      # El `.npmrc` aplica `minimum-release-age=14d` -> versiones publicadas
+      # hace menos de 14 dias son ignoradas (mitigacion supply-chain).
       - name: Instalar dependencias
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         working-directory: tmyh-web
 
       - name: Build Astro
@@ -51,7 +61,7 @@ jobs:
           # GoogleTagManager no renderiza nada y GTM queda inactivo.
           PUBLIC_GTM_ID: ${{ secrets.PUBLIC_GTM_ID }}
           BASE_PATH: /
-        run: npm run build
+        run: pnpm build
         working-directory: tmyh-web
 
       - name: Push dist/ a rama production

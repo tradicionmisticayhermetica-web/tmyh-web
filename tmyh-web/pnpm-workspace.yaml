@@ -1,0 +1,35 @@
+# =============================================================================
+# Configuracion de pnpm para tmyh-web (pnpm v11+)
+# =============================================================================
+# Este archivo NO convierte al proyecto en monorepo. En pnpm v11+ es el lugar
+# canonico para configuraciones que antes vivian en package.json bajo el
+# campo "pnpm" (deprecated).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# allowBuilds (reemplaza onlyBuiltDependencies de pnpm v10)
+# -----------------------------------------------------------------------------
+# Allowlist de paquetes que pueden ejecutar lifecycle scripts (preinstall,
+# install, postinstall, prepare). Por defecto pnpm v10+ BLOQUEA todos los
+# scripts de dependencias para mitigar el vector de ataque que usaron los
+# troyanos recientes (Axios RAT, Shai-Hulud) que se inyectaban via postinstall.
+#
+# Acá listamos solo los paquetes legitimos que SI necesitan compilar binarios
+# nativos durante la instalacion:
+#   - esbuild: compila el binario de su bundler.
+#   - sharp: compila libvips para optimizacion de imagenes (lo usa Astro).
+#   - lightningcss: compilador CSS de bajo nivel (lo usa Tailwind v4).
+#   - @tailwindcss/oxide: compilador rust de Tailwind v4.
+#   - @parcel/watcher: file watcher nativo (lo usa Astro en dev).
+#   - unrs-resolver: resolver rust (transitive de varias deps).
+#
+# Para agregar nuevos paquetes, usar `pnpm approve-builds` (modo interactivo)
+# o editar manualmente esta lista. Todo lo que no este aca queda bloqueado.
+# -----------------------------------------------------------------------------
+allowBuilds:
+  esbuild: true
+  sharp: true
+  lightningcss: true
+  "@tailwindcss/oxide": true
+  "@parcel/watcher": true
+  unrs-resolver: true
