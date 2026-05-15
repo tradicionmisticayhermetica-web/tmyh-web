@@ -29,8 +29,15 @@ jobs:
       # Instalamos pnpm ANTES de setup-node para que la cache de Node
       # pueda apuntar al store de pnpm (no al de npm). La version exacta
       # de pnpm la lee del campo "packageManager" del package.json.
+      #
+      # `package_json_file` es necesario porque el package.json vive en
+      # un subdirectorio del repo (tmyh-web/), no en la raiz. Sin esto
+      # action-setup busca en raiz, no encuentra el archivo y falla con
+      # "No pnpm version is specified".
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          package_json_file: tmyh-web/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
