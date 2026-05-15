@@ -1,15 +1,22 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Ornament from "../../components/Ornament.astro";
+import SmoothScrollReveal from "../../components/SmoothScrollReveal.astro";
 ---
 
 <BaseLayout
   title="Blog"
   description="Reflexiones de Emanuel Mari sobre hermetismo, iniciación, alquimia y símbolo. Alquimia. Centro de estudios tradicionales."
 >
+  <SmoothScrollReveal slot="background-effects" />
+
   <section class="py-20">
     <div class="container-prose max-w-4xl">
-      <div class="text-center max-w-2xl mx-auto mb-16">
+      <div
+        class="text-center max-w-2xl mx-auto mb-16"
+        data-aos="fade-up"
+        data-aos-anchor-placement="top-bottom"
+      >
         <span class="title-eyebrow">Reflexiones</span>
         <h1 class="text-4xl md:text-5xl font-display mt-6 mb-6 text-balance">
           Blog
@@ -21,10 +28,70 @@ import Ornament from "../../components/Ornament.astro";
 
       <Ornament symbol="✦" />
 
-      <div id="lista-posts" class="space-y-6 mt-12">
-        <div class="text-center text-parchment-400 font-serif italic py-16">
-          Cargando reflexiones…
+      {/*
+        Buscador. Filtra los posts client-side por titulo, extracto y
+        etiquetas, normalizando tildes y mayusculas. Aparece solo si hay
+        posts cargados (el JS lo revela despues de fetchear).
+      */}
+      <div
+        id="blog-buscar-wrapper"
+        class="hidden max-w-md mx-auto mt-10 mb-6"
+        data-aos="fade-up"
+        data-aos-anchor-placement="top-bottom"
+        data-aos-delay="150"
+      >
+        <label for="blog-buscar" class="sr-only">Buscar reflexiones</label>
+        <div class="relative">
+          {/* Icono lupa decorativo (svg inline, sin assets externos) */}
+          <svg
+            class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[color:var(--color-gold-500)] pointer-events-none"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="20" y1="20" x2="16.5" y2="16.5"></line>
+          </svg>
+          <input
+            id="blog-buscar"
+            type="search"
+            placeholder="Buscar reflexiones…"
+            autocomplete="off"
+            class="w-full bg-[color:var(--color-night-800)] border border-[rgb(230_196_100_/_0.15)] rounded-sm pl-10 pr-4 py-2.5 text-sm text-parchment-100 font-serif placeholder:text-parchment-400 focus:border-[color:var(--color-gold-400)] focus:outline-none transition"
+          />
         </div>
+      </div>
+
+      {/*
+        Wrapper con scroll INTERNO propio. data-lenis-prevent le indica a
+        Lenis que NO se coma los wheel events cuando el cursor esta sobre
+        este contenedor: asi la rueda del mouse scrollea la lista
+        interna, no el body. La scrollbar es fina y dorada (estilos en
+        <style> mas abajo).
+      */}
+      <div
+        id="lista-posts-scroll"
+        class="blog-lista-scroll mt-2"
+        data-lenis-prevent
+        data-aos="fade-up"
+        data-aos-anchor-placement="top-bottom"
+        data-aos-duration="900"
+      >
+        <div id="lista-posts" class="space-y-6 pr-2">
+          <div class="text-center text-parchment-400 font-serif italic py-16">
+            Cargando reflexiones…
+          </div>
+        </div>
+      </div>
+
+      <div id="sin-resultados" class="hidden text-center py-12">
+        <p class="text-parchment-300 font-serif italic">
+          No encontramos reflexiones que coincidan con la búsqueda.
+        </p>
       </div>
 
       <div id="sin-posts" class="hidden text-center py-16">
@@ -35,11 +102,60 @@ import Ornament from "../../components/Ornament.astro";
     </div>
   </section>
 
+  <style>
+    /* =====================================================================
+       Scrollbar interna fina y dorada para la lista de posts del blog.
+       Compatible con Firefox (scrollbar-width/color) y Webkit (Chrome,
+       Safari, Edge moderno). El padding-right interno evita que los
+       posts toquen la barra.
+       ===================================================================== */
+    .blog-lista-scroll {
+      max-height: min(75vh, 800px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      /* Firefox */
+      scrollbar-width: thin;
+      scrollbar-color: rgb(212 175 55 / 0.35) transparent;
+      /* Fade sutil arriba y abajo para que el contenido no quede
+         cortado de golpe contra el borde. */
+      mask-image: linear-gradient(
+        180deg,
+        transparent 0,
+        #000 18px,
+        #000 calc(100% - 18px),
+        transparent 100%
+      );
+    }
+
+    /* Webkit */
+    .blog-lista-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .blog-lista-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .blog-lista-scroll::-webkit-scrollbar-thumb {
+      background: rgb(212 175 55 / 0.35);
+      border-radius: 3px;
+      transition: background 200ms ease;
+    }
+    .blog-lista-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgb(212 175 55 / 0.65);
+    }
+  </style>
+
   <script>
-    import { listarPostsPublicos, formatearFecha, type PostBlog } from "../../lib/admin";
+    import {
+      listarPostsPublicos,
+      type PostBlog,
+    } from "../../lib/admin";
 
     const lista = document.getElementById("lista-posts");
     const sinPosts = document.getElementById("sin-posts");
+    const sinResultados = document.getElementById("sin-resultados");
+    const buscadorWrapper = document.getElementById("blog-buscar-wrapper");
+    const input = document.getElementById("blog-buscar") as HTMLInputElement | null;
+    const scrollWrapper = document.getElementById("lista-posts-scroll");
 
     function escapeHtml(s: string): string {
       return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -57,25 +173,37 @@ import Ornament from "../../components/Ornament.astro";
       } catch { return iso; }
     }
 
-    (async () => {
-      const posts = await listarPostsPublicos(50);
+    /**
+     * Normaliza un texto para busqueda: minusculas, sin tildes ni diacriticos.
+     * "Espagiría" -> "espagiria". Asi el usuario puede tipear "espagiria"
+     * y encontrar resultados con "Espagiría".
+     */
+    function normalizar(texto: string): string {
+      return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
 
-      if (!lista) return;
-
-      if (posts.length === 0) {
-        lista.innerHTML = "";
-        sinPosts?.classList.remove("hidden");
-        return;
-      }
-
-      lista.innerHTML = posts.map((p: PostBlog) => `
-        <a href="/blog/post?slug=${escapeHtml(p.slug)}"
-           class="card-altar group block p-8 md:p-10 relative overflow-hidden">
+    /**
+     * Construye el HTML de UN post. La data-haystack contiene todo el
+     * texto buscable ya normalizado para que el filtro sea barato.
+     */
+    function renderPost(p: PostBlog): string {
+      const etiquetaPrincipal = p.etiquetas?.[0] ?? "";
+      const fecha = formatearFechaLegible(p.publicado_en ?? p.creado_en);
+      const haystack = normalizar(
+        [p.titulo, p.extracto ?? "", (p.etiquetas ?? []).join(" ")].join(" "),
+      );
+      return `
+        <a
+          href="/blog/post?slug=${escapeHtml(p.slug)}"
+          class="post-item card-altar group block p-8 md:p-10 relative overflow-hidden"
+          data-haystack="${escapeHtml(haystack)}"
+        >
           <div class="flex items-center gap-3 mb-4 text-xs tracking-[0.2em] uppercase">
-            ${p.etiquetas?.length ? `<span class="text-[color:var(--color-gold-400)]">${escapeHtml(p.etiquetas[0])}</span><span class="text-parchment-500">·</span>` : ""}
-            <time class="text-parchment-400">
-              ${escapeHtml(formatearFechaLegible(p.publicado_en ?? p.creado_en))}
-            </time>
+            ${etiquetaPrincipal ? `<span class="text-[color:var(--color-gold-400)]">${escapeHtml(etiquetaPrincipal)}</span><span class="text-parchment-500">·</span>` : ""}
+            <time class="text-parchment-400">${escapeHtml(fecha)}</time>
           </div>
           <h2 class="text-2xl md:text-3xl font-display mb-4 text-parchment-50 group-hover:text-[color:var(--color-gold-300)] transition-colors">
             ${escapeHtml(p.titulo)}
@@ -84,7 +212,53 @@ import Ornament from "../../components/Ornament.astro";
           <span class="text-xs tracking-[0.2em] uppercase text-[color:var(--color-gold-400)] group-hover:text-[color:var(--color-gold-300)]">
             Leer reflexión →
           </span>
-        </a>`).join("");
+        </a>`;
+    }
+
+    /**
+     * Aplica el filtro segun el query actual del input. Muestra/oculta cada
+     * post via class hidden (no remueve del DOM) y revela el cartel de
+     * "Sin resultados" si todo queda oculto.
+     */
+    function aplicarFiltro(query: string): void {
+      if (!lista || !sinResultados) return;
+      const q = normalizar(query.trim());
+      const posts = lista.querySelectorAll<HTMLElement>(".post-item");
+
+      let visibles = 0;
+      posts.forEach((post) => {
+        const hay = post.dataset.haystack ?? "";
+        // Si la query esta vacia, mostramos todo. Si no, match por substring.
+        const visible = q.length === 0 || hay.includes(q);
+        post.classList.toggle("hidden", !visible);
+        if (visible) visibles++;
+      });
+
+      sinResultados.classList.toggle("hidden", visibles > 0 || q.length === 0);
+    }
+
+    (async () => {
+      const posts = await listarPostsPublicos(50);
+      if (!lista) return;
+
+      if (posts.length === 0) {
+        lista.innerHTML = "";
+        scrollWrapper?.classList.add("hidden");
+        sinPosts?.classList.remove("hidden");
+        return;
+      }
+
+      lista.innerHTML = posts.map(renderPost).join("");
+
+      // Solo mostramos el buscador si hay un numero razonable de posts:
+      // con 1 o 2 reflexiones no aporta nada y ensucia visualmente.
+      if (posts.length >= 3) {
+        buscadorWrapper?.classList.remove("hidden");
+      }
+
+      // Listener del input. Sin debounce porque el filtro es trivial
+      // (querySelectorAll + toggle de class).
+      input?.addEventListener("input", () => aplicarFiltro(input.value));
     })();
   </script>
 </BaseLayout>

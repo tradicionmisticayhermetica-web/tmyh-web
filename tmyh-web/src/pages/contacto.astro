@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Ornament from "../components/Ornament.astro";
 import RedesSociales from "../components/RedesSociales.astro";
+import SmoothScrollReveal from "../components/SmoothScrollReveal.astro";
 import { cursos } from "../data/cursos";
 import { WHATSAPP_NUMERO_VISUAL } from "../data/redes";
 ---
@@ -10,9 +11,14 @@ import { WHATSAPP_NUMERO_VISUAL } from "../data/redes";
   title="Contacto"
   description="Escribinos para inscribirte en un curso, recibir información o presentarte. Alquimia. Centro de estudios tradicionales."
 >
+  <SmoothScrollReveal slot="background-effects" />
   <section class="py-24">
     <div class="container-prose max-w-2xl">
-      <div class="text-center mb-12">
+      <div
+        class="text-center mb-12"
+        data-aos="fade-up"
+        data-aos-anchor-placement="top-bottom"
+      >
         <span class="title-eyebrow">Hablemos</span>
         <h1 class="text-4xl md:text-5xl font-display mt-6 mb-6 text-balance">
           Contacto
@@ -24,14 +30,26 @@ import { WHATSAPP_NUMERO_VISUAL } from "../data/redes";
 
       <Ornament symbol="✦" />
 
-      <div class="mb-10">
+      <div
+        class="mb-10"
+        data-aos="fade-up"
+        data-aos-anchor-placement="center-bottom"
+        data-aos-delay="100"
+      >
         <RedesSociales variante="contacto" />
         <p class="text-center text-sm md:text-base text-parchment-200 mt-4 font-serif leading-relaxed">
           Para consultas sobre cursos o si querés contar algo en detalle, escribinos por el formulario y te respondemos por mail. WhatsApp directo: <span class="text-parchment-100 font-medium">{WHATSAPP_NUMERO_VISUAL}</span>.
         </p>
       </div>
 
-      <form id="contact-form" class="card-altar p-8 md:p-10 space-y-6" novalidate>
+      <form
+        id="contact-form"
+        class="card-altar p-8 md:p-10 space-y-6"
+        novalidate
+        data-aos="zoom-in-up"
+        data-aos-anchor-placement="center-bottom"
+        data-aos-duration="900"
+      >
         {/* Honeypot anti-bots: campo escondido que un humano nunca completa.
             Si llega con valor, lo descartamos silenciosamente en el cliente
             (no vale la pena ni mandarlo a la RPC). */}

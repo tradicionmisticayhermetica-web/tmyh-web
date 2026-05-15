@@ -24,7 +24,8 @@
  *      viewport se dispara (por defecto: `center-bottom`).
  *
  * Solo se aplica en las paginas donde se monta el componente (slot
- * "background-effects" del BaseLayout). Hoy: Home y /tradicion.
+ * "background-effects" del BaseLayout). Hoy: Home, /tradicion, /cursos,
+ * /blog y /contacto.
  *
  * Respeta `prefers-reduced-motion`: si el usuario lo tiene activado,
  * desactiva Lenis, oculta el caduceo, congela las estrellas y muestra
@@ -52,21 +53,9 @@ import caduceoImg from "../assets/images/caduceo-fondo.png";
 </div>
 
 <style>
-  /* =====================================================================
-     OCULTAR SCROLLBAR (solo en paginas con el efecto activo)
-     ===================================================================== */
-  /* Cuando el componente esta montado, marca html y body con
-     data-smooth-fx. Asi la scrollbar nativa se oculta solo en home y
-     /tradicion -- el resto del sitio mantiene su scrollbar normal. */
-  :global(html[data-smooth-fx]),
-  :global(body[data-smooth-fx]) {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE / Edge legacy */
-  }
-  :global(html[data-smooth-fx])::-webkit-scrollbar,
-  :global(body[data-smooth-fx])::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Edge moderno */
-  }
+  /* NOTA: la scrollbar nativa ahora se oculta en TODO el sitio desde
+     global.css (no solo en paginas con este componente). Por eso aca
+     ya no hay reglas para ocultarla. */
 
   /* =====================================================================
      CAPAS DE FONDO
@@ -234,13 +223,6 @@ import caduceoImg from "../assets/images/caduceo-fondo.png";
 
   function init(): void {
     if (typeof window === "undefined") return;
-
-    // -----------------------------------------------------------------
-    // Marca html+body para que el CSS oculte la scrollbar SOLO acá.
-    // El resto del sitio mantiene su scrollbar nativa.
-    // -----------------------------------------------------------------
-    document.documentElement.setAttribute("data-smooth-fx", "");
-    document.body.setAttribute("data-smooth-fx", "");
 
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"

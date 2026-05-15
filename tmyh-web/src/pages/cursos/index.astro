@@ -2,6 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import CourseCard from "../../components/CourseCard.astro";
 import Ornament from "../../components/Ornament.astro";
+import SmoothScrollReveal from "../../components/SmoothScrollReveal.astro";
 import { listarCursosParaSitio } from "../../lib/cursos-cms";
 
 const cursos = await listarCursosParaSitio();
@@ -16,9 +17,14 @@ const historicos = cursos.filter(
   title="Cursos"
   description="Catálogo de cursos de la escuela: Simbología Hermética, Heka y los programas ya dictados (Espagiria, Cuerpo Solar, Revelaciones y Tradición Hermética)."
 >
+  <SmoothScrollReveal slot="background-effects" />
   <section class="py-20">
     <div class="container-prose">
-      <div class="text-center max-w-2xl mx-auto mb-16">
+      <div
+        class="text-center max-w-2xl mx-auto mb-16"
+        data-aos="fade-up"
+        data-aos-anchor-placement="top-bottom"
+      >
         <span class="title-eyebrow">Nuestros programas</span>
         <h1 class="text-4xl md:text-5xl font-display mt-6 mb-6 text-balance">
           Cursos de la escuela
@@ -37,10 +43,19 @@ const historicos = cursos.filter(
       {
         activos.length > 0 && (
           <>
-            <div class="text-center mb-10">
+            <div
+              class="text-center mb-10"
+              data-aos="fade-up"
+              data-aos-anchor-placement="center-bottom"
+            >
               <span class="title-eyebrow">Inscripción abierta</span>
             </div>
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div
+              class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+              data-aos="fade-up"
+              data-aos-anchor-placement="top-bottom"
+              data-aos-duration="1000"
+            >
               {activos.map((curso) => (
                 <CourseCard curso={curso} />
               ))}
@@ -56,13 +71,22 @@ const historicos = cursos.filter(
         proximos.length > 0 && (
           <>
             <Ornament symbol="✦" />
-            <div class="text-center mb-10">
+            <div
+              class="text-center mb-10"
+              data-aos="fade-up"
+              data-aos-anchor-placement="center-bottom"
+            >
               <span class="title-eyebrow">Próximamente</span>
               <h2 class="text-2xl md:text-3xl font-display mt-4">
                 Nuevos cursos en preparación
               </h2>
             </div>
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div
+              class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+              data-aos="fade-up"
+              data-aos-anchor-placement="top-bottom"
+              data-aos-duration="1000"
+            >
               {proximos.map((curso) => (
                 <CourseCard curso={curso} />
               ))}
@@ -78,7 +102,11 @@ const historicos = cursos.filter(
         historicos.length > 0 && (
           <>
             <Ornament symbol="☉" />
-            <div class="text-center max-w-2xl mx-auto mb-10">
+            <div
+              class="text-center max-w-2xl mx-auto mb-10"
+              data-aos="fade-up"
+              data-aos-anchor-placement="center-bottom"
+            >
               <span class="title-eyebrow">Archivo</span>
               <h2 class="text-2xl md:text-3xl font-display mt-4 mb-4">
                 Cursos dictados
@@ -88,7 +116,12 @@ const historicos = cursos.filter(
                 interesa alguno, escribinos y te avisamos cuando vuelva a abrirse.
               </p>
             </div>
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div
+              class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+              data-aos="fade-up"
+              data-aos-anchor-placement="top-bottom"
+              data-aos-duration="1000"
+            >
               {historicos.map((curso) => (
                 <CourseCard curso={curso} />
               ))}

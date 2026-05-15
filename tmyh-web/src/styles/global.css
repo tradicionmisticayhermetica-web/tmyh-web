@@ -47,6 +47,23 @@
     scroll-behavior: smooth;
   }
 
+  /* =======================================================================
+     Scrollbar nativa: oculta en TODO el sitio.
+     El scroll sigue funcionando normal (rueda, trackpad, teclado, touch).
+     Solo se esconde la barra lateral que ensucia la estetica. Si algun
+     contenedor interno necesita scroll propio (por ej. la lista del blog),
+     define su propia scrollbar con scrollbar-width: thin + estilos
+     -webkit-scrollbar a medida.
+     ======================================================================= */
+  html {
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* IE / Edge legacy */
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;                /* Chrome, Safari, Edge moderno */
+  }
+
   body {
     background-color: var(--color-night-900);
     color: var(--color-parchment-100);

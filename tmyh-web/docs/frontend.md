@@ -190,11 +190,14 @@ Hay una animación definida (`soft-pulse`) que hace parpadear muy lento
 algo como "activo" o llamar la atención sutilmente. Todavía no se aplica
 en ninguna parte.
 
-### Smooth scroll + reveal (Home y `/tradicion`)
+### Smooth scroll + reveal (Home, `/tradicion`, `/cursos`, `/blog`, `/contacto`)
 
-A partir de mayo 2026, las dos páginas "showcase" del sitio —la Home y
-`/tradicion`— suman un efecto coordinado de scroll que las diferencia
-del resto del sitio (que sigue con scroll nativo, plano y sobrio).
+A partir de mayo 2026, las cinco páginas públicas del sitio —Home,
+`/tradicion`, `/cursos`, `/blog` y `/contacto`— comparten un efecto
+coordinado de scroll. Es la diferencia visual entre "estás navegando un
+sitio cualquiera" y "estás entrando a un templo". Las páginas
+utilitarias (login, recuperar password, área reservada) siguen con
+scroll nativo, plano y sobrio.
 
 El efecto vive en `src/components/SmoothScrollReveal.astro` y se monta
 únicamente vía el slot `background-effects` del `BaseLayout`. Tiene
@@ -237,37 +240,76 @@ tres capas:
      toca el borde inferior del viewport), `center-bottom` (cuando el
      centro lo toca, más sutil), `bottom-bottom`, etc.
 
-La regla de aplicación es estricta:
+La regla de aplicación:
 
-- **Sí** lo usan: Home (`/`) y `/tradicion`. Son las dos páginas donde
-  el lector "llega" y queremos que sienta el lugar.
-- **No** lo usan: cursos, blog, contacto, área reservada, ni ninguna
-  otra ruta. Esas son páginas funcionales o de lectura larga y el
-  smooth scroll molestaría la búsqueda en página (Ctrl+F) y la
-  experiencia de scroll predecible.
+- **Sí** lo usan: Home (`/`), `/tradicion`, `/cursos`, `/blog` y
+  `/contacto`. Todas las páginas públicas del menú principal.
+- **No** lo usan: área reservada (`/area-reservada/*`), login,
+  recuperar password, restablecer password, páginas individuales de
+  curso (`/cursos/[slug]`), página individual de post
+  (`/blog/post`), 404, ni las páginas de gestión del newsletter
+  (`unsubscribe`, `preferencias`). Esas son utilitarias o de lectura
+  larga, y el smooth scroll molestaría a quien está leyendo un curso
+  o un post completo.
+
+### Scrollbar nativa oculta (todo el sitio)
+
+Por decisión estética (mayo 2026), la scrollbar nativa del navegador
+está **oculta en todas las páginas del sitio**. La regla vive en
+`src/styles/global.css` (afecta `html` y `body`). El scroll sigue
+funcionando normalmente con rueda, trackpad, teclado (Page Up/Down) y
+touch: lo único que cambia es que no se ve la barra fea de Windows o
+macOS pintada al costado. Esto incluye el backoffice; si en algún
+momento esa decisión molesta en alguna pantalla de admin, se puede
+revertir devolviendo `scrollbar-width: auto` localmente al body de
+esa ruta.
+
+Cuando un contenedor interno necesita tener scroll propio (caso
+único hoy: la lista del blog), define su propia scrollbar con
+`scrollbar-width: thin` + `::-webkit-scrollbar` a medida. En el blog
+es fina, 6 px de ancho, dorada translúcida.
+
+### Buscador y scroll interno del blog
+
+En `/blog`, además del efecto general, hay dos extras propios:
+
+- **Buscador client-side**: input arriba de la lista que filtra los
+  posts por título, extracto y etiquetas, normalizando tildes y
+  mayúsculas (`espagiria` matchea `Espagiría`). Aparece solo si hay
+  3+ posts; con menos no aporta y ensucia visualmente. Si filtra y no
+  hay matches, muestra el cartel "No encontramos reflexiones que
+  coincidan con la búsqueda".
+- **Scroll interno**: la lista vive dentro de un wrapper con
+  `max-height: min(75vh, 800px)` y `overflow-y: auto`, con la
+  scrollbar fina dorada descrita arriba. Tiene el atributo
+  `data-lenis-prevent` para que Lenis **no** intercepte la rueda del
+  mouse cuando el cursor está sobre la lista: así el scroll de rueda
+  scrollea la lista interna, no el body. Esto es crítico, sin ese
+  atributo el scroll interno sería inútil porque Lenis se comería
+  los eventos.
 
 ### Accesibilidad: respeta `prefers-reduced-motion`
 
 Si el usuario tiene activada la preferencia del sistema "reducir
 movimiento", el componente desactiva todo: Lenis se apaga (vuelve al
-scroll nativo), el caduceo se oculta, las estrellas se congelan y los
-bloques con `data-reveal` aparecen instantáneamente. Esto es
-obligatorio por WCAG 2.1 y lo manejamos con un solo `@media` query.
+scroll nativo), el caduceo se oculta, las estrellas se congelan y AOS
+no anima nada (los bloques aparecen instantáneos). Obligatorio por
+WCAG 2.1 y se maneja con un solo `@media` query + `AOS.init({ disable })`.
 
 ### Lo que NO se usa (a propósito)
 
-- En el resto del sitio (cursos, blog, contacto, etc.) no hay efectos
-  al hacer scroll: scroll nativo, plano.
 - No hay loaders ni splash screens.
 - No hay cursor personalizado.
 - No hay parallax pesado, "scroll-jacking" duro, ni elementos
   pinneados que paren el scroll.
 - No hay librerías de animación grandes (Framer Motion, GSAP): solo
   Lenis (~3 KB) y AOS (~5 KB).
+- No hay caduceo girando ni cielo estrellado animado en el backoffice
+  ni en páginas individuales de curso/post.
 
 La regla fue: "si no aporta a la sensación de templo, no va". Por eso
-el efecto se aplica únicamente a las dos páginas donde queremos
-construir atmósfera —el resto se mantiene sobrio y rápido.
+el efecto se aplica a las cinco páginas del menú público y se omite
+en utilitarias / lectura larga.
 
 ---
 
