@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Ornament from "../components/Ornament.astro";
+import SmoothScrollReveal from "../components/SmoothScrollReveal.astro";
 import { Image } from "astro:assets";
 import guenonImg from "../assets/images/guenon-1925.jpg";
 ---
@@ -9,6 +10,10 @@ import guenonImg from "../assets/images/guenon-1925.jpg";
   title="La Tradición"
   description="Centro de Estudios TM&H — una senda seria, viva y contemporánea de estudio simbólico. Hermes, Pitágoras, los neoplatónicos, los alquimistas renacentistas, los Rosacruces y la religiosidad del Antiguo Egipto."
 >
+  {/* Smooth scroll + fondo decorativo (caduceo girando + estrellas).
+      Solo aplicado en Home y esta pagina. */}
+  <SmoothScrollReveal slot="background-effects" />
+
   <section class="py-24">
     <div class="container-prose max-w-3xl">
       <div class="text-center mb-16">
@@ -26,7 +31,7 @@ import guenonImg from "../assets/images/guenon-1925.jpg";
       {/* ============================================================
             Cita de René Guénon con su retrato
           ============================================================ */}
-      <div class="my-12 grid md:grid-cols-[auto_1fr] gap-8 md:gap-10 items-start">
+      <div class="my-12 grid md:grid-cols-[auto_1fr] gap-8 md:gap-10 items-start" data-aos="fade-up" data-aos-anchor-placement="top-bottom" data-aos-duration="1100">
         <figure class="mx-auto md:mx-0">
           <Image
             src={guenonImg}
@@ -81,7 +86,7 @@ import guenonImg from "../assets/images/guenon-1925.jpg";
       {/* ============================================================
             Bio de la escuela (sin foco personal)
           ============================================================ */}
-      <div class="space-y-6 text-lg font-serif leading-relaxed text-parchment-100">
+      <div class="space-y-6 text-lg font-serif leading-relaxed text-parchment-100" data-aos="fade-up" data-aos-anchor-placement="center-bottom" data-aos-duration="1000">
         <p>
           En estos años pasaron por nuestros cursos más de mil alumnos, y
           seguimos trabajando en la misma dirección: ofrecer una senda seria,
@@ -100,7 +105,7 @@ import guenonImg from "../assets/images/guenon-1925.jpg";
 
       <Ornament symbol="✦" />
 
-      <div class="text-center">
+      <div class="text-center" data-aos="zoom-in-up" data-aos-anchor-placement="center-bottom" data-aos-duration="900">
         <p class="text-lg font-serif text-parchment-200 mb-8">
           Si te interesa empezar un camino de estudio o tenés una consulta,
           estamos a disposición.
@@ -119,7 +124,7 @@ import guenonImg from "../assets/images/guenon-1925.jpg";
       {/* ============================================================
             Redes
           ============================================================ */}
-      <div class="mt-16 text-center">
+      <div class="mt-16 text-center" data-aos="fade-up" data-aos-delay="200" data-aos-anchor-placement="center-bottom">
         <p class="text-xs tracking-[0.2em] uppercase text-parchment-400 mb-4">
           También en
         </p>

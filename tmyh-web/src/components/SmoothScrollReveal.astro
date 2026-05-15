@@ -1,0 +1,345 @@
+---
+/**
+ * SmoothScrollReveal
+ * ------------------------------------------------------------------
+ * Suma a la pagina tres efectos coordinados:
+ *
+ *   1. Smooth scroll con inertia (Lenis): el scroll de rueda y trackpad
+ *      se suaviza con un decay natural, dando sensacion de "flujo".
+ *      En touch usa scroll nativo (sin smoothing) para no romper el
+ *      gesto del celular.
+ *
+ *   2. Fondo decorativo en dos capas (fixed, detras del contenido):
+ *        - Cielo estrellado profundo con drift muy lento + twinkle
+ *          en algunas estrellas doradas.
+ *        - Caduceo de Mercurio 3D dorado, gigante, blureado, con
+ *          opacidad muy baja y mix-blend-mode screen, rotando a
+ *          medida que el usuario scrollea.
+ *
+ *   3. Reveal de bloques: usa la libreria AOS (Animate On Scroll). Los
+ *      elementos marcados con `data-aos="fade-up"` (o las variantes
+ *      `fade-up-right`, `zoom-in`, `flip-up`, etc.) aparecen con la
+ *      animacion elegida al entrar al viewport. Cada elemento puede
+ *      tener `data-aos-anchor-placement` para ajustar a que altura del
+ *      viewport se dispara (por defecto: `center-bottom`).
+ *
+ * Solo se aplica en las paginas donde se monta el componente (slot
+ * "background-effects" del BaseLayout). Hoy: Home y /tradicion.
+ *
+ * Respeta `prefers-reduced-motion`: si el usuario lo tiene activado,
+ * desactiva Lenis, oculta el caduceo, congela las estrellas y muestra
+ * todos los bloques sin animacion.
+ * ------------------------------------------------------------------
+ */
+import { Image } from "astro:assets";
+import caduceoImg from "../assets/images/caduceo-fondo.png";
+---
+
+<div class="smooth-fx" aria-hidden="true">
+  <div class="smooth-fx-stars"></div>
+  <div class="smooth-fx-caduceo">
+    <Image
+      src={caduceoImg}
+      alt=""
+      widths={[480, 800, 1200]}
+      sizes="(max-width: 768px) 90vh, 600px"
+      loading="eager"
+      fetchpriority="low"
+      format="webp"
+      quality={75}
+    />
+  </div>
+</div>
+
+<style>
+  /* =====================================================================
+     OCULTAR SCROLLBAR (solo en paginas con el efecto activo)
+     ===================================================================== */
+  /* Cuando el componente esta montado, marca html y body con
+     data-smooth-fx. Asi la scrollbar nativa se oculta solo en home y
+     /tradicion -- el resto del sitio mantiene su scrollbar normal. */
+  :global(html[data-smooth-fx]),
+  :global(body[data-smooth-fx]) {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE / Edge legacy */
+  }
+  :global(html[data-smooth-fx])::-webkit-scrollbar,
+  :global(body[data-smooth-fx])::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge moderno */
+  }
+
+  /* =====================================================================
+     CAPAS DE FONDO
+     ===================================================================== */
+  .smooth-fx {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  /* ---------- Cielo estrellado (denso, visible) ---------- */
+  .smooth-fx-stars {
+    position: absolute;
+    /* Panel mas grande que el viewport para que el drift no muestre
+       los bordes al moverse. */
+    inset: -10%;
+    background-image:
+      /* Estrellas frias (cremas) - mas densas y visibles */
+      radial-gradient(1.5px 1.5px at 5% 8%, rgb(245 236 215 / 0.85), transparent),
+      radial-gradient(1px 1px at 12% 22%, rgb(245 236 215 / 0.7), transparent),
+      radial-gradient(1.5px 1.5px at 18% 34%, rgb(245 236 215 / 0.75), transparent),
+      radial-gradient(1px 1px at 24% 12%, rgb(245 236 215 / 0.6), transparent),
+      radial-gradient(1.5px 1.5px at 28% 78%, rgb(245 236 215 / 0.85), transparent),
+      radial-gradient(1px 1px at 32% 56%, rgb(245 236 215 / 0.65), transparent),
+      radial-gradient(1.5px 1.5px at 38% 42%, rgb(245 236 215 / 0.7), transparent),
+      radial-gradient(1px 1px at 42% 22%, rgb(245 236 215 / 0.65), transparent),
+      radial-gradient(1px 1px at 46% 68%, rgb(245 236 215 / 0.7), transparent),
+      radial-gradient(1.5px 1.5px at 52% 14%, rgb(245 236 215 / 0.85), transparent),
+      radial-gradient(1px 1px at 55% 88%, rgb(245 236 215 / 0.75), transparent),
+      radial-gradient(1.5px 1.5px at 59% 38%, rgb(245 236 215 / 0.7), transparent),
+      radial-gradient(1px 1px at 63% 62%, rgb(245 236 215 / 0.65), transparent),
+      radial-gradient(1.5px 1.5px at 67% 14%, rgb(245 236 215 / 0.85), transparent),
+      radial-gradient(1px 1px at 71% 28%, rgb(245 236 215 / 0.7), transparent),
+      radial-gradient(1px 1px at 74% 82%, rgb(245 236 215 / 0.6), transparent),
+      radial-gradient(1.5px 1.5px at 78% 48%, rgb(245 236 215 / 0.75), transparent),
+      radial-gradient(1px 1px at 82% 18%, rgb(245 236 215 / 0.65), transparent),
+      radial-gradient(1.5px 1.5px at 86% 64%, rgb(245 236 215 / 0.85), transparent),
+      radial-gradient(1px 1px at 90% 34%, rgb(245 236 215 / 0.7), transparent),
+      radial-gradient(1.5px 1.5px at 95% 80%, rgb(245 236 215 / 0.75), transparent),
+      radial-gradient(1px 1px at 98% 8%, rgb(245 236 215 / 0.6), transparent),
+      /* Estrellas calidas (doradas) - mas grandes, mas visibles */
+      radial-gradient(2px 2px at 8% 48%, rgb(230 196 100 / 0.85), transparent),
+      radial-gradient(2px 2px at 22% 64%, rgb(230 196 100 / 0.75), transparent),
+      radial-gradient(1.5px 1.5px at 35% 18%, rgb(230 196 100 / 0.7), transparent),
+      radial-gradient(2px 2px at 48% 52%, rgb(230 196 100 / 0.8), transparent),
+      radial-gradient(1.5px 1.5px at 58% 78%, rgb(230 196 100 / 0.7), transparent),
+      radial-gradient(2px 2px at 72% 38%, rgb(230 196 100 / 0.85), transparent),
+      radial-gradient(1.5px 1.5px at 84% 22%, rgb(230 196 100 / 0.75), transparent),
+      radial-gradient(2px 2px at 92% 56%, rgb(230 196 100 / 0.8), transparent);
+    background-size: 100% 100%;
+    animation: smooth-fx-drift 240s linear infinite;
+    will-change: transform;
+  }
+
+  /* Segunda capa de estrellas pequenas con twinkle (parpadeo lento) */
+  .smooth-fx-stars::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 11% 18%, rgb(230 196 100 / 0.95), transparent),
+      radial-gradient(1px 1px at 22% 38%, rgb(230 196 100 / 0.9), transparent),
+      radial-gradient(1px 1px at 33% 72%, rgb(230 196 100 / 0.95), transparent),
+      radial-gradient(1px 1px at 45% 25%, rgb(230 196 100 / 0.9), transparent),
+      radial-gradient(1px 1px at 56% 58%, rgb(230 196 100 / 0.95), transparent),
+      radial-gradient(1px 1px at 67% 32%, rgb(230 196 100 / 0.9), transparent),
+      radial-gradient(1px 1px at 78% 78%, rgb(230 196 100 / 0.95), transparent),
+      radial-gradient(1px 1px at 86% 48%, rgb(230 196 100 / 0.9), transparent),
+      radial-gradient(1px 1px at 93% 18%, rgb(230 196 100 / 0.95), transparent);
+    animation: smooth-fx-twinkle 5.5s ease-in-out infinite;
+    will-change: opacity;
+  }
+
+  /* ---------- Caduceo (zoom + rotacion sobre eje vertical) ---------- */
+  /* IMPORTANTE: usamos rotateY (eje vertical), NO rotate. Esto hace que el
+     caduceo gire sobre su propio baston como si fuera una moneda, sin
+     pasar por la posicion invertida. La inversion del caduceo tiene un
+     significado simbolico contrario a la tradicion hermetica que ensena
+     el sitio, por eso se evita explicitamente.
+     `backface-visibility: hidden` asegura que cuando esta de espaldas
+     (entre 90 y 270 grados) directamente desaparezca, en vez de mostrarse
+     espejado. */
+  .smooth-fx-caduceo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: min(85vh, 600px);
+    aspect-ratio: 2 / 3;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    /* perspective() dentro del transform da profundidad 3D al rotateY.
+       Sin esto, el giro se ve como un simple "stretch" horizontal.
+       Variables actualizadas desde JS segun el progreso del scroll:
+         --smooth-fx-scale: 1   -> 1.35   (zoom 35% al final)
+         --smooth-fx-rot:   0   -> 360deg (un giro completo, eje vertical) */
+    transform:
+      translate(-50%, -50%)
+      perspective(1400px)
+      scale(var(--smooth-fx-scale, 1))
+      rotateY(var(--smooth-fx-rot, 0deg));
+    /* Como la imagen ya tiene canal alfa (PNG transparente), NO necesitamos
+       mix-blend-mode: screen (que blanqueaba la imagen). La opacidad sube
+       un poco para compensar la falta del modo de mezcla. */
+    opacity: 0.12;
+    filter: blur(4px);
+    will-change: transform;
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .smooth-fx-caduceo :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* =====================================================================
+     KEYFRAMES
+     ===================================================================== */
+  @keyframes smooth-fx-drift {
+    0% {
+      transform: translate(0, 0);
+    }
+    100% {
+      transform: translate(-40px, -25px);
+    }
+  }
+
+  @keyframes smooth-fx-twinkle {
+    0%, 100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  /* =====================================================================
+     ACCESIBILIDAD: prefers-reduced-motion
+     ===================================================================== */
+  /* AOS ya respeta `prefers-reduced-motion` automaticamente cuando lo
+     inicializamos con `disable: () => matchMedia(...).matches`. Aca solo
+     cuidamos las capas decorativas propias. */
+  @media (prefers-reduced-motion: reduce) {
+    .smooth-fx-stars,
+    .smooth-fx-stars::after {
+      animation: none;
+    }
+    .smooth-fx-caduceo {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  import Lenis from "lenis";
+  // @ts-ignore -- aos no tiene types oficiales actualizados, usamos el JS directo.
+  import AOS from "aos";
+  import "aos/dist/aos.css";
+
+  type LenisScrollEvent = { scroll: number };
+
+  function init(): void {
+    if (typeof window === "undefined") return;
+
+    // -----------------------------------------------------------------
+    // Marca html+body para que el CSS oculte la scrollbar SOLO acá.
+    // El resto del sitio mantiene su scrollbar nativa.
+    // -----------------------------------------------------------------
+    document.documentElement.setAttribute("data-smooth-fx", "");
+    document.body.setAttribute("data-smooth-fx", "");
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    if (reduceMotion) {
+      // AOS por defecto no hace nada si los elementos no tienen data-aos,
+      // pero por las dudas inicializamos con disable: true para que no
+      // toque nada.
+      AOS.init({ disable: true });
+      return;
+    }
+
+    // -----------------------------------------------------------------
+    // 1. Smooth scroll con Lenis
+    // -----------------------------------------------------------------
+    // lerp 0.1 -> interpolacion suave; smoothWheel activa el smoothing
+    // en rueda/trackpad; en touch usamos scroll nativo (smoothTouch=false)
+    // para no romper el gesto del celular.
+    const lenis = new Lenis({
+      lerp: 0.1,
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 1.5,
+    });
+
+    function raf(time: number): void {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+
+    // -----------------------------------------------------------------
+    // 2. Caduceo: zoom + rotacion atados al PROGRESO del scroll
+    // -----------------------------------------------------------------
+    // En vez de "X grados por cada N pixels" (que dependia del largo de
+    // la pagina), atamos al progreso normalizado:
+    //   - progress = 0  (arriba)  -> rotacion 0deg,   scale 1.00
+    //   - progress = 1  (final)   -> rotacion 360deg, scale 1.35
+    //
+    // Asi en cualquier pagina (corta o larga) el caduceo siempre da
+    // exactamente UN giro completo y termina ~35% mas grande, dando la
+    // sensacion de que "se viene acercando" mientras gira.
+    // -----------------------------------------------------------------
+    const caduceo = document.querySelector<HTMLElement>(".smooth-fx-caduceo");
+    if (caduceo) {
+      const ZOOM_MAX = 0.35; // 1.0 al inicio -> 1.35 al final
+      const ROT_MAX = 360; // un giro completo
+
+      const aplicarProgreso = (scrollY: number): void => {
+        const maxScroll = Math.max(
+          1,
+          document.documentElement.scrollHeight - window.innerHeight
+        );
+        const progress = Math.min(Math.max(scrollY / maxScroll, 0), 1);
+        const scale = 1 + ZOOM_MAX * progress;
+        const rot = ROT_MAX * progress;
+        caduceo.style.setProperty("--smooth-fx-scale", scale.toFixed(4));
+        caduceo.style.setProperty("--smooth-fx-rot", `${rot.toFixed(2)}deg`);
+      };
+
+      lenis.on("scroll", (e: LenisScrollEvent) => aplicarProgreso(e.scroll));
+      // Estado inicial (por si la pagina arranca scrolleada, ej. anchor).
+      aplicarProgreso(window.scrollY);
+    }
+
+    // -----------------------------------------------------------------
+    // 3. AOS (Animate On Scroll) para reveal de bloques
+    // -----------------------------------------------------------------
+    // Inicializamos con defaults pensados para este sitio. Cada bloque
+    // puede sobrescribir con sus propios `data-aos-*`:
+    //   data-aos="fade-up"             tipo de animacion
+    //   data-aos-duration="900"        duracion en ms
+    //   data-aos-delay="150"           retardo antes de animar
+    //   data-aos-anchor-placement="..." en que punto del viewport se dispara
+    //
+    // anchorPlacement "center-bottom" = la animacion arranca cuando el
+    // CENTRO del elemento llega al BOTTOM del viewport. Es lo que da la
+    // sensacion de que el contenido aparece "justo cuando lo estabas
+    // por ver", sin esperar a que el elemento entre del todo.
+    AOS.init({
+      duration: 900,
+      easing: "ease-out-cubic",
+      once: true,
+      mirror: false,
+      offset: 80,
+      anchorPlacement: "center-bottom",
+      disable: false,
+    });
+
+    // Si la altura de la pagina cambia (imagenes que cargan tarde,
+    // contenido async), refrescamos AOS para que recalcule las posiciones
+    // de disparo de cada elemento.
+    window.addEventListener("load", () => AOS.refresh());
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
+</script>

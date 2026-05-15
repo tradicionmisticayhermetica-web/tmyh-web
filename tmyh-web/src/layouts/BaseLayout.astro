@@ -129,8 +129,13 @@ const websiteJsonLd = {
 
   <body class="min-h-screen flex flex-col">
     <GoogleTagManager body />
+    {/* Slot opcional para efectos de fondo (smooth scroll + reveal,
+        caduceo girando, cielo estrellado animado). Las paginas que lo
+        usan colocan <SmoothScrollReveal slot="background-effects" />.
+        Si no se usa, no renderiza nada y no afecta performance. */}
+    <slot name="background-effects" />
     <Navbar />
-    <main class="flex-1">
+    <main class="flex-1 relative z-[1]">
       <slot />
     </main>
     <Footer />

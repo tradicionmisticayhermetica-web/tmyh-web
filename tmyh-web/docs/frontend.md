@@ -190,15 +190,84 @@ Hay una animación definida (`soft-pulse`) que hace parpadear muy lento
 algo como "activo" o llamar la atención sutilmente. Todavía no se aplica
 en ninguna parte.
 
+### Smooth scroll + reveal (Home y `/tradicion`)
+
+A partir de mayo 2026, las dos páginas "showcase" del sitio —la Home y
+`/tradicion`— suman un efecto coordinado de scroll que las diferencia
+del resto del sitio (que sigue con scroll nativo, plano y sobrio).
+
+El efecto vive en `src/components/SmoothScrollReveal.astro` y se monta
+únicamente vía el slot `background-effects` del `BaseLayout`. Tiene
+tres capas:
+
+1. **Smooth scroll con inertia** (librería [Lenis](https://github.com/darkroomengineering/lenis),
+   ~3 KB). Suaviza el scroll de rueda y trackpad con un decay natural.
+   En táctil deja el scroll nativo del sistema para no entorpecer el
+   gesto del celular. Sin esto el scroll se siente "duro" y mecánico.
+
+2. **Fondo decorativo en dos capas, fijo respecto al viewport**:
+   - Un **cielo estrellado profundo** (varias capas de `radial-gradient`
+     en CSS, sin imágenes) con dos animaciones combinadas:
+     un *drift* muy lento de toda la grilla cada 4 minutos y un
+     *twinkle* (parpadeo) en algunas estrellas doradas cada 5 segundos.
+     Suma sensación de "cielo vivo" sin que se note conscientemente.
+   - Un **caduceo de Mercurio 3D dorado** (PNG con canal alfa real,
+     recortado con `scripts/recortar_caduceo.py`), gigante y centrado,
+     con opacidad ~12 % y blur ~4 px. Gira sobre su **eje vertical**
+     (`rotateY`, no `rotate`) usando `perspective(1400px)` para que se
+     vea con profundidad real, como una moneda girando. Decisión
+     simbólica importante: usar `rotateY` y `backface-visibility:
+     hidden` evita que el caduceo aparezca jamás invertido durante el
+     giro — la inversión del símbolo tiene un significado contrario a
+     la tradición hermética que enseña el sitio. La rotación está
+     atada al **progreso** del scroll: en cualquier página da
+     exactamente un giro completo (0° → 360°) y termina 35 % más cerca
+     (scale 1 → 1.35).
+
+3. **Reveal de bloques con [AOS](https://michalsnik.github.io/aos/)**
+   (Animate On Scroll, ~5 KB). Cada bloque se marca con
+   `data-aos="fade-up"` (o variantes: `fade-right`, `zoom-in-up`,
+   `flip-up`, etc.) y AOS dispara la animación al entrar al viewport.
+   Tres parámetros adicionales que usamos:
+   - `data-aos-duration="900"` — duración de la animación, en ms.
+   - `data-aos-delay="200"` — retardo antes de animar (útil para
+     bloques secundarios como las redes sociales).
+   - `data-aos-anchor-placement="center-bottom"` — define en qué punto
+     del scroll se dispara: `top-bottom` (cuando el top del elemento
+     toca el borde inferior del viewport), `center-bottom` (cuando el
+     centro lo toca, más sutil), `bottom-bottom`, etc.
+
+La regla de aplicación es estricta:
+
+- **Sí** lo usan: Home (`/`) y `/tradicion`. Son las dos páginas donde
+  el lector "llega" y queremos que sienta el lugar.
+- **No** lo usan: cursos, blog, contacto, área reservada, ni ninguna
+  otra ruta. Esas son páginas funcionales o de lectura larga y el
+  smooth scroll molestaría la búsqueda en página (Ctrl+F) y la
+  experiencia de scroll predecible.
+
+### Accesibilidad: respeta `prefers-reduced-motion`
+
+Si el usuario tiene activada la preferencia del sistema "reducir
+movimiento", el componente desactiva todo: Lenis se apaga (vuelve al
+scroll nativo), el caduceo se oculta, las estrellas se congelan y los
+bloques con `data-reveal` aparecen instantáneamente. Esto es
+obligatorio por WCAG 2.1 y lo manejamos con un solo `@media` query.
+
 ### Lo que NO se usa (a propósito)
 
-- Nada aparece con efectos al hacer scroll (fade-in, parallax, etc.).
+- En el resto del sitio (cursos, blog, contacto, etc.) no hay efectos
+  al hacer scroll: scroll nativo, plano.
 - No hay loaders ni splash screens.
 - No hay cursor personalizado.
-- No hay librerías de animación (Framer Motion, GSAP, AOS).
-- Las estrellas del fondo no titilan.
+- No hay parallax pesado, "scroll-jacking" duro, ni elementos
+  pinneados que paren el scroll.
+- No hay librerías de animación grandes (Framer Motion, GSAP): solo
+  Lenis (~3 KB) y AOS (~5 KB).
 
-La regla fue: "si no aporta a la sensación de templo, no va".
+La regla fue: "si no aporta a la sensación de templo, no va". Por eso
+el efecto se aplica únicamente a las dos páginas donde queremos
+construir atmósfera —el resto se mantiene sobrio y rápido.
 
 ---
 
@@ -324,8 +393,6 @@ Para sumar una imagen nueva:
 - **OG image** personalizada para compartir en redes (hoy muestra texto
   solo). Se podría armar una con el símbolo hermético y el logo.
 - **Favicon** más elaborado (hoy es uno simple de placeholder).
-- **Fade-in al aparecer en viewport**, opcional, si sumamos muchos
-  bloques nuevos.
 - **Panel de admin** para que Emanuel edite precios, fechas y blog sin
   depender de nadie (esto es una fase más grande, aparte).
 
